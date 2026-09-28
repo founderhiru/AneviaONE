@@ -17,6 +17,18 @@ type HealthData = {
   procedures: Procedure[];
 };
 
+const HEART_KEYWORDS = ['blood pressure', 'heart', 'pulse', 'ecg', 'ekg', 'cardiac'];
+
+/** Groups trends into the brief's named health categories. This is a light
+ * keyword heuristic over metric names — a real system would tag this at
+ * the observation level (see Observation['category'] for the closer, but
+ * still coarse, equivalent used elsewhere). Everything else falls under
+ * "Blood & Metabolic" since that covers the current mock dataset. */
+function isHeartMetric(metricName: string): boolean {
+  const lower = metricName.toLowerCase();
+  return HEART_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
+
 export default function HealthScreen() {
   const theme = useTheme();
   const [data, setData] = useState<HealthData | null>(null);
@@ -60,6 +72,9 @@ export default function HealthScreen() {
     );
   }
 
+  const heartTrends = data.trends.filter((t) => isHeartMetric(t.metricName));
+  const bloodMetabolicTrends = data.trends.filter((t) => !isHeartMetric(t.metricName));
+
   return (
     <ScreenContainer>
       <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]} accessibilityRole="header">
@@ -67,27 +82,51 @@ export default function HealthScreen() {
       </Text>
 
       <View style={{ gap: theme.spacing.sm }}>
-        <SectionHeader title={PRODUCT_TERMS.healthTrends} />
-        {data.trends.map((trend) => (
-          <TrendCard key={trend.id} trend={trend} onPress={() => router.push(`/trends/${encodeURIComponent(trend.metricName)}`)} />
-        ))}
+        <SectionHeader title="Blood & Metabolic" />
+        {bloodMetabolicTrends.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+            {PRODUCT_TERMS.healthTrends} for blood and metabolic markers will appear here once you add a report.
+          </Text>
+        ) : (
+          bloodMetabolicTrends.map((trend) => (
+            <TrendCard key={trend.id} trend={trend} onPress={() => router.push(`/trends/${encodeURIComponent(trend.metricName)}`)} />
+          ))
+        )}
+      </View>
+
+      <View style={{ gap: theme.spacing.sm }}>
+        <SectionHeader title="Heart" />
+        {heartTrends.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+            Blood pressure and other heart-related trends appear here once they&rsquo;re added to your Health
+            Memory.
+          </Text>
+        ) : (
+          heartTrends.map((trend) => (
+            <TrendCard key={trend.id} trend={trend} onPress={() => router.push(`/trends/${encodeURIComponent(trend.metricName)}`)} />
+          ))
+        )}
       </View>
 
       <View style={{ gap: theme.spacing.sm }}>
         <SectionHeader title="Medications" actionLabel="View All" onActionPress={() => router.push('/medications')} />
-        {data.medications.slice(0, 3).map((med) => (
-          <Card key={med.id}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{med.name}</Text>
-                <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-                  {med.dosage} · {med.frequency}
-                </Text>
+        {data.medications.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None on file.</Text>
+        ) : (
+          data.medications.slice(0, 3).map((med) => (
+            <Card key={med.id}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{med.name}</Text>
+                  <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+                    {med.dosage} · {med.frequency}
+                  </Text>
+                </View>
+                <StatusBadge label={med.status === 'active' ? 'Active' : med.status === 'past' ? 'Past' : 'As needed'} tone={med.status === 'active' ? 'success' : 'neutral'} />
               </View>
-              <StatusBadge label={med.status === 'active' ? 'Active' : med.status === 'past' ? 'Past' : 'As needed'} tone={med.status === 'active' ? 'success' : 'neutral'} />
-            </View>
-          </Card>
-        ))}
+            </Card>
+          ))
+        )}
       </View>
 
       <View style={{ gap: theme.spacing.sm }}>

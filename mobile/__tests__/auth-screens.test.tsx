@@ -121,7 +121,7 @@ describe('OTP screen', () => {
 });
 
 describe('Onboarding screen', () => {
-  it('walks through all 4 steps and lets a user skip to Home', async () => {
+  it('walks through all 5 steps and lets a user skip to Home', async () => {
     await renderWithAuth(<OnboardingScreen />);
 
     expect(screen.getByText('Your health has a history.')).toBeTruthy();
@@ -139,6 +139,11 @@ describe('Onboarding screen', () => {
     expect(screen.getByText(/Health Memory brings together/)).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByText('Continue'));
+    });
+
+    expect(screen.getByText('Your health records can start here.')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('onboarding-skip-whatsapp'));
     });
 
     expect(screen.getByText('Start with your first health record.')).toBeTruthy();

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
 import { useTheme } from '../../design/theme';
 import { documentsService } from '../../services/documents/documentsService';
-import type { Document, Observation } from '../../types';
+import { healthService } from '../../services/health/healthService';
+import type { Document, HealthChange, Observation } from '../../types';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -17,6 +18,7 @@ export default function DocumentViewerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [document, setDocument] = useState<Document | null | undefined>(null);
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [changes, setChanges] = useState<HealthChange[]>([]);
   const [error, setError] = useState(false);
 
   async function load() {
@@ -24,7 +26,11 @@ export default function DocumentViewerScreen() {
     try {
       const doc = await documentsService.getDocumentById(id);
       setDocument(doc ?? undefined);
-      if (doc) setObservations(await documentsService.getObservationsForDocument(doc));
+      if (doc) {
+        setObservations(await documentsService.getObservationsForDocument(doc));
+        const allChanges = await healthService.getWhatChanged();
+        setChanges(allChanges.filter((change) => change.sourceDocumentId === doc.id));
+      }
     } catch {
       setError(true);
     }
@@ -112,6 +118,48 @@ export default function DocumentViewerScreen() {
                   </Text>
                   {obs.confidence ? (
                     <StatusBadge label={`${Math.round(obs.confidence * 100)}% confidence`} tone="neutral" />
+                  ) : null}
+                </View>
+              </View>
+            </Card>
+          ))}
+        </View>
+      ) : null}
+
+      {changes.length > 0 ? (
+        <View style={{ gap: theme.spacing.sm }}>
+          <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>AI explanation</Text>
+          {changes.map((change) => (
+            <Card
+              key={change.id}
+              style={{ backgroundColor: theme.colors.surfaceAlt, borderStyle: 'dashed' }}
+            >
+              <View style={{ flexDirection: 'row', gap: theme.spacing.sm, alignItems: 'flex-start' }}>
+                <Ionicons name="sparkles-outline" size={18} color={theme.colors.brandSecondary} />
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary }]}>
+                    {change.type === 'value_change'
+                      ? `Your latest ${change.metricOrItemName} (${change.currentValue}${change.unit ?? ''}) is ${
+                          Number(change.currentValue) > Number(change.previousValue) ? 'higher' : 'lower'
+                        } than your previous recorded value (${change.previousValue}${change.unit ?? ''}).`
+                      : `${change.metricOrItemName} was added from this report.`}
+                  </Text>
+                  <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+                    This is an observation about your records, not a diagnosis or treatment recommendation.
+                  </Text>
+                  {change.comparedSourceDocumentId ? (
+                    <Card
+                      onPress={() => router.push(`/documents/${change.comparedSourceDocumentId}`)}
+                      accessibilityLabel="View previous result"
+                      style={{ marginTop: theme.spacing.xs }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+                        <Ionicons name="arrow-back-circle-outline" size={16} color={theme.colors.brandPrimary} />
+                        <Text style={[theme.typography.labelMedium, { color: theme.colors.brandPrimary }]}>
+                          View previous result
+                        </Text>
+                      </View>
+                    </Card>
                   ) : null}
                 </View>
               </View>

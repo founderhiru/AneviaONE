@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { EmptyState, ErrorState, HealthChangeCard, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
+import { EmptyState, ErrorState, FadeInView, HealthChangeCard, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
 import { healthService } from '../../services/health/healthService';
 import type { HealthChange } from '../../types';
@@ -38,20 +38,26 @@ export default function WhatChangedScreen() {
       ) : changes === null ? (
         <LoadingState label="Comparing your records…" />
       ) : changes.length === 0 ? (
-        <EmptyState title="No changes yet" description="Add another record to see what's changed over time." />
+        <EmptyState
+          title="No changes yet"
+          description="Add another record to see what's changed over time."
+          actionLabel="Add a record"
+          onActionPress={() => router.push('/add')}
+        />
       ) : (
         <View style={{ gap: theme.spacing.sm }}>
-          {changes.map((change) => (
-            <HealthChangeCard
-              key={change.id}
-              change={change}
-              onViewTrend={
-                change.type === 'value_change'
-                  ? () => router.push(`/trends/${encodeURIComponent(change.metricOrItemName)}`)
-                  : undefined
-              }
-              onViewEvidence={() => router.push(`/documents/${change.sourceDocumentId}`)}
-            />
+          {changes.map((change, index) => (
+            <FadeInView key={change.id} delay={Math.min(index, 8) * 35}>
+              <HealthChangeCard
+                change={change}
+                onViewTrend={
+                  change.type === 'value_change'
+                    ? () => router.push(`/trends/${encodeURIComponent(change.metricOrItemName)}`)
+                    : undefined
+                }
+                onViewEvidence={() => router.push(`/documents/${change.sourceDocumentId}`)}
+              />
+            </FadeInView>
           ))}
         </View>
       )}

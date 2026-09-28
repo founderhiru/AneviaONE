@@ -3,7 +3,9 @@ import { Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { Card, EvidenceLink, ErrorState, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Card, EmptyState, EvidenceLink, ErrorState, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
 import { healthService } from '../../services/health/healthService';
 import type { Trend } from '../../types';
@@ -99,7 +101,13 @@ export default function TrendDetailScreen() {
     return (
       <ScreenContainer>
         <ScreenHeader title="Trend" />
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>Trend not found.</Text>
+        <EmptyState
+          icon={<Ionicons name="trending-up-outline" size={40} color={theme.colors.textDisabled} />}
+          title="No trend yet"
+          description="Once you have two or more records for this metric, we'll show how it's changed over time here."
+          actionLabel="Add a record"
+          onActionPress={() => router.push('/add')}
+        />
       </ScreenContainer>
     );
   }

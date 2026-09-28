@@ -38,10 +38,11 @@ describe('Trend detail screen', () => {
     ).toBeTruthy();
   });
 
-  it('shows a not-found state for an unknown metric', async () => {
+  it('shows an empty state with a CTA for an unknown metric', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ metric: 'NotAMetric' });
     await renderWithAuth(<TrendDetailScreen />);
-    await waitFor(() => expect(screen.getByText('Trend not found.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('No trend yet')).toBeTruthy());
+    expect(screen.getByText('Add a record')).toBeTruthy();
   });
 });
 

@@ -74,7 +74,15 @@ Reusable primitives live in `components/` and are re-exported from
 `HealthChangeCard`, `HealthHistoryLine`, `TrendCard`, `TimelineEvent`,
 `EmptyState`, `LoadingState` (+ `SkeletonBlock`), `ErrorState`,
 `ProcessingState`, `Modal`, `BottomSheet`, `ScreenContainer`,
-`ScreenHeader`.
+`ScreenHeader`, `SuccessCheck`, `FadeInView`.
+
+`SuccessCheck` and `FadeInView` are the project's microinteraction
+primitives — a short scale/fade success checkmark and a restrained
+fade + small upward slide for card/list entrance, both built on React
+Native's built-in `Animated` API (this project does not use
+`react-native-reanimated`). Keep any new entrance/feedback animation to
+that same register: short duration (~200-260ms), no bounce or spring,
+no gamification.
 
 Screens compose these rather than rebuilding primitives inline. New
 one-off UI should still be built from `theme.*` tokens even when it

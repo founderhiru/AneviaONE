@@ -1,4 +1,4 @@
-import { getDocumentById as mockGetDocumentById, mockDocuments } from '../../mock';
+import { getDocumentById as mockGetDocumentById, mockChanges, mockDocuments } from '../../mock';
 import { getObservationsByIds } from '../../mock/observations';
 import type { Document, DocumentProcessingStatus, Observation } from '../../types';
 
@@ -13,6 +13,15 @@ export type ProcessingUpdate = {
   status: DocumentProcessingStatus;
 };
 
+export type ProcessingResult = {
+  document: Document;
+  /** Counts describing what the new document contributed to the Health
+   * Memory — all derived from the mock dataset itself, never invented. */
+  observationCount: number;
+  newEncounterCount: number;
+  historicalComparisonCount: number;
+};
+
 /**
  * Documents service boundary. `processNewDocument` simulates the pipeline
  * described in the Add Record flow (received → identified → extracted →
@@ -25,7 +34,7 @@ export interface DocumentsService {
   getDocuments(): Promise<Document[]>;
   getDocumentById(id: string): Promise<Document | undefined>;
   getObservationsForDocument(document: Document): Promise<Observation[]>;
-  processNewDocument(input: AddDocumentInput, onProgress: (update: ProcessingUpdate) => void): Promise<Document>;
+  processNewDocument(input: AddDocumentInput, onProgress: (update: ProcessingUpdate) => void): Promise<ProcessingResult>;
 }
 
 const STEP_DELAY_MS = 700;
@@ -50,7 +59,12 @@ export const documentsService: DocumentsService = {
     onProgress({ status: 'complete' });
     // Mock outcome: point at the most recent existing mock document so the
     // "Health Memory Updated" and "What Changed" screens have something
-    // coherent to show, without inventing new AI-extracted content.
-    return mockDocuments[0];
+    // coherent to show, without inventing new AI-extracted content. The
+    // counts below are all derived from that same document's real links in
+    // the mock dataset, not invented numbers.
+    const document = mockDocuments[0];
+    const observationCount = document.observationIds?.length ?? 0;
+    const historicalComparisonCount = mockChanges.filter((change) => change.sourceDocumentId === document.id).length;
+    return { document, observationCount, newEncounterCount: 1, historicalComparisonCount };
   },
 };

@@ -5,10 +5,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { Button, Card, ProcessingState, ScreenContainer, ScreenHeader, SecondaryButton, type ProcessingStep } from '../../components';
+import { Button, Card, ProcessingState, ScreenContainer, ScreenHeader, SecondaryButton, SuccessCheck, type ProcessingStep } from '../../components';
 import { useTheme } from '../../design/theme';
-import { documentsService } from '../../services/documents/documentsService';
-import type { Document, DocumentProcessingStatus, DocumentSource } from '../../types';
+import { documentsService, type ProcessingResult } from '../../services/documents/documentsService';
+import type { DocumentProcessingStatus, DocumentSource } from '../../types';
 
 type FlowStep = 'choose' | 'processing' | 'updated';
 
@@ -28,13 +28,13 @@ export default function AddRecordScreen() {
   const theme = useTheme();
   const [step, setStep] = useState<FlowStep>('choose');
   const [currentStatus, setCurrentStatus] = useState<DocumentProcessingStatus>('received');
-  const [resultDocument, setResultDocument] = useState<Document | null>(null);
+  const [result, setResult] = useState<ProcessingResult | null>(null);
   const [permissionError, setPermissionError] = useState<string | undefined>();
 
   async function startProcessing(source: DocumentSource, fileUri?: string) {
     setStep('processing');
-    const doc = await documentsService.processNewDocument({ source, fileUri }, (update) => setCurrentStatus(update.status));
-    setResultDocument(doc);
+    const outcome = await documentsService.processNewDocument({ source, fileUri }, (update) => setCurrentStatus(update.status));
+    setResult(outcome);
     setStep('updated');
   }
 
@@ -81,20 +81,35 @@ export default function AddRecordScreen() {
     );
   }
 
-  if (step === 'updated' && resultDocument) {
+  if (step === 'updated' && result) {
+    const counts = [
+      { label: `${result.observationCount} health observation${result.observationCount === 1 ? '' : 's'}`, icon: 'analytics-outline' as const },
+      { label: `${result.newEncounterCount} new encounter${result.newEncounterCount === 1 ? '' : 's'}`, icon: 'calendar-outline' as const },
+      { label: `${result.historicalComparisonCount} historical comparison${result.historicalComparisonCount === 1 ? '' : 's'}`, icon: 'trending-up-outline' as const },
+    ];
     return (
       <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: theme.spacing.sm }}>
-          <Ionicons name="checkmark-circle" size={56} color={theme.colors.success} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: theme.spacing.md }}>
+          <SuccessCheck />
           <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]} accessibilityRole="header">
-            Health Memory Updated
+            Added to Health Memory
           </Text>
           <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary, textAlign: 'center' }]}>
-            {resultDocument.title} has been added to your Health Memory.
+            {result.document.title} has been added to your Health Memory.
           </Text>
+          <Card style={{ width: '100%' }}>
+            <View style={{ gap: theme.spacing.sm }}>
+              {counts.map((item) => (
+                <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <Ionicons name={item.icon} size={18} color={theme.colors.brandPrimary} />
+                  <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary }]}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </Card>
         </View>
         <View style={{ gap: theme.spacing.sm }}>
-          <Button label="View What Changed" onPress={() => router.replace('/changes')} />
+          <Button label="See what changed →" onPress={() => router.replace('/changes')} />
           <SecondaryButton label="Done" onPress={() => router.replace('/(tabs)/home')} />
         </View>
       </ScreenContainer>

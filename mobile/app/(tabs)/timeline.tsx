@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { EmptyState, ErrorState, LoadingState, ScreenContainer, TimelineEvent } from '../../components';
+import { EmptyState, ErrorState, FadeInView, LoadingState, ScreenContainer, TimelineEvent } from '../../components';
 import { useTheme } from '../../design/theme';
 import { groupTimelineByYear } from '../../mock';
 import { healthService } from '../../services/health/healthService';
@@ -57,6 +57,7 @@ export default function TimelineScreen() {
   }
 
   const grouped = groupTimelineByYear(events);
+  let entryIndex = 0;
 
   return (
     <ScreenContainer>
@@ -67,14 +68,18 @@ export default function TimelineScreen() {
         <View key={year} style={{ gap: theme.spacing.xs }}>
           <Text style={[theme.typography.labelLarge, { color: theme.colors.textTertiary }]}>{year}</Text>
           <View>
-            {yearEvents.map((event, index) => (
-              <TimelineEvent
-                key={event.id}
-                event={event}
-                isLast={index === yearEvents.length - 1}
-                onPress={() => router.push(`/timeline/${event.id}`)}
-              />
-            ))}
+            {yearEvents.map((event, index) => {
+              const staggerDelay = Math.min(entryIndex++, 8) * 35;
+              return (
+                <FadeInView key={event.id} delay={staggerDelay}>
+                  <TimelineEvent
+                    event={event}
+                    isLast={index === yearEvents.length - 1}
+                    onPress={() => router.push(`/timeline/${event.id}`)}
+                  />
+                </FadeInView>
+              );
+            })}
           </View>
         </View>
       ))}

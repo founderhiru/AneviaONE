@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+
+import { Card, EmptyState, ErrorState, LoadingState, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
 import { useTheme } from '../../design/theme';
 import { healthService } from '../../services/health/healthService';
 import type { Medication } from '../../types';
@@ -38,6 +41,14 @@ export default function MedicationsScreen() {
         <ErrorState onRetry={load} />
       ) : medications === null ? (
         <LoadingState label="Loading medications…" />
+      ) : medications.length === 0 ? (
+        <EmptyState
+          icon={<Ionicons name="medkit-outline" size={40} color={theme.colors.textDisabled} />}
+          title="No medications yet"
+          description="Medications from your reports and prescriptions will show up here once they're added to your Health Memory."
+          actionLabel="Add your first record"
+          onActionPress={() => router.push('/add')}
+        />
       ) : (
         medications.map((med) => (
           <Card key={med.id}>
