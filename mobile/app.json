@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Health Intelligence",
+    "slug": "health-intelligence-app",
+    "version": "1.0.0",
+    "scheme": "healthintelligence",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.healthintelligence.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Health Intelligence uses your camera to capture photos of health reports and prescriptions so they can be added to your Health Memory.",
+        "NSPhotoLibraryUsageDescription": "Health Intelligence needs access to your photos so you can upload existing health documents."
+      }
+    },
+    "android": {
+      "package": "ai.healthintelligence.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F5F0",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true,
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F7F5F0",
+          "image": "./assets/icon.png",
+          "imageWidth": 120
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Health Intelligence uses your camera to capture photos of health reports and prescriptions."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Health Intelligence needs access to your photos so you can upload existing health documents."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

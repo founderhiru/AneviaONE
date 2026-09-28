@@ -1,0 +1,146 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { router } from 'expo-router';
+
+import {
+  Card,
+  ErrorState,
+  HealthChangeCard,
+  LoadingState,
+  ScreenContainer,
+  SectionHeader,
+  TrendCard,
+} from '../../components';
+import { PRODUCT_TERMS } from '../../config/brand';
+import { useTheme } from '../../design/theme';
+import { healthStoryYears } from '../../mock';
+import { healthService } from '../../services/health/healthService';
+import type { HealthChange, Trend } from '../../types';
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+export default function HomeScreen() {
+  const theme = useTheme();
+  const [changes, setChanges] = useState<HealthChange[] | null>(null);
+  const [trends, setTrends] = useState<Trend[] | null>(null);
+  const [error, setError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(false);
+    try {
+      const [c, t] = await Promise.all([healthService.getWhatChanged(), healthService.getTrends()]);
+      setChanges(c);
+      setTrends(t);
+    } catch {
+      setError(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }
+
+  const isLoading = changes === null && trends === null && !error;
+
+  if (error) {
+    return (
+      <ScreenContainer>
+        <ErrorState onRetry={load} />
+      </ScreenContainer>
+    );
+  }
+
+  return (
+    <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      <View>
+        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>{greeting()}</Text>
+        <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]} accessibilityRole="header">
+          Your Health
+        </Text>
+        <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, marginTop: 2 }]}>
+          Updated today
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <LoadingState label="Loading your Health Memory…" />
+      ) : (
+        <>
+          <View style={{ gap: theme.spacing.sm }}>
+            <SectionHeader
+              title={PRODUCT_TERMS.whatChanged}
+              subtitle={`${changes?.length ?? 0} changes found`}
+              actionLabel="View Changes"
+              onActionPress={() => router.push('/changes')}
+            />
+            {(changes ?? []).slice(0, 3).map((change) => (
+              <HealthChangeCard
+                key={change.id}
+                change={change}
+                onViewTrend={
+                  change.type === 'value_change' ? () => router.push(`/trends/${encodeURIComponent(change.metricOrItemName)}`) : undefined
+                }
+                onViewEvidence={() => router.push(`/documents/${change.sourceDocumentId}`)}
+              />
+            ))}
+          </View>
+
+          <View style={{ gap: theme.spacing.sm }}>
+            <SectionHeader title="Your Health Story" actionLabel="View Timeline" onActionPress={() => router.push('/(tabs)/timeline')} />
+            <Card>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                {healthStoryYears.map((year, index) => (
+                  <React.Fragment key={year}>
+                    <Text style={[theme.typography.labelMedium, { color: theme.colors.textSecondary }]}>{year}</Text>
+                    {index < healthStoryYears.length - 1 ? (
+                      <Text style={{ color: theme.colors.textTertiary }}>→</Text>
+                    ) : null}
+                  </React.Fragment>
+                ))}
+              </View>
+            </Card>
+          </View>
+
+          <View style={{ gap: theme.spacing.sm }}>
+            <SectionHeader
+              title={PRODUCT_TERMS.healthTrends}
+              actionLabel="View All"
+              onActionPress={() => router.push('/(tabs)/health')}
+            />
+            {(trends ?? []).slice(0, 3).map((trend) => (
+              <TrendCard key={trend.id} trend={trend} onPress={() => router.push(`/trends/${encodeURIComponent(trend.metricName)}`)} />
+            ))}
+          </View>
+
+          <View style={{ gap: theme.spacing.sm }}>
+            <SectionHeader title={PRODUCT_TERMS.askMyHealth} />
+            <Pressable
+              onPress={() => router.push('/(tabs)/ask')}
+              accessibilityRole="button"
+              accessibilityLabel="Ask about your health history"
+            >
+              <Card>
+                <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>
+                  Ask about your health history...
+                </Text>
+              </Card>
+            </Pressable>
+          </View>
+        </>
+      )}
+    </ScreenContainer>
+  );
+}
