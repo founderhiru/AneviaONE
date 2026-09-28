@@ -7,6 +7,7 @@ export * from './EmptyState';
 export * from './ErrorState';
 export * from './EvidenceLink';
 export * from './HealthChangeCard';
+export * from './HealthHistoryLine';
 export * from './LoadingState';
 export * from './Modal';
 export * from './OtpInput';

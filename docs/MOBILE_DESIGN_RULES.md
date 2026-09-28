@@ -1,24 +1,45 @@
 # Mobile Design Rules
 
 Design tokens and component rules for the app, per spec section 3 (design
-system) and section 4/33 (platform conventions, accessibility). Everything
-here lives under `mobile/design/` and `mobile/components/`.
+system) and section 4/33 (platform conventions, accessibility), and the
+dedicated visual-design pass that followed the functional skeleton.
+Everything here lives under `mobile/design/` and `mobile/components/`.
+
+## Product positioning
+
+This is a Personal Health Intelligence product. It should feel calm,
+premium, trustworthy, intelligent, personal, private, modern — think
+Apple-level simplicity + premium fintech clarity + modern AI-product
+intelligence. It must never look like a hospital application, a medical
+dashboard, a generic health tracker, a document-storage app, or a generic
+AI chatbot. Concretely, that rules out: default-red vitals, traffic-light
+health coding, gamified badges/streaks, heavy gradients, and stacking
+everything in bordered cards by default.
 
 ## Aesthetic principles
 
-Premium, calm, trustworthy, minimal. A warm/light canvas with deep navy as
-the anchor color. Deliberately avoids:
-- Excessive red (red is reserved for genuine danger/destructive actions,
-  never for routine emphasis)
-- Heavy gradients
-- Gamification (badges, streaks, progress bars framed as "scores")
-- "Medical dashboard" saturation — no default-red vitals, no traffic-light
-  coding of health data without an explicit legend
+Premium, calm, trustworthy, minimal. A warm off-white canvas, deep
+navy/ink as the primary text and action color, a restrained blue/teal
+accent, whitespace used aggressively instead of dividers/cards. Green,
+amber, and red are used only where semantically necessary (destructive
+actions, genuine warnings) — never for routine emphasis. Typography leans
+editorial rather than dense (see Typography below).
 
 Trend colors (`trendUp` / `trendDown` / `trendFlat`) are intentionally
 **not** red/green — an upward trend isn't automatically "bad" and a
 downward one isn't automatically "good" outside clinical context the app
 doesn't have. See `design/colors.ts`.
+
+## The Health History Line
+
+The product's signature visual motif is a quiet timeline of years joined
+by a hairline rule — `2019 ─── 2021 ─── 2023 ─── 2026` — used wherever the
+product wants to say "this is about your history over time" without
+reaching for a chart or a card. Implemented as `components/HealthHistoryLine.tsx`
+and used on Home's "Your Health Story" section (replacing an earlier
+card-wrapped row of years). It is deliberately not a `Card` — it's
+line-work and typography, not a content surface — which is also an
+example of the "avoid excessive cards" rule in practice.
 
 ## Tokens
 
@@ -30,7 +51,11 @@ picks `lightColors` or `darkColors` (`design/colors.ts`) based on
   `brandPrimary`, `danger`, …), never raw hex in screens/components.
 - **Typography** (`design/typography.ts`) — a fixed scale
   (`displayLarge`/`displayMedium`, `headingLarge/Medium/Small`,
-  `bodyLarge/Medium/Small`, `labelLarge/Medium`, `caption`).
+  `bodyLarge/Medium/Small`, `labelLarge/Medium`, `caption`), using the
+  system font (San Francisco / Roboto) with subtle negative letter-spacing
+  on the display/heading sizes (-0.1 to -0.4) for an editorial rather than
+  default-system-dense feel, without pretending a custom display font was
+  used.
 - **Spacing** (`design/spacing.ts`) — `xxs`/`xs`/`sm`/`md`/`lg`/`xl` scale,
   plus `minTouchTarget = 44` (see Accessibility below).
 - **Radius** (`design/radius.ts`) and **Shadows** (`design/shadows.ts`).
@@ -46,13 +71,22 @@ Reusable primitives live in `components/` and are re-exported from
 
 `Button`, `SecondaryButton`, `TextInput`, `OtpInput`, `Card`,
 `SectionHeader`, `StatusBadge`, `Avatar`, `EvidenceLink`, `DocumentCard`,
-`HealthChangeCard`, `TrendCard`, `TimelineEvent`, `EmptyState`,
-`LoadingState` (+ `SkeletonBlock`), `ErrorState`, `ProcessingState`,
-`Modal`, `BottomSheet`, `ScreenContainer`, `ScreenHeader`.
+`HealthChangeCard`, `HealthHistoryLine`, `TrendCard`, `TimelineEvent`,
+`EmptyState`, `LoadingState` (+ `SkeletonBlock`), `ErrorState`,
+`ProcessingState`, `Modal`, `BottomSheet`, `ScreenContainer`,
+`ScreenHeader`.
 
 Screens compose these rather than rebuilding primitives inline. New
 one-off UI should still be built from `theme.*` tokens even when it
 doesn't warrant a new shared component.
+
+**Card discipline**: `Card` is for genuine content surfaces (a record, a
+trend, a change) — not for every grouping of text on a screen. Where a
+section only needs typographic separation (an intro line, a row of years,
+an icon + a sentence), render it directly against the background instead
+of wrapping it in a bordered `Card`. This pass removed two such cards
+(Home's "Your Health Story" row, Privacy's intro line) in favor of plain
+layout, per the brief's "avoid excessive cards" rule.
 
 ## Required screen states
 
@@ -101,6 +135,39 @@ visual layout). Screens use `SafeAreaView` (via `ScreenContainer`), `flex`,
 `ScrollView`, and `FlatList` (Timeline, Ask's message list) so layouts
 adapt to device size and orientation rather than assuming a fixed
 viewport.
+
+## Screen-by-screen notes from this pass
+
+- **Home** — hierarchy is Greeting → Your Health → What Changed → Your
+  Health Story → Health Trends → Ask My Health, in that order, so the
+  product reads within a few seconds. "Your Health Story" now renders
+  `HealthHistoryLine` instead of a card. The "Ask about your health
+  history..." entry point is now a pill (rounded, tinted background, a
+  sparkle icon) rather than a bordered card, to read as an intelligent
+  entry point rather than another content card.
+- **What Changed** (`HealthChangeCard`) — already showed
+  `previous → current` with a neutral arrow, a compared-with date, and
+  non-alarming trend colors; unchanged in this pass, it already matched
+  the brief.
+- **Timeline** — unchanged visually this pass; it already uses a rail +
+  dot + connecting line per event rather than a flat document list.
+- **Health** — unchanged visually; already leads with `TrendCard`
+  (sparkline + direction) before raw medication/condition/allergy lists.
+- **Ask My Health** — unchanged visually; message bubbles already
+  distinguish "From your records" vs "AI explanation" via `StatusBadge`,
+  never blending the two.
+- **Add to Health Memory** (formerly "Add Record") — screen heading and
+  intro copy now read "Add to Health Memory"; the four entry points are
+  Scan document / Upload document / WhatsApp / Add manually (the fourth
+  is new — it's a scoped, honest "coming soon" prompt via `Alert`, not a
+  new manual-entry form, since this pass explicitly excludes new backend
+  functionality). Processing step copy now matches the brief exactly
+  ("Report received" → "Reading document" → "Extracting health
+  information" → "Comparing with your history" → "Updating Health
+  Memory").
+- **Me / Privacy** — Privacy's intro sentence now sits next to a
+  shield-checkmark icon instead of inside a card, for a touch more
+  trust-signaling without adding a security claim the app can't back.
 
 ## Platform conventions
 

@@ -41,12 +41,13 @@ export default function PrivacyScreen() {
     <ScreenContainer>
       <ScreenHeader title="Privacy & Security" />
 
-      <Card>
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary }]}>
+      <View style={{ flexDirection: 'row', gap: theme.spacing.sm, alignItems: 'flex-start' }}>
+        <Ionicons name="shield-checkmark-outline" size={22} color={theme.colors.brandSecondary} />
+        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary, flex: 1 }]}>
           Your health information belongs to you. You control what&rsquo;s stored, what&rsquo;s shared, and who can
           see it.
         </Text>
-      </Card>
+      </View>
 
       <Row
         icon="share-social-outline"

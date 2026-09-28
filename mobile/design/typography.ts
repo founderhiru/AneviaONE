@@ -23,10 +23,13 @@ export const typography = {
   fontFamily,
   fontFamilyMedium,
 
-  displayLarge: { fontSize: 32, lineHeight: 40, fontWeight: '700' as const },
-  displayMedium: { fontSize: 28, lineHeight: 36, fontWeight: '700' as const },
-  headingLarge: { fontSize: 24, lineHeight: 32, fontWeight: '700' as const },
-  headingMedium: { fontSize: 20, lineHeight: 28, fontWeight: '600' as const },
+  // Slightly negative letter-spacing on the large editorial sizes reads as
+  // premium/considered rather than default-system-font-dense; kept subtle
+  // so it never looks like a custom display font was intended.
+  displayLarge: { fontSize: 32, lineHeight: 40, fontWeight: '700' as const, letterSpacing: -0.4 },
+  displayMedium: { fontSize: 28, lineHeight: 36, fontWeight: '700' as const, letterSpacing: -0.3 },
+  headingLarge: { fontSize: 24, lineHeight: 32, fontWeight: '700' as const, letterSpacing: -0.2 },
+  headingMedium: { fontSize: 20, lineHeight: 28, fontWeight: '600' as const, letterSpacing: -0.1 },
   headingSmall: { fontSize: 17, lineHeight: 24, fontWeight: '600' as const },
 
   bodyLarge: { fontSize: 17, lineHeight: 25, fontWeight: '400' as const },

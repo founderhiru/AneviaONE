@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,9 +13,9 @@ import type { Document, DocumentProcessingStatus, DocumentSource } from '../../t
 type FlowStep = 'choose' | 'processing' | 'updated';
 
 const STEP_LABELS: Record<DocumentProcessingStatus, string> = {
-  received: 'Document received',
-  identifying: 'Report identified',
-  extracting: 'Health information extracted',
+  received: 'Report received',
+  identifying: 'Reading document',
+  extracting: 'Extracting health information',
   comparing: 'Comparing with your history',
   updating_memory: 'Updating Health Memory',
   complete: 'Updating Health Memory',
@@ -61,6 +61,13 @@ export default function AddRecordScreen() {
     router.replace('/whatsapp');
   }
 
+  function handleManual() {
+    Alert.alert(
+      'Add manually',
+      'Manually entering a record without a document is coming soon. For now, scan or upload a report to add it to your Health Memory.'
+    );
+  }
+
   if (step === 'processing') {
     const steps: ProcessingStep[] = STEP_ORDER.map((status) => ({
       id: status,
@@ -96,16 +103,22 @@ export default function AddRecordScreen() {
 
   return (
     <ScreenContainer scroll={false}>
-      <ScreenHeader title="Add Record" onBack={() => router.back()} />
+      <ScreenHeader title="Add to Health Memory" onBack={() => router.back()} />
+      <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary, marginTop: theme.spacing.xs }]}>
+        Choose how you&rsquo;d like to add this record.
+      </Text>
       <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
-        <Card onPress={handleCamera} accessibilityLabel="Take a photo">
-          <Row icon="camera" label="Take a photo" />
+        <Card onPress={handleCamera} accessibilityLabel="Scan document">
+          <Row icon="camera" label="Scan document" />
         </Card>
-        <Card onPress={handleUpload} accessibilityLabel="Upload a document">
-          <Row icon="cloud-upload-outline" label="Upload a document" />
+        <Card onPress={handleUpload} accessibilityLabel="Upload document">
+          <Row icon="cloud-upload-outline" label="Upload document" />
         </Card>
         <Card onPress={handleWhatsApp} accessibilityLabel="Send via WhatsApp">
-          <Row icon="logo-whatsapp" label="Send via WhatsApp" />
+          <Row icon="logo-whatsapp" label="WhatsApp" />
+        </Card>
+        <Card onPress={handleManual} accessibilityLabel="Add manually">
+          <Row icon="create-outline" label="Add manually" />
         </Card>
         {permissionError ? (
           <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite">

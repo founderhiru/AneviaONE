@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import {
-  Card,
   ErrorState,
   HealthChangeCard,
+  HealthHistoryLine,
   LoadingState,
   ScreenContainer,
   SectionHeader,
@@ -99,19 +100,15 @@ export default function HomeScreen() {
           </View>
 
           <View style={{ gap: theme.spacing.sm }}>
-            <SectionHeader title="Your Health Story" actionLabel="View Timeline" onActionPress={() => router.push('/(tabs)/timeline')} />
-            <Card>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                {healthStoryYears.map((year, index) => (
-                  <React.Fragment key={year}>
-                    <Text style={[theme.typography.labelMedium, { color: theme.colors.textSecondary }]}>{year}</Text>
-                    {index < healthStoryYears.length - 1 ? (
-                      <Text style={{ color: theme.colors.textTertiary }}>→</Text>
-                    ) : null}
-                  </React.Fragment>
-                ))}
-              </View>
-            </Card>
+            <SectionHeader
+              title="Your Health Story"
+              subtitle="A quiet timeline of everything you've added"
+              actionLabel="View Timeline"
+              onActionPress={() => router.push('/(tabs)/timeline')}
+            />
+            <View style={{ paddingHorizontal: theme.spacing.xs, paddingTop: theme.spacing.xs }}>
+              <HealthHistoryLine years={healthStoryYears} />
+            </View>
           </View>
 
           <View style={{ gap: theme.spacing.sm }}>
@@ -131,12 +128,23 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/ask')}
               accessibilityRole="button"
               accessibilityLabel="Ask about your health history"
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: theme.spacing.xs,
+                  minHeight: theme.minTouchTarget,
+                  paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.radius.pill,
+                  backgroundColor: theme.colors.surfaceAlt,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
             >
-              <Card>
-                <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>
-                  Ask about your health history...
-                </Text>
-              </Card>
+              <Ionicons name="sparkles-outline" size={18} color={theme.colors.brandSecondary} />
+              <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary, flex: 1 }]}>
+                Ask about your health history...
+              </Text>
             </Pressable>
           </View>
         </>

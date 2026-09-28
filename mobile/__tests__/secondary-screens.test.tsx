@@ -57,8 +57,9 @@ describe('Timeline event detail screen', () => {
 describe('Add Record screen', () => {
   it('offers camera, upload and WhatsApp entry points, and WhatsApp navigates directly', async () => {
     await renderWithAuth(<AddRecordScreen />);
-    expect(screen.getByLabelText('Take a photo')).toBeTruthy();
-    expect(screen.getByLabelText('Upload a document')).toBeTruthy();
+    expect(screen.getByLabelText('Scan document')).toBeTruthy();
+    expect(screen.getByLabelText('Upload document')).toBeTruthy();
+    expect(screen.getByLabelText('Add manually')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Send via WhatsApp'));
