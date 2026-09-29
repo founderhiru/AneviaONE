@@ -1,3 +1,4 @@
+export * from './AnimatedSplash';
 export * from './Avatar';
 export * from './BottomSheet';
 export * from './Button';

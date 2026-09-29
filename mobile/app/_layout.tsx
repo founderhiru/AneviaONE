@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LoadingState } from '../components';
+import { AnimatedSplash } from '../components';
 import { useTheme } from '../design/theme';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 
@@ -13,9 +13,18 @@ function RootNavigator() {
   const segments = useSegments();
   const router = useRouter();
   const theme = useTheme();
+  // The animated launch sequence always plays at least once per app
+  // session (cold launch), and never again for in-app navigation — this
+  // component (and its state) lives for the lifetime of the Stack root,
+  // not per-screen. `showSplash` stays true until the reveal has finished
+  // AND auth/session initialization has resolved, whichever is later, so
+  // a slow session check is masked by the splash's settled frame instead
+  // of an artificial delay or a second loading spinner.
+  const [splashRevealDone, setSplashRevealDone] = useState(false);
+  const showSplash = !splashRevealDone;
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || showSplash) return;
 
     const segmentList = segments as unknown as string[];
     const inAuthGroup = segmentList[0] === '(auth)';
@@ -33,12 +42,12 @@ function RootNavigator() {
     if (user && user.onboardingComplete && inAuthGroup) {
       router.replace('/(tabs)/home');
     }
-  }, [user, isLoading, segments, router]);
+  }, [user, isLoading, showSplash, segments, router]);
 
-  if (isLoading) {
+  if (showSplash) {
     return (
       <SafeAreaProvider style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <LoadingState fullScreen label="Loading your Health Memory…" />
+        <AnimatedSplash ready={!isLoading} onFinished={() => setSplashRevealDone(true)} />
       </SafeAreaProvider>
     );
   }
