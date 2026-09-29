@@ -54,9 +54,13 @@ export default function MeScreen() {
   const theme = useTheme();
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<HealthProfile | null>(null);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
-    healthService.getHealthProfile().then(setProfile);
+    healthService
+      .getHealthProfile()
+      .then(setProfile)
+      .catch(() => setProfileError(true));
   }, []);
 
   const displayIdentity =
@@ -76,7 +80,11 @@ export default function MeScreen() {
         </View>
       </View>
 
-      {!profile ? (
+      {profileError ? (
+        <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+          We couldn&rsquo;t load your summary right now.
+        </Text>
+      ) : !profile ? (
         <LoadingState label="Loading your profile…" />
       ) : (
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
@@ -97,6 +105,7 @@ export default function MeScreen() {
 
       <RowList
         rows={[
+          { label: 'My documents', onPress: () => router.push('/documents') },
           { label: 'WhatsApp — Connected Services', onPress: () => router.push('/whatsapp') },
           { label: `${PRODUCT_TERMS.familyHealth} (coming soon)`, onPress: () => router.push('/family') },
         ]}

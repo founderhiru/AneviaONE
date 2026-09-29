@@ -1,4 +1,5 @@
 export * from './AnimatedSplash';
+export * from './AppModeNotices';
 export * from './Avatar';
 export * from './BottomSheet';
 export * from './Button';

@@ -10,7 +10,8 @@ duplicate Health Memories.
 Product direction (explicit): Mobile OTP is better suited to an
 India-first consumer health product than email/password. Google is
 offered as a faster secondary option for people who prefer it. There is
-no email/password flow in this app at all.
+no password flow. Email one-time code is also offered, and is the only
+method that works before an SMS provider is configured.
 
 ## Screens
 
@@ -36,18 +37,18 @@ call only `authService` (`services/auth/authService.ts`), never Supabase
 directly:
 
 ```ts
-export const authService: AuthService = isSupabaseConfigured ? supabaseAuthService : mockAuthService;
+export const authService: AuthService = isDemoMode ? mockAuthService : supabaseAuthService;
 ```
 
-`isSupabaseConfigured` (from `services/supabaseClient.ts`) is true once
-`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` are set in
-the environment. Until then, `mockAuthService` is used automatically — no
-code change is needed to go live once Supabase credentials exist.
+The mode comes from `config/appMode.ts` (`EXPO_PUBLIC_APP_MODE`, default
+`production`). **Production never falls back to the mock**: if the Supabase
+values are missing, the root layout shows a "not configured" screen. The mock
+is used only in explicit demo mode, which shows a "DEMO · sample data" badge.
+Full flow: `MOBILE_PHASE1_INTEGRATION.md`.
 
-### Mock implementation (`mockAuthService.ts`)
+### Mock implementation (`mockAuthService.ts`) — demo mode only
 
-- Development-only, isolated in its own file, and clearly commented as
-  such.
+- Isolated in its own file and clearly commented as such.
 - `MOCK_OTP = '123456'` — an obviously-fake fixed code; it never claims to
   send a real OTP.
 - Google mock never fabricates a real Google identity token — it simulates
@@ -62,9 +63,17 @@ code change is needed to go live once Supabase credentials exist.
   `verifyOtp({ phone, token, type: 'sms' })`. Supabase owns OTP generation,
   delivery, and verification — this app never generates or stores an OTP
   itself.
+- Email one-time code (no password) via `signInWithOtp({ email })` /
+  `verifyOtp({ email, token, type: 'email' })` — works without an SMS provider.
 - Google OAuth via `signInWithOAuth({ provider: 'google', options: { skipBrowserRedirect: true } })`
-  + `expo-web-browser`'s `openAuthSessionAsync`, with the redirect URI built
-  from `expo-auth-session`'s `makeRedirectUri({ scheme: 'healthintelligence' })`.
+  + `expo-web-browser`'s `openAuthSessionAsync`, then PKCE
+  `exchangeCodeForSession(code)` (redirect URI from `expo-auth-session`'s
+  `makeRedirectUri({ scheme: 'healthintelligence' })`). Not yet verified end to end.
+- Session persisted in the Keychain/Keystore (`secureStorageAdapter.ts`),
+  never plain AsyncStorage; refreshed only while the app is in the foreground.
+- If the session expires or is revoked, the app returns to Welcome and says
+  so ("Your session has expired…").
+- User-facing error messages are always safe text, never raw backend errors.
 
 ## Account linking (single Health Memory per person)
 

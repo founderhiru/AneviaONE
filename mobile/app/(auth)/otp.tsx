@@ -10,7 +10,10 @@ import { authService } from '../../services/auth/authService';
 export default function OtpScreen() {
   const theme = useTheme();
   const { refreshUser } = useAuth();
-  const { mobileNumber } = useLocalSearchParams<{ mobileNumber: string }>();
+  // Either an SMS code (mobileNumber) or an emailed code (email).
+  const { mobileNumber, email } = useLocalSearchParams<{ mobileNumber?: string; email?: string }>();
+  const isEmail = Boolean(email);
+  const destination = (isEmail ? email : mobileNumber) ?? '';
 
   const [otp, setOtp] = useState('');
   const [errorText, setErrorText] = useState<string | undefined>();
@@ -20,7 +23,9 @@ export default function OtpScreen() {
   async function handleVerify(code: string) {
     setErrorText(undefined);
     setVerifying(true);
-    const result = await authService.verifyMobileOtp(mobileNumber, code);
+    const result = isEmail
+      ? await authService.verifyEmailOtp(destination, code)
+      : await authService.verifyMobileOtp(destination, code);
     setVerifying(false);
     if (!result.success) {
       setErrorText(result.errorMessage);
@@ -32,7 +37,8 @@ export default function OtpScreen() {
 
   async function handleResend() {
     setResending(true);
-    await authService.sendMobileOtp(mobileNumber);
+    if (isEmail) await authService.sendEmailOtp(destination);
+    else await authService.sendMobileOtp(destination);
     setResending(false);
   }
 
@@ -43,7 +49,7 @@ export default function OtpScreen() {
           Enter the code
         </Text>
         <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
-          We sent a 6-digit code to {mobileNumber}.
+          We sent a 6-digit code to {destination}.
         </Text>
         <OtpInput
           value={otp}

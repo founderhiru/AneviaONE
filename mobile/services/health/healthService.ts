@@ -1,4 +1,6 @@
+import { isDemoMode } from '../../config/appMode';
 import {
+  healthStoryYears as sampleHealthStoryYears,
   mockChanges,
   mockHealthProfile,
   mockTimeline,
@@ -19,15 +21,18 @@ import type {
   Trend,
   Vaccination,
 } from '../../types';
+import { documentsService } from '../documents/documentsService';
 
 /**
- * Health data service boundary. Every method is `async` even though the
- * mock implementation resolves immediately, so screens already handle
- * loading states correctly and a real Supabase-backed implementation can
- * be dropped in later without touching any screen.
+ * Health data service boundary. Every method is `async` so screens handle
+ * loading states, and the real Supabase-backed implementation (Phase 2:
+ * observations, insights, health_events — see docs/BACKEND_CONTRACTS.md)
+ * can replace `productionHealthService` without touching any screen.
  */
 export interface HealthService {
   getHealthProfile(): Promise<HealthProfile>;
+  /** Years that have at least one record, oldest first (Home's health story). */
+  getHealthStoryYears(): Promise<string[]>;
   getWhatChanged(): Promise<HealthChange[]>;
   getTimeline(): Promise<HealthEvent[]>;
   getEventById(id: string): Promise<HealthEvent | undefined>;
@@ -44,8 +49,10 @@ export interface HealthService {
 const NETWORK_DELAY_MS = 350;
 const delay = <T,>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(value), NETWORK_DELAY_MS));
 
-export const healthService: HealthService = {
+/** DEMO MODE ONLY — the fictional sample Health Memory (no real patient data). */
+export const demoHealthService: HealthService = {
   getHealthProfile: () => delay(mockHealthProfile),
+  getHealthStoryYears: () => delay(sampleHealthStoryYears),
   getWhatChanged: () => delay(mockChanges),
   getTimeline: () => delay(mockTimeline),
   getEventById: (id) => delay(mockGetEventById(id)),
@@ -58,3 +65,37 @@ export const healthService: HealthService = {
   getVaccinations: () => delay(mockVaccinations),
   getProcedures: () => delay(mockProcedures),
 };
+
+/**
+ * PRODUCTION (Phase 1). No health facts exist yet — reports are stored but
+ * not read until Phase 2 — so every health list is honestly empty and the
+ * screens show their empty states. Nothing is ever substituted from the
+ * sample dataset. The only real number available now is the document count.
+ */
+export const productionHealthService: HealthService = {
+  async getHealthProfile() {
+    const documents = await documentsService.listDocuments();
+    const latest = documents[0]?.uploadedAt ?? documents[0]?.createdAt;
+    return {
+      userId: documents[0]?.userId ?? '',
+      recordCount: 0,
+      documentCount: documents.length,
+      activeMedicationCount: 0,
+      lastUpdated: latest ?? new Date(0).toISOString(),
+    };
+  },
+  getHealthStoryYears: async () => [],
+  getWhatChanged: async () => [],
+  getTimeline: async () => [],
+  getEventById: async () => undefined,
+  getTrends: async () => [],
+  getTrendById: async () => undefined,
+  getTrendByMetricName: async () => undefined,
+  getMedications: async () => [],
+  getConditions: async () => [],
+  getAllergies: async () => [],
+  getVaccinations: async () => [],
+  getProcedures: async () => [],
+};
+
+export const healthService: HealthService = isDemoMode ? demoHealthService : productionHealthService;

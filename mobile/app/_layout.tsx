@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AnimatedSplash } from '../components';
+import { AnimatedSplash, ConfigurationRequired, DemoModeBadge } from '../components';
+import { APP_MODE, isDemoMode } from '../config/appMode';
 import { useTheme } from '../design/theme';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 
@@ -17,17 +19,19 @@ function RootNavigator() {
   // session (cold launch), and never again for in-app navigation — this
   // component (and its state) lives for the lifetime of the Stack root,
   // not per-screen. `showSplash` stays true until the reveal has finished
-  // AND auth/session initialization has resolved, whichever is later, so
-  // a slow session check is masked by the splash's settled frame instead
-  // of an artificial delay or a second loading spinner.
+  // AND auth/session initialization has resolved, whichever is later.
+  // The navigator stays mounted underneath the full-screen splash, so the
+  // redirect below completes behind it and the placeholder `index` route
+  // ("Loading…") is never seen.
   const [splashRevealDone, setSplashRevealDone] = useState(false);
   const showSplash = !splashRevealDone;
 
   useEffect(() => {
-    if (isLoading || showSplash) return;
+    if (isLoading) return;
 
     const segmentList = segments as unknown as string[];
     const inAuthGroup = segmentList[0] === '(auth)';
+    const atEntry = segmentList.length === 0; // the placeholder `index` route
 
     if (!user && !inAuthGroup) {
       router.replace('/(auth)/welcome');
@@ -39,35 +43,42 @@ function RootNavigator() {
       return;
     }
 
-    if (user && user.onboardingComplete && inAuthGroup) {
+    if (user && user.onboardingComplete && (inAuthGroup || atEntry)) {
       router.replace('/(tabs)/home');
     }
-  }, [user, isLoading, showSplash, segments, router]);
-
-  if (showSplash) {
-    return (
-      <SafeAreaProvider style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <AnimatedSplash ready={!isLoading} onFinished={() => setSplashRevealDone(true)} />
-      </SafeAreaProvider>
-    );
-  }
+  }, [user, isLoading, segments, router]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-      <Stack.Screen name="add" options={{ presentation: 'modal' }} />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+      </Stack>
+      {showSplash ? <AnimatedSplash ready={!isLoading} onFinished={() => setSplashRevealDone(true)} /> : null}
+    </View>
   );
 }
 
 export default function RootLayout() {
+  // A production build without backend configuration explains that it can't
+  // start, rather than silently running on mock sign-in or sample data
+  // (see config/appMode.ts).
+  if (APP_MODE.configurationError) {
+    return (
+      <SafeAreaProvider>
+        <ConfigurationRequired message={APP_MODE.configurationError} />
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
           <StatusBar style="auto" />
           <RootNavigator />
+          {isDemoMode ? <DemoModeBadge /> : null}
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -10,7 +10,7 @@ export type AskQuestionResult = {
  * screens go through this interface only, so a real provider can be wired
  * in later behind one seam:
  *
- *   AI Provider -> AI Service -> Health Intelligence (screens)
+ *   AI Provider -> AI Service -> screens
  *
  * The contract deliberately separates a record-backed answer from an
  * AI-generated explanation so the UI can always show which is which.

@@ -4,18 +4,27 @@ import { Switch, Text, View } from 'react-native';
 import { Card, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
 import { profileService, type DataSharingSetting } from '../../services/profile/profileService';
+import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
 
 export default function DataSharingScreen() {
   const theme = useTheme();
   const [settings, setSettings] = useState<DataSharingSetting[] | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     profileService.getDataSharingSettings().then(setSettings);
   }, []);
 
   async function toggle(id: string, value: boolean) {
+    setSaveError(null);
     setSettings((prev) => prev?.map((s) => (s.id === id ? { ...s, enabled: value } : s)) ?? prev);
-    await profileService.setDataSharingSetting(id, value);
+    try {
+      await profileService.setDataSharingSetting(id, value);
+    } catch (error) {
+      // Never show a preference as saved when it wasn't.
+      setSettings((prev) => prev?.map((s) => (s.id === id ? { ...s, enabled: !value } : s)) ?? prev);
+      setSaveError(error instanceof ServiceError ? error.userMessage : GENERIC_ERROR_MESSAGE);
+    }
   }
 
   return (
@@ -41,6 +50,11 @@ export default function DataSharingScreen() {
           </Card>
         ))
       )}
+      {saveError ? (
+        <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite">
+          {saveError}
+        </Text>
+      ) : null}
     </ScreenContainer>
   );
 }

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import {
+  EmptyState,
   ErrorState,
   HealthChangeCard,
   HealthHistoryLine,
@@ -14,7 +15,6 @@ import {
 } from '../../components';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
-import { healthStoryYears } from '../../mock';
 import { healthService } from '../../services/health/healthService';
 import type { HealthChange, Trend } from '../../types';
 
@@ -29,15 +29,21 @@ export default function HomeScreen() {
   const theme = useTheme();
   const [changes, setChanges] = useState<HealthChange[] | null>(null);
   const [trends, setTrends] = useState<Trend[] | null>(null);
+  const [storyYears, setStoryYears] = useState<string[]>([]);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setError(false);
     try {
-      const [c, t] = await Promise.all([healthService.getWhatChanged(), healthService.getTrends()]);
+      const [c, t, y] = await Promise.all([
+        healthService.getWhatChanged(),
+        healthService.getTrends(),
+        healthService.getHealthStoryYears(),
+      ]);
       setChanges(c);
       setTrends(t);
+      setStoryYears(y);
     } catch {
       setError(true);
     }
@@ -55,6 +61,7 @@ export default function HomeScreen() {
   }
 
   const isLoading = changes === null && trends === null && !error;
+  const hasNoHistory = !isLoading && (changes ?? []).length === 0 && (trends ?? []).length === 0 && storyYears.length === 0;
 
   if (error) {
     return (
@@ -78,6 +85,13 @@ export default function HomeScreen() {
 
       {isLoading ? (
         <LoadingState label="Loading your Health Memory…" />
+      ) : hasNoHistory ? (
+        <EmptyState
+          title="Your health history starts here"
+          description="Add your first report and it will be stored privately in your Health Memory."
+          actionLabel="Add a record"
+          onActionPress={() => router.push('/add')}
+        />
       ) : (
         <>
           <View style={{ gap: theme.spacing.sm }}>
@@ -107,7 +121,7 @@ export default function HomeScreen() {
               onActionPress={() => router.push('/(tabs)/timeline')}
             />
             <View style={{ paddingHorizontal: theme.spacing.xs, paddingTop: theme.spacing.xs }}>
-              <HealthHistoryLine years={healthStoryYears} />
+              <HealthHistoryLine years={storyYears} />
             </View>
           </View>
 
