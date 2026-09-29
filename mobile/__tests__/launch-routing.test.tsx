@@ -30,8 +30,8 @@ describe('launch routing', () => {
   it('shows the branded launch sequence on cold start', async () => {
     jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(null);
     await render(<RootLayout />);
-    expect(screen.getByLabelText(`Loading ${BRAND.name}`)).toBeTruthy();
-    expect(screen.getByText(BRAND.name)).toBeTruthy();
+    expect(screen.getByLabelText(`Loading ${BRAND.productName}`)).toBeTruthy();
+    expect(screen.getByText(BRAND.productName)).toBeTruthy();
   });
 
   it('new / signed-out user → Welcome', async () => {

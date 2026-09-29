@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
             style={[theme.typography.displayMedium, { color: theme.colors.brandPrimary, textAlign: 'center' }]}
             accessibilityRole="header"
           >
-            {BRAND.name}
+            {BRAND.productName}
           </Text>
           <Text style={[theme.typography.bodyLarge, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
             {BRAND.tagline}

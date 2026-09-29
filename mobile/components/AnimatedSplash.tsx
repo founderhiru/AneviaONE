@@ -199,7 +199,7 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
   const labelProps = {
     accessible: true,
     accessibilityRole: 'progressbar' as const,
-    accessibilityLabel: `Loading ${BRAND.name}`,
+    accessibilityLabel: `Loading ${BRAND.productName}`,
   };
 
   if (reduceMotion) {
@@ -269,7 +269,7 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
             style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, textAlign: 'center', marginBottom: 10 }]}
             accessibilityRole="header"
           >
-            {BRAND.name}
+            {BRAND.productName}
           </Animated.Text>
         </Animated.View>
         <Animated.Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary, textAlign: 'center', opacity: view.line1In }]}>
@@ -289,7 +289,7 @@ function Wordmark({ theme }: { theme: ReturnType<typeof useTheme> }) {
   return (
     <View style={{ alignItems: 'center', marginTop: 32 }}>
       <Animated.Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, marginBottom: 10 }]} accessibilityRole="header">
-        {BRAND.name}
+        {BRAND.productName}
       </Animated.Text>
       <Animated.Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
         {taglineFirst}

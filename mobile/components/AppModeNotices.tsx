@@ -22,7 +22,7 @@ export function ConfigurationRequired({ message }: { message: string }) {
       accessibilityRole="alert"
     >
       <Text style={[theme.typography.headingMedium, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
-        {BRAND.name} isn’t configured
+        {BRAND.productName} isn’t configured
       </Text>
       <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
         This build can’t connect to its secure backend, so it won’t start. No data has been used or stored.

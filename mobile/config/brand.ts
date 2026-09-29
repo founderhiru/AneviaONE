@@ -1,12 +1,15 @@
 /**
  * BRAND CONFIGURATION — single source of truth for product naming.
  *
- * "AneviaOne" is the current WORKING product name (not a final or registered
- * brand). Every screen and component must read the product name from here
- * rather than hard-coding it, so the app can be re-branded later by changing
- * only this file. (Native OS strings in app.json — the home-screen name and
- * permission prompts — are the only other place, because app.json can't
- * import TypeScript.)
+ * The product name below is a WORKING name (not final or registered). Every
+ * screen, component and test must read product naming from `BRAND` — never a
+ * literal string, in any spelling or capitalisation — so the app can be
+ * re-branded by changing only this file.
+ *
+ * Native limitation: app.json can't import TypeScript, so the home-screen
+ * display name (`expo.name`) must be kept in sync by hand. It is the only
+ * other place the name appears; permission prompts there are written without
+ * the product name (iOS/Android already show the app name in the dialog).
  *
  * Branding is presentation only: database tables, storage buckets, bundle
  * identifiers and URL schemes stay product-neutral and must not change with
@@ -18,20 +21,16 @@
  */
 
 const PRODUCT_NAME = 'AneviaOne';
-const PRODUCT_SHORT_NAME = 'AneviaOne';
 
 export const BRAND = {
   /** Working product name, shown on splash/welcome/marketing-style moments. */
   productName: PRODUCT_NAME,
-  /** Compact name for tab bars, headers, and tight spaces. */
-  productShortName: PRODUCT_SHORT_NAME,
+  /** Compact name for tab bars, headers, and tight spaces (same for now). */
+  productShortName: PRODUCT_NAME,
   /** Product category. */
   category: 'Personal Health Intelligence',
   /** Core product promise, used on Welcome and the launch sequence. */
   tagline: 'Every record. Every change. One intelligent health history.',
-  /** Aliases kept so existing screens don't need to change. */
-  name: PRODUCT_NAME,
-  shortName: PRODUCT_SHORT_NAME,
   /** No logo asset yet — render a text wordmark using the product name. */
   logo: null as null,
   /** Core product loop, used in a few explanatory/empty-state contexts. */

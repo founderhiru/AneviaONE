@@ -12,8 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "ai.healthintelligence.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "AneviaOne uses your camera to capture photos of health reports and prescriptions so they can be added to your Health Memory.",
-        "NSPhotoLibraryUsageDescription": "AneviaOne needs access to your photos so you can upload existing health documents."
+        "NSCameraUsageDescription": "Your camera is used to capture photos of health reports and prescriptions so they can be added to your Health Memory.",
+        "NSPhotoLibraryUsageDescription": "Access to your photos lets you upload existing health documents."
       }
     },
     "android": {
@@ -46,13 +46,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "AneviaOne uses your camera to capture photos of health reports and prescriptions."
+          "cameraPermission": "Your camera is used to capture photos of health reports and prescriptions."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "AneviaOne needs access to your photos so you can upload existing health documents."
+          "photosPermission": "Access to your photos lets you upload existing health documents."
         }
       ]
     ],
