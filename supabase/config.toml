@@ -1,0 +1,3 @@
+# Supabase CLI project config (used by `npx supabase link` / `npx supabase db push`).
+# Only the technical project id lives here — it is NOT the consumer brand name.
+project_id = "health-intelligence-app"
