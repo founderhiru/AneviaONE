@@ -6,6 +6,9 @@ import { router } from 'expo-router';
 import { Card, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
 import { profileService } from '../../services/profile/profileService';
+import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
+
+const errorMessage = (error: unknown) => (error instanceof ServiceError ? error.userMessage : GENERIC_ERROR_MESSAGE);
 
 export default function PrivacyScreen() {
   const theme = useTheme();
@@ -13,9 +16,14 @@ export default function PrivacyScreen() {
 
   async function handleDownload() {
     setRequesting('download');
-    await profileService.requestDataDownload();
-    setRequesting(null);
-    Alert.alert('Request received', "We'll prepare your data and notify you when it's ready to download.");
+    try {
+      await profileService.requestDataDownload();
+      Alert.alert('Request received', "We'll prepare your data and notify you when it's ready to download.");
+    } catch (error) {
+      Alert.alert('Download My Data', errorMessage(error));
+    } finally {
+      setRequesting(null);
+    }
   }
 
   function handleDeleteAccount() {
@@ -29,8 +37,13 @@ export default function PrivacyScreen() {
           style: 'destructive',
           onPress: async () => {
             setRequesting('delete');
-            await profileService.requestAccountDeletion();
-            setRequesting(null);
+            try {
+              await profileService.requestAccountDeletion();
+            } catch (error) {
+              Alert.alert('Delete account', errorMessage(error));
+            } finally {
+              setRequesting(null);
+            }
           },
         },
       ]

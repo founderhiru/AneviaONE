@@ -9,6 +9,15 @@
  * `router.push`/`replace`/`back` calls each screen makes, which is what
  * "verify major navigation paths work" means for this test suite.
  */
+
+/**
+ * Screen/UI tests run in explicit DEMO mode (mock sign-in, in-memory
+ * documents, sample Health Memory) so they never need a backend. Production
+ * behaviour is covered by dedicated tests that load the production services
+ * directly or re-load modules with production environment values.
+ */
+process.env.EXPO_PUBLIC_APP_MODE = 'demo';
+
 /**
  * `SafeAreaProvider`'s real implementation measures native layout via
  * `onLayout`, which never fires in the jest test-renderer environment — so

@@ -13,32 +13,32 @@ Backing types:
 - **Edge Function** — server code with the service role, for anything that
   needs secrets (AI keys), cross-table writes, or signed server actions.
 
-All methods should throw a `ServiceError` with a user-safe `userMessage`, a
-`code`, and `retryable`; raw backend errors are never shown. (`ServiceError`
-and the Phase 1 services below exist in the pre-integration ZIP line and are
-**not yet on this branch** — see `PHASE1_BACKEND_INTEGRATION.md`, "Mobile
-Phase 1 port".)
+All methods throw `ServiceError` (`mobile/services/serviceError.ts`) with a
+user-safe `userMessage`, a `code`, and `retryable`; raw backend errors are
+never shown. Every service has a production implementation and a demo one,
+selected once by `config/appMode.ts` (see `MOBILE_PHASE1_INTEGRATION.md`).
 
 ---
 
-## 1. AuthService — `services/auth` · on `main`: phone OTP + Google only · Phase 1 upgrade **pending mobile port**
+## 1. AuthService — `services/auth` · **implemented (Phase 1)**
 
 | Method | Backing |
 |---|---|
-| `sendEmailOtp` / `verifyEmailOtp` *(pending port)* | Supabase Auth `signInWithOtp` / `verifyOtp(type: email)` |
+| `sendEmailOtp` / `verifyEmailOtp` | Supabase Auth `signInWithOtp` / `verifyOtp(type: email)` |
 | `sendMobileOtp` / `verifyMobileOtp` | Supabase Auth (needs SMS provider) |
 | `signInWithGoogle`, `linkIdentity` | Supabase Auth OAuth (PKCE) |
 | `getCurrentUser` | `auth.getSession()` + `profiles` |
-| `completeOnboarding` *(pending port)* | UPDATE `profiles.onboarding_completed_at` |
-| `onSignedOut` *(pending port)*, `signOut` | Supabase Auth |
+| `completeOnboarding` | UPDATE `profiles.onboarding_completed_at` |
+| `onSignedOut`, `signOut` | Supabase Auth |
 
-## 2. DocumentsService — `services/documents` · on `main`: **mock** (`processNewDocument` simulates processing) · real Phase 1 implementation **pending mobile port**, extended in Phase 2
+## 2. DocumentsService — `services/documents` · **implemented (Phase 1)**, extended in Phase 2
 
 ```ts
-// Phase 1 (pending mobile port)
+// Phase 1
 listDocuments(): Promise<StoredDocument[]>                 // documents (status ≠ pending_upload)
 getDocument(id): Promise<StoredDocument | null>             // documents
-uploadDocument(file, onStage): Promise<{ document }>        // documents + storage (reserve → upload → confirm)
+uploadDocument(file, onStage): Promise<UploadResult>        // documents + storage (reserve → upload → confirm);
+                                                            // UploadResult.processing is absent until Phase 2
 getOriginalDocumentUrl(doc): Promise<string>                // storage.createSignedUrl(60 s)
 // Phase 2 additions
 getDocumentPages(documentId): Promise<DocumentPage[]>       // document_pages

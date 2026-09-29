@@ -24,6 +24,9 @@ function __clearSecureStoreForTests() {
 }
 
 module.exports = {
+  AFTER_FIRST_UNLOCK: 0,
+  AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 1,
+  WHEN_UNLOCKED: 2,
   setItemAsync,
   getItemAsync,
   deleteItemAsync,

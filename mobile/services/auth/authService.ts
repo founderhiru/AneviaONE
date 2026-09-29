@@ -1,16 +1,16 @@
-import { isSupabaseConfigured } from '../supabaseClient';
+import { isDemoMode } from '../../config/appMode';
 import { mockAuthService } from './mockAuthService';
 import { supabaseAuthService } from './supabaseAuthService';
 import type { AuthService } from './authTypes';
 
 /**
- * The single entry point screens should import. Automatically selects the
- * real Supabase-backed implementation once configured, and otherwise falls
- * back to the isolated mock so the UI stays fully reviewable without
- * credentials. Never used to fake a "production" success path — the two
- * implementations are kept in separate files precisely so this seam is
- * explicit and auditable.
+ * The single entry point screens should import.
+ *
+ *   production mode → real Supabase Auth, always. If Supabase is not
+ *                     configured the root layout shows a configuration
+ *                     screen; it NEVER silently falls back to the mock.
+ *   demo mode       → the isolated mock (explicit opt-in, visibly badged).
  */
-export const authService: AuthService = isSupabaseConfigured ? supabaseAuthService : mockAuthService;
+export const authService: AuthService = isDemoMode ? mockAuthService : supabaseAuthService;
 
 export * from './authTypes';

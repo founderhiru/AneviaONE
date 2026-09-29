@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { Button, Card, ScreenContainer, SecondaryButton } from '../../components';
-import { PRODUCT_TERMS } from '../../config/brand';
+import { PRODUCT_TERMS, taglineLines } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { whatsappService } from '../../services/whatsapp/whatsappService';
 
 const TOTAL_STEPS = 5;
+const [TAGLINE_HEADLINE, TAGLINE_SUBLINE] = taglineLines();
 
 export default function OnboardingScreen() {
   const theme = useTheme();
@@ -43,10 +44,10 @@ export default function OnboardingScreen() {
         {step === 0 && (
           <View style={{ gap: theme.spacing.sm }}>
             <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]} accessibilityRole="header">
-              Your health has a history.
+              {TAGLINE_HEADLINE}
             </Text>
             <Text style={[theme.typography.headingMedium, { color: theme.colors.textSecondary }]}>
-              Now it has intelligence.
+              {TAGLINE_SUBLINE}
             </Text>
           </View>
         )}

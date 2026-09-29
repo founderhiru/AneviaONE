@@ -1,4 +1,5 @@
 import type { AuthProvider, User } from '../../types';
+import { isValidEmail, maskEmail, normalizeEmail } from './authInput';
 import { secureSession } from './secureSession';
 import type {
   AuthService,
@@ -9,12 +10,12 @@ import type {
 } from './authTypes';
 
 /**
- * MOCK, DEVELOPMENT-ONLY implementation — clearly isolated in its own file
- * and only ever selected by `authService.ts` when Supabase is not
- * configured (see `isSupabaseConfigured`). It never claims a real OTP was
- * sent and never fakes a real Google identity token; it simulates the UX
- * flow and timing only, using an obviously-fake fixed code so reviewers can
- * exercise the screens end to end.
+ * MOCK, DEMO-ONLY implementation — clearly isolated in its own file and only
+ * ever selected by `authService.ts` when the app is explicitly built in demo
+ * mode (`EXPO_PUBLIC_APP_MODE=demo`, see config/appMode.ts). Production never
+ * falls back to it. It never claims a real OTP was sent and never fakes a
+ * real Google identity token; it simulates the UX flow and timing only,
+ * using an obviously-fake fixed code so reviewers can exercise the screens.
  */
 const MOCK_OTP = '123456';
 
@@ -58,6 +59,27 @@ export const mockAuthService: AuthService = {
     return { success: true, user, isNewUser: !existing };
   },
 
+  async sendEmailOtp(email: string): Promise<SendOtpResult> {
+    await delay(600);
+    if (!isValidEmail(email)) return { success: false, errorMessage: 'Enter a valid email address.' };
+    return { success: true };
+  },
+
+  async verifyEmailOtp(email: string, otp: string): Promise<VerifyOtpResult> {
+    await delay(500);
+    if (otp !== MOCK_OTP) {
+      return { success: false, errorMessage: 'Incorrect code. Please try again.' };
+    }
+    const normalized = normalizeEmail(email);
+    const existing = await secureSession.load();
+    const user =
+      existing?.email === normalized
+        ? existing
+        : buildUser({ provider: 'email', displayValue: maskEmail(normalized), email: normalized });
+    await secureSession.save(user);
+    return { success: true, user, isNewUser: !user.onboardingComplete };
+  },
+
   async signInWithGoogle(): Promise<GoogleSignInResult> {
     await delay(700);
     // Mock mode never fabricates a "successful" real Google identity in a
@@ -91,6 +113,15 @@ export const mockAuthService: AuthService = {
 
   async getCurrentUser(): Promise<User | null> {
     return secureSession.load();
+  },
+
+  async completeOnboarding(): Promise<void> {
+    const existing = await secureSession.load();
+    if (existing) await secureSession.save({ ...existing, onboardingComplete: true });
+  },
+
+  onSignedOut() {
+    return () => undefined;
   },
 
   async signOut(): Promise<void> {

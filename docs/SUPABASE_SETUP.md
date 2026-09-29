@@ -6,11 +6,9 @@ Budget ~30–40 minutes.
 
 ## 0. Before you start
 
-- [ ] Know what is on this branch: the **database** (steps 1–4) is ready.
-      Connecting the **app** (steps 5–6) needs the *mobile Phase 1 port*
-      first — on GitHub `main` the app has no email sign-in, stores the session
-      unencrypted, and simulates uploads. See
-      `PHASE1_BACKEND_INTEGRATION.md` → "Mobile Phase 1 port".
+- [ ] Use a build that includes the mobile Phase 1 integration
+      (`docs/MOBILE_PHASE1_INTEGRATION.md`): email sign-in, encrypted session,
+      real private uploads, explicit demo/production modes.
 - [ ] Review the decisions listed in "Decisions" at the end of this file.
 - [ ] You will need: a password manager, access to your email inbox.
 - [ ] You will **never** need the **service_role / secret** key for these
@@ -98,15 +96,11 @@ Also check: **Storage** → the bucket `medical-documents` shows as
 
 ## 5. Connect the app
 
-> **Requires the mobile Phase 1 port** (not yet on `main`). Until then, stop
-> after step 4 — the database is fully set up and verified; nothing else is
-> needed to keep it safe.
-
 1. **Project Settings → Data API**: copy the **Project URL**.
 2. **Project Settings → API Keys**: copy the **Publishable key**
    (`sb_publishable_…`; on older projects, the **anon public** key).
    Do **not** copy the secret / service_role key.
-3. Open `mobile/.env` and change it to:
+3. Create `mobile/.env` (copy `mobile/.env.example`; it is git-ignored) and set:
 
    ```
    EXPO_PUBLIC_APP_MODE=production
@@ -115,21 +109,22 @@ Also check: **Storage** → the bucket `medical-documents` shows as
    ```
 
 4. Restart the app server with a clean cache: `cd mobile && npx expo start -c`.
-   The yellow **DEMO** badge disappears — you are now on the real backend.
+   No **DEMO** badge = you are on the real backend. If you see
+   "AneviaOne isn’t configured", a value is missing.
 
 ## 6. Try the real flow
-
-> **Requires the mobile Phase 1 port.**
 
 1. In the app: **Continue with Email** → enter your email → type the 6-digit
    code from the email.
 2. Finish onboarding → **Add** → **Upload document** → pick a PDF.
-3. You should see **Report saved securely**. Tap **View document** →
+3. You should see **Stored securely**. Tap **View document** →
    **View Original** opens your PDF.
-4. In the dashboard: **Table Editor → documents** shows one row with status
+4. Home, Timeline and Health show an empty history (reports aren’t read until
+   Phase 2) — that is expected; no sample data is shown in production.
+5. In the dashboard: **Table Editor → documents** shows one row with status
    `uploaded`; **Storage → medical-documents** shows
    `<your-user-id>/documents/<document-id>/original.pdf`.
-5. Close and reopen the app — you should still be signed in.
+6. Close and reopen the app — you should still be signed in.
 
 ## Optional, later
 

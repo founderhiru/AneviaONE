@@ -1,17 +1,17 @@
+import { isDemoMode } from '../../config/appMode';
 import { mockConversations, suggestedQuestions } from '../../mock/conversations';
 import type { AiService, AskQuestionResult } from './aiTypes';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Mock AI service. Answers are canned per known mock question so the "Ask
- * My Health" screen has something believable to render; a real
- * implementation will call an actual AI Provider from behind this same
- * interface. Never generates diagnosis or treatment content — see
- * `docs/MOBILE_ARCHITECTURE.md` for the product safety rule this
- * enforces.
+ * DEMO MODE ONLY. Answers are canned per known sample question so the "Ask
+ * My Health" screen can be reviewed; they describe the fictional sample
+ * Health Memory, never a real person. A real implementation (Phase 3,
+ * server-side `ask-health`) sits behind this same interface. Never generates
+ * diagnosis or treatment content — see `docs/MOBILE_ARCHITECTURE.md`.
  */
-export const aiService: AiService = {
+export const demoAiService: AiService = {
   async askQuestion(question: string): Promise<AskQuestionResult> {
     await delay(900);
     const normalized = question.trim().toLowerCase();
@@ -76,3 +76,27 @@ export const aiService: AiService = {
     return mockConversations.flatMap((c) => c.messages);
   },
 };
+
+/** Shown in production until reports can be read (Phase 2) and questions
+ * answered from the person's own records (Phase 3). */
+export const ASK_NOT_AVAILABLE_MESSAGE =
+  'Ask My Health will answer from your own records once your reports have been read. That isn’t available yet — your uploaded reports are stored safely in the meantime.';
+
+/**
+ * PRODUCTION (Phase 1). There is no grounded answering yet, so it never
+ * returns record-backed text or evidence — only an honest explanation.
+ * No sample answers, no suggestions about data the person doesn't have.
+ */
+export const productionAiService: AiService = {
+  async askQuestion() {
+    return { aiExplanation: { text: ASK_NOT_AVAILABLE_MESSAGE } };
+  },
+  async getSuggestedQuestions() {
+    return [];
+  },
+  async getConversationHistory() {
+    return [];
+  },
+};
+
+export const aiService: AiService = isDemoMode ? demoAiService : productionAiService;

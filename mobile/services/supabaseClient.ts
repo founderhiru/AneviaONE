@@ -1,47 +1,58 @@
 import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import { AppState, type AppStateStatus } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+import { APP_MODE, SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/appMode';
+import { secureStorageAdapter } from './auth/secureStorageAdapter';
 
 /**
  * Supabase client factory.
  *
- * SECURITY: only the public anon key belongs here — never the service-role
- * key, and never in the mobile bundle. Values come from `app.json`'s
- * `extra` block (populated from environment variables at build/publish
- * time), never hard-coded. Session storage uses AsyncStorage for the
- * (non-sensitive) session token cache, as recommended by Supabase's
- * React Native guide, while anything more sensitive goes through
- * `expo-secure-store` in `services/auth/secureSession.ts`.
+ * SECURITY: only the client-safe project URL and anon (publishable) key
+ * belong in the app. Every table and the document bucket are protected by
+ * Row Level Security (see /supabase/migrations), so this key alone grants a
+ * caller nothing beyond their own signed-in data. The service-role key and
+ * any AI provider keys must NEVER be added here — they live only in
+ * server-side Edge Function secrets.
+ *
+ * The session (access + refresh token) is persisted in the Keychain /
+ * Keystore through `secureStorageAdapter`, so sign-in survives app restarts.
  */
 
-type SupabaseExtra = {
-  supabaseUrl?: string;
-  supabaseAnonKey?: string;
-};
-
-const extra = (Constants.expoConfig?.extra ?? {}) as SupabaseExtra;
-
-export const SUPABASE_URL = extra.supabaseUrl ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-export const SUPABASE_ANON_KEY = extra.supabaseAnonKey ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
-
-export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const isSupabaseConfigured = APP_MODE.supabaseConfigured;
 
 let client: SupabaseClient | null = null;
+let appStateSubscribed = false;
 
-/** Returns the shared Supabase client, or `null` when not yet configured
- * (mock services fall back automatically — see `services/auth/authService.ts`). */
+/** Returns the shared Supabase client, or `null` in demo mode / when not
+ * configured (production mode then shows a configuration screen instead of
+ * silently falling back to mock data). */
 export function getSupabaseClient(): SupabaseClient | null {
-  if (!isSupabaseConfigured) return null;
+  if (APP_MODE.mode !== 'production' || !isSupabaseConfigured) return null;
   if (!client) {
     client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
-        storage: AsyncStorage,
+        storage: secureStorageAdapter,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        // OAuth (Google) returns a one-time ?code= that is exchanged for a
+        // session on-device; tokens never travel in the redirect URL.
+        flowType: 'pkce',
       },
     });
+    subscribeToAppState(client);
   }
   return client;
+}
+
+/** Refresh tokens only while the app is in the foreground (Supabase's
+ * recommended React Native setup); on resume, the session is refreshed. */
+function subscribeToAppState(supabase: SupabaseClient) {
+  if (appStateSubscribed) return;
+  appStateSubscribed = true;
+  AppState.addEventListener('change', (state: AppStateStatus) => {
+    if (state === 'active') supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
 }

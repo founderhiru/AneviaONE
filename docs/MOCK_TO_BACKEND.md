@@ -1,69 +1,56 @@
 # Mock → backend replacement map
 
-Inventory of every place the mobile app on **GitHub `main`** (`edd7b10`) uses
-mock/local data, and what replaces it. The database side for all of it is
-designed in `DATABASE_SCHEMA.md` and contracted in `BACKEND_CONTRACTS.md`.
+Where the mobile app (branch `phase-1-mobile-integration`) still uses
+mock/sample data, and what replaces it. The database side is designed in
+`DATABASE_SCHEMA.md` and contracted in `BACKEND_CONTRACTS.md`.
 
-## Real today
+**Rule since Phase 1:** sample data exists only in **demo mode**
+(`EXPO_PUBLIC_APP_MODE=demo`, with a visible badge). In production every
+service is either real or honestly empty/unavailable — the app never shows
+sample health data as the person's own.
 
-| Area | State on `main` |
+## Real in production (Phase 1)
+
+| Area | Implementation |
 |---|---|
-| Supabase client | exists; selected only when `EXPO_PUBLIC_SUPABASE_*` are set, otherwise the app **silently uses mock sign-in** |
-| Sign-in | phone OTP + Google via Supabase Auth when configured (needs an SMS provider / Google credentials); no email sign-in |
+| Sign-in, session, sign-out, onboarding flag | `supabaseAuthService` + `profiles`; session in Keychain/Keystore |
+| Upload a PDF, list/view my documents, open original | `supabaseDocumentsService` + `documents` + private `medical-documents` bucket |
+| Me → document count | real count from `documentsService` |
 
-Everything else is mock. The Phase 1 real implementations (auth hardening,
-email sign-in, real PDF upload, document viewer, My documents) exist in the
-pre-integration ZIP line and are listed in `PHASE1_BACKEND_INTEGRATION.md`
-("Mobile Phase 1 port").
+## Honest empty/unavailable in production (until the listed phase)
 
-## Mock data sources (`mobile/mock/`)
-
-| Mock export | Used by (via) | Replaced by | Phase |
+| Service | Production behaviour | Replaced by | Phase |
 |---|---|---|---|
-| `mockObservations`, `getObservationsByIds`, `getObservationsByName` | Health, Trends, document viewer (`documentsService.getObservationsForDocument`), Timeline detail (**direct import**) | `observations` / `current_observations` | 2 |
-| `mockTrends`, `getTrendById`, `getTrendByMetricName` | Home, Health, Trend detail (`healthService`) | query over `current_observations` by `code` | 2 |
-| `mockChanges` | Home, What Changed, document viewer "AI explanation" / "View previous result" (`healthService.getWhatChanged`), Add Record success counts (`documentsService`) | `current_insights` + `insight_sources` | 2 |
-| `mockTimeline`, `getEventById` | Timeline, Timeline detail (`healthService`) | `health_events` | 2 |
-| `groupTimelineByYear` | Timeline (**direct import**) | not data — move to a `utils/` helper | 2 (move) |
-| `healthStoryYears` | Home (**direct import**) | derived from `health_events` years | 2 |
-| `mockMedications` | Health, Medications (`healthService`) | `current_medications` | 2 |
-| `mockConditions`, `mockAllergies` | Health (`healthService`) | `current_conditions`, `current_allergies` | 2 |
-| `mockProcedures`, `mockVaccinations` | Health (`healthService`) | `current_procedures` by `procedure_kind` | 2 |
-| `mockHealthProfile` | Me (`healthService.getHealthProfile`), `profileService` | RPC `get_health_summary()` | 2 |
-| `mockDocuments`, `getDocumentById` | Document viewer, Add Record result (`documentsService`) | `documents` (+ `document_pages`) | 1 (port) / 2 |
-| `mockConversations`, `suggestedQuestions` | Ask (`aiService`) | Edge Function `ask-health`; conversation tables TBD | 3 |
+| `healthService` (`productionHealthService`) | every list empty; lookups undefined; screens show their empty states | `HealthRecordService` over `current_*` views, `insights`, `health_events` | 2 |
+| `aiService` (`productionAiService`) | explains that Ask isn't available yet; no record answers/evidence | `ask-health` Edge Function | 3 |
+| `profileService` (`productionProfileService`) | sharing options shown off and not changeable; download/delete report "not available yet" | `consents`; Edge Functions `export-my-data`, `delete-account` | 2 / pre-launch |
+| Add Record success counts | not shown (no processing summary) — "Stored securely" instead | `UploadResult.processing` from Phase 2 processing | 2 |
 
-## Mock services on `main`
+## Demo-mode sample data (`mobile/mock/`) — kept intentionally for UI work
 
-| Service | Mocked methods | Replaced by | Phase |
-|---|---|---|---|
-| `documentsService` | `processNewDocument` (ignores the picked file, simulates 5 steps, returns `mockDocuments[0]` + counts derived from mock data), `getDocuments`, `getDocumentById`, `getObservationsForDocument` | Phase 1 port: real upload/list/view (`documents`, `medical-documents`); Phase 2: `getProcessingSummary()` for the success-screen counts | 1 (port) / 2 |
-| `healthService` | all 12 methods | `HealthRecordService` (BACKEND_CONTRACTS §3) | 2 |
-| `aiService` | `askQuestion` (keyword-matched canned answers), suggestions, history | `AskService` → `ask-health` | 3 |
-| `profileService` | health profile counts, data-sharing toggles (in-memory), export/delete (stubs) | `get_health_summary`, `consents`, Edge Functions `export-my-data`, `delete-account` | 2 / pre-launch |
-| `whatsappService` | connect/disconnect/status (in-memory; also used by the onboarding WhatsApp step) | Edge Functions + `whatsapp_connections` | later |
-| `authService` | selects `mockAuthService` whenever Supabase is not configured | Phase 1 port: explicit demo mode; production never falls back | 1 (port) |
+| Mock export | Used via (demo only) |
+|---|---|
+| `mockObservations`, `mockTrends`, `mockChanges`, `mockTimeline`, `mockMedications`, `mockConditions`, `mockAllergies`, `mockProcedures`, `mockVaccinations`, `mockHealthProfile`, `healthStoryYears` | `demoHealthService` |
+| `mockConversations`, `suggestedQuestions` | `demoAiService` |
+| `mockDocuments`, `getDocumentById` | `sampleDocumentsService` (viewer for sample records, labelled "Sample data"), `demoDocumentsService` sample-derived counts |
 
-## Screens (on `main`)
+Still imported directly by screens (safe in production because the screens
+are only reachable with data that production doesn't return):
+`groupTimelineByYear` (Timeline — a pure helper, should move to `utils/`),
+`getObservationsByIds` (Timeline detail — only for sample events).
 
-| Screen | Data | Real? |
+## Unchanged mocks (by design, not Phase 1)
+
+| Service | State | Replaced by |
 |---|---|---|
-| Welcome, Login, OTP | auth | real only when configured; otherwise **mock without notice** |
-| Onboarding (incl. WhatsApp step) | whatsappService | ❌ mock |
-| Home, Timeline, Timeline detail, Health, Trend detail, What Changed, Medications | healthService / mock | ❌ mock |
-| Ask My Health | aiService | ❌ mock |
-| Add Record | documentsService.processNewDocument | ❌ simulated processing |
-| Document viewer (incl. AI explanation block) | documentsService + healthService | ❌ mock |
-| Me | counts | ❌ mock (identity real when configured) |
-| Privacy & Security, Data Sharing | profileService | ❌ stubs / in-memory |
-| Doctor Brief, Family | static | ❌ placeholder |
-| WhatsApp | whatsappService | ❌ mock (by design) |
+| `whatsappService` | in-memory preview with a "Preview only" notice (also the onboarding WhatsApp step) | Edge Functions + `whatsapp_connections` (later) |
+| Doctor Brief, Family | static placeholders | later phases |
 
-## Recommended order
+## Next
 
-1. **Mobile Phase 1 port** onto `main` (reviewed separately — touches screens).
-2. **Phase 2:** `process-document` → facts → `HealthRecordService` →
-   evidence viewer with `document_pages`; real success-screen counts.
-3. **Profile:** `get_health_summary`, consents for Data Sharing.
-4. **Before real users:** `delete-account`, `export-my-data`.
-5. **Phase 3:** `ask-health`. Later: WhatsApp, notifications, Doctor Brief, Family.
+1. **Phase 2:** `process-document` → facts → `HealthRecordService` replaces
+   `productionHealthService`; evidence viewer with `document_pages`; real
+   success-screen counts.
+2. **Profile:** `get_health_summary`, consents for Data Sharing.
+3. **Before real users:** `delete-account`, `export-my-data`.
+4. **Phase 3:** `ask-health`. Later: WhatsApp, notifications, Doctor Brief, Family.

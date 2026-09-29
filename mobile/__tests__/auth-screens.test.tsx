@@ -14,6 +14,7 @@ import LoginScreen from '../app/(auth)/login';
 import OnboardingScreen from '../app/(auth)/onboarding';
 import OtpScreen from '../app/(auth)/otp';
 import WelcomeScreen from '../app/(auth)/welcome';
+import { BRAND, taglineLines } from '../config/brand';
 import { renderWithAuth } from './testUtils';
 
 const { __clearSecureStoreForTests } = require('expo-secure-store');
@@ -26,7 +27,7 @@ beforeEach(() => {
 describe('Welcome screen', () => {
   it('shows the brand-neutral name/tagline and both entry points', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByText('Health Intelligence')).toBeTruthy();
+    expect(screen.getByText(BRAND.productName)).toBeTruthy();
     expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
     expect(screen.getByTestId('continue-with-google')).toBeTruthy();
   });
@@ -124,7 +125,8 @@ describe('Onboarding screen', () => {
   it('walks through all 5 steps and lets a user skip to Home', async () => {
     await renderWithAuth(<OnboardingScreen />);
 
-    expect(screen.getByText('Your health has a history.')).toBeTruthy();
+    expect(screen.getByText(taglineLines()[0])).toBeTruthy();
+    expect(screen.getByText(taglineLines()[1])).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByTestId('onboarding-build-memory'));
     });

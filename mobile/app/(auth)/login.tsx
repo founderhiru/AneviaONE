@@ -6,19 +6,22 @@ import { Button, ScreenContainer, TextInput } from '../../components';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/auth/authService';
+import { isValidEmail } from '../../services/auth/authInput';
 
 /**
- * Handles both auth entry points. Mobile OTP is the primary/default path
- * (per product direction: better suited to an India-first consumer health
- * product than email/password); Google is offered as the secondary option.
+ * Handles the auth entry points. Mobile OTP is the primary/default path
+ * (India-first); email one-time code (no password) and Google are
+ * secondary options. All three end in the same Supabase account model.
  */
 export default function LoginScreen() {
   const theme = useTheme();
   const { refreshUser } = useAuth();
   const { method } = useLocalSearchParams<{ method?: string }>();
   const isGoogle = method === 'google';
+  const isEmail = method === 'email';
 
   const [mobileNumber, setMobileNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [errorText, setErrorText] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -33,6 +36,18 @@ export default function LoginScreen() {
       return;
     }
     router.push({ pathname: '/(auth)/otp', params: { mobileNumber } });
+  }
+
+  async function handleSendEmailCode() {
+    setErrorText(undefined);
+    setSending(true);
+    const result = await authService.sendEmailOtp(email);
+    setSending(false);
+    if (!result.success) {
+      setErrorText(result.errorMessage);
+      return;
+    }
+    router.push({ pathname: '/(auth)/otp', params: { email: email.trim() } });
   }
 
   async function handleGoogleContinue() {
@@ -63,6 +78,35 @@ export default function LoginScreen() {
           ) : null}
         </View>
         <Button label="Continue with Google" onPress={handleGoogleContinue} loading={googleLoading} testID="google-oauth-continue" />
+      </ScreenContainer>
+    );
+  }
+
+  if (isEmail) {
+    return (
+      <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'space-between' }}>
+        <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.md }}>
+          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
+            Enter your email
+          </Text>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
+            We&rsquo;ll email you a one-time code to verify it&rsquo;s you. No password needed.
+          </Text>
+          <TextInput
+            label="Email"
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={email}
+            onChangeText={setEmail}
+            errorText={errorText}
+            testID="email-input"
+          />
+        </View>
+        <Button label="Send code" onPress={handleSendEmailCode} loading={sending} disabled={!isValidEmail(email)} testID="send-email-code" />
       </ScreenContainer>
     );
   }
