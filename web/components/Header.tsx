@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { Icon } from './Icon';
 import { Logo } from './Logo';
@@ -13,31 +13,22 @@ import { NAV_GROUPS, NAV_LINKS } from '@/lib/nav';
 export function Header() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
 
   const rootRef = useRef<HTMLElement | null>(null);
   const panelsRef = useRef<HTMLDivElement | null>(null);
   const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
-  const closeTimer = useRef<number | undefined>(undefined);
 
   const closeAll = useCallback(() => {
-    window.clearTimeout(closeTimer.current);
     setOpenId(null);
     setMobileOpen(false);
   }, []);
 
-  const cancelClose = () => window.clearTimeout(closeTimer.current);
-  const scheduleClose = () => {
-    window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => setOpenId(null), 180);
+  // No hover-intent timers: a panel opens the moment a trigger is hovered and
+  // closes the moment the pointer leaves the header (panels are inside it, and
+  // a CSS bridge covers the gap). The scrolled shadow is scroll-driven CSS.
+  const onHeaderPointerLeave = (e: PointerEvent<HTMLElement>) => {
+    if (e.pointerType === 'mouse') setOpenId(null);
   };
-
-  // Shadow once the page scrolls.
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   // While a menu is open: Escape closes (and returns focus), outside press closes.
   useEffect(() => {
@@ -49,7 +40,7 @@ export function Header() {
       if (id) triggers.current[id]?.focus();
       else document.getElementById('mobile-toggle')?.focus();
     };
-    const onPointer = (e: PointerEvent) => {
+    const onPointer = (e: globalThis.PointerEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) closeAll();
     };
     document.addEventListener('keydown', onKey);
@@ -78,11 +69,16 @@ export function Header() {
   };
 
   return (
-    <header ref={rootRef} className={`header${scrolled ? ' is-scrolled' : ''}${mobileOpen ? ' is-drawer' : ''}`} onBlur={onBlur}>
+    <header
+      ref={rootRef}
+      className={`header${mobileOpen ? ' is-drawer' : ''}`}
+      onBlur={onBlur}
+      onPointerLeave={onHeaderPointerLeave}
+    >
       <div className="container header__inner">
         <Logo />
 
-        <nav className="header__nav" aria-label="Primary" onPointerLeave={scheduleClose} onPointerEnter={cancelClose}>
+        <nav className="header__nav" aria-label="Primary">
           <ul className="header__list">
             {NAV_GROUPS.map((g) => {
               const isOpen = openId === g.id;
@@ -98,10 +94,7 @@ export function Header() {
                     aria-controls={`mega-${g.id}`}
                     onClick={() => setOpenId(isOpen ? null : g.id)}
                     onPointerEnter={(e) => {
-                      if (e.pointerType === 'mouse') {
-                        cancelClose();
-                        setOpenId(g.id);
-                      }
+                      if (e.pointerType === 'mouse') setOpenId(g.id);
                     }}
                     onKeyDown={(e) => onTriggerKey(e, g.id)}
                   >
@@ -121,7 +114,12 @@ export function Header() {
           </ul>
         </nav>
 
-        <div className="header__actions">
+        <div
+          className="header__actions"
+          onPointerEnter={(e) => {
+            if (e.pointerType === 'mouse') setOpenId(null);
+          }}
+        >
           {LINKS.signIn ? (
             <a href={LINKS.signIn} className="header__signin">
               Sign In
@@ -152,12 +150,7 @@ export function Header() {
       </div>
 
       {/* Desktop mega panels — absolutely positioned, so opening never shifts layout. */}
-      <div
-        ref={panelsRef}
-        className="mega"
-        onPointerEnter={cancelClose}
-        onPointerLeave={scheduleClose}
-      >
+      <div ref={panelsRef} className="mega">
         <div className="container">
           <div className="mega__frame">
             {NAV_GROUPS.map((g) => (

@@ -13,15 +13,19 @@ const clean = (value: string | undefined) => {
   return v ? v : undefined;
 };
 
+// The product name is defined once; every other string derives from it.
+const NAME = 'AneviaOne';
+const CATEGORY = 'Personal Health Intelligence';
+
 export const BRAND = {
-  name: 'AneviaOne',
-  category: 'Personal Health Intelligence',
+  name: NAME,
+  category: CATEGORY,
   parent: 'MedhaIQ Systems',
   tagline: 'Every record. Every change. One intelligent health history.',
   promise: 'Your health has a history. Now it has intelligence.',
   description:
-    'AneviaOne brings your health records, reports, medications and changes together into one intelligent health history.',
-  title: 'AneviaOne | Personal Health Intelligence',
+    `${NAME} brings your health records, reports, medications and changes together into one intelligent health history.`,
+  title: `${NAME} | ${CATEGORY}`,
 } as const;
 
 export const SITE = {
@@ -41,6 +45,16 @@ export const LINKS = {
   // TODO(launch): set to a monitored inbox.
   contactEmail: clean(process.env.NEXT_PUBLIC_CONTACT_EMAIL),
 } as const;
+
+/**
+ * Two-tone wordmark derived from BRAND.name, so the logo, app-screen mockups
+ * and OG image follow any change to the name or its capitalization.
+ * "AneviaOne" / "AneviaONE" → ["Anevia", "One" | "ONE"].
+ */
+export const WORDMARK = (() => {
+  const m = /^(.+?)(one)$/i.exec(BRAND.name);
+  return m ? { lead: m[1], accent: m[2] } : { lead: BRAND.name, accent: '' };
+})();
 
 /** Anchor on the home page where the download buttons live. */
 export const DOWNLOAD_ANCHOR = '/#download';

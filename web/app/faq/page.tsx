@@ -3,6 +3,7 @@ import { Icon } from '@/components/Icon';
 import { Reveal } from '@/components/Reveal';
 import { FAQS } from '@/lib/pages';
 import { pageMetadata } from '@/lib/metadata';
+import { BRAND } from '@/lib/config';
 
 export const metadata = pageMetadata('faq');
 
@@ -27,13 +28,13 @@ export default function FaqPage() {
         eyebrow="FAQ"
         headline="Questions,"
         accent="answered."
-        lede="Straight answers about what AneviaOne does, and what it doesn’t."
+        lede={`Straight answers about what ${BRAND.name} does, and what it doesn’t.`}
       />
       <section className="section page-section">
         <div className="container prose">
           <div className="faq">
-            {FAQS.map((f, i) => (
-              <Reveal key={f.q} delay={Math.min(i, 5) * 40}>
+            {FAQS.map((f) => (
+              <Reveal key={f.q}>
                 <details className="faq__item">
                   <summary className="faq__q">
                     <span>{f.q}</span>

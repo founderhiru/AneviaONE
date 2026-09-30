@@ -1,9 +1,10 @@
 import { Icon, type IconName } from './Icon';
 import { Reveal } from './Reveal';
+import { BRAND } from '@/lib/config';
 
 const STEPS: { n: string; title: string; text: string; icon: IconName; tone: string }[] = [
   { n: '01', title: 'Capture', text: 'Upload a report, scan a document or send through WhatsApp.', icon: 'upload', tone: 'blue' },
-  { n: '02', title: 'Understand', text: 'AneviaOne extracts relevant information and organizes it.', icon: 'scan', tone: 'teal' },
+  { n: '02', title: 'Understand', text: `${BRAND.name} extracts relevant information and organizes it.`, icon: 'scan', tone: 'teal' },
   { n: '03', title: 'Remember', text: 'Your information becomes part of your longitudinal health history.', icon: 'layers', tone: 'lavender' },
   { n: '04', title: 'Compare', text: 'See meaningful changes, trends and patterns across months and years.', icon: 'compare', tone: 'mint' },
   { n: '05', title: 'Ask', text: 'Ask questions about your health history and get evidence-based answers.', icon: 'chat', tone: 'cream' },
@@ -14,15 +15,15 @@ export function HowItWorks() {
     <section id="how" className="section how" aria-labelledby="how-title">
       <div className="container">
         <Reveal className="section-head section-head--center">
-          <p className="eyebrow">How AneviaOne works</p>
+          <p className="eyebrow">How {BRAND.name} works</p>
           <h2 id="how-title" className="h2">
             From records to understanding.
           </h2>
         </Reveal>
 
         <ol className="flow">
-          {STEPS.map((s, i) => (
-            <Reveal as="li" key={s.n} delay={i * 90} className={`flow__step tone-${s.tone}`}>
+          {STEPS.map((s) => (
+            <Reveal as="li" key={s.n} className={`flow__step tone-${s.tone}`}>
               <span className="flow__marker">
                 <Icon name={s.icon} size={26} />
               </span>

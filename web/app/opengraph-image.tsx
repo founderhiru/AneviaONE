@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-import { BRAND } from '@/lib/config';
+import { BRAND, WORDMARK } from '@/lib/config';
 
 export const alt = `${BRAND.name} — ${BRAND.category}`;
 export const size = { width: 1200, height: 630 };
@@ -23,7 +23,8 @@ export default function OpenGraphImage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', fontSize: 44, fontWeight: 700, letterSpacing: -1.5 }}>
-          Anevia<span style={{ color: '#34bfdc' }}>One</span>
+          {WORDMARK.lead}
+          <span style={{ color: '#34bfdc' }}>{WORDMARK.accent}</span>
           <span style={{ marginLeft: 22, fontSize: 20, letterSpacing: 4, textTransform: 'uppercase', color: '#9fb2cf', fontWeight: 600 }}>
             {BRAND.category}
           </span>

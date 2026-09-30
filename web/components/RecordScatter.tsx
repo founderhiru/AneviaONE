@@ -1,26 +1,31 @@
+import type { CSSProperties } from 'react';
+
 import { HomeScreen } from './PhoneScreens';
 import { Phone } from './Phone';
 import { Icon } from './Icon';
 import { RECORD_CHIPS } from '@/lib/sample';
+import { BRAND } from '@/lib/config';
 
 /**
  * Hero visual: six different records around one phone, tied to it by thin
  * teal/blue lines — "Different records. One connected story."
  * Coordinates are in a 100 × 106 space so lines and chips stay aligned at any size.
+ * Static by design: no float/bob loops, so the hero never repaints on idle.
  */
 const H = 106;
 // [centre x, centre y, phone-edge y] for each chip in RECORD_CHIPS order.
+// The phone spans x 26–74 (see .scatter__phone); chips are 22 wide.
 const LAYOUT: [number, number, number][] = [
-  [13.5, 14, 25],
-  [13.5, 46, 47],
-  [13.5, 80, 70],
-  [86.5, 20, 29],
-  [86.5, 53, 53],
-  [86.5, 87, 77],
+  [12, 16, 24],
+  [12, 50, 48],
+  [12, 84, 74],
+  [88, 24, 30],
+  [88, 58, 56],
+  [88, 90, 80],
 ];
-const CHIP_HALF = 12;
-const EDGE_L = 28;
-const EDGE_R = 72;
+const CHIP_HALF = 11;
+const EDGE_L = 26;
+const EDGE_R = 74;
 
 export function RecordScatter() {
   return (
@@ -48,7 +53,7 @@ export function RecordScatter() {
       </svg>
 
       <div className="scatter__phone">
-        <Phone label="AneviaOne Home screen showing a health timeline from 2019 to 2026 and a health snapshot">
+        <Phone label={`${BRAND.name} Home screen showing a health timeline from 2019 to 2026 and a health snapshot`}>
           <HomeScreen />
         </Phone>
       </div>
@@ -58,8 +63,8 @@ export function RecordScatter() {
         return (
           <div
             key={`${c.year}-${c.label}`}
-            className={`rchip tone-${c.tone}`}
-            style={{ left: `${cx}%`, top: `${(cy / H) * 100}%`, animationDelay: `${i * -1.1}s` }}
+            className={`rchip rchip--${cx < 50 ? 'l' : 'r'} tone-${c.tone}`}
+            style={{ '--x': `${cx}%`, top: `${(cy / H) * 100}%` } as CSSProperties}
           >
             <span className="rchip__icon">
               <Icon name={c.icon} size={18} />

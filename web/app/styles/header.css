@@ -11,8 +11,8 @@
 .logo__dot--lead { fill: var(--teal-300); }
 .logo__text { display: flex; flex-direction: column; line-height: 1.05; }
 .logo__name {
-  font-size: 1.36rem;
-  font-weight: 760;
+  font-size: 1.44rem;
+  font-weight: 770;
   letter-spacing: -0.04em;
   color: var(--navy-800);
 }
@@ -43,9 +43,9 @@
   background: var(--navy-950);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
 }
-a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24, 51, 0.3); }
+a.store:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(4, 24, 51, 0.3); }
 .store__text { display: flex; flex-direction: column; line-height: 1.1; }
 .store__small { font-size: 0.66rem; font-weight: 500; letter-spacing: 0.02em; opacity: 0.85; }
 .store__big { font-size: 1.16rem; font-weight: 640; letter-spacing: -0.02em; }
@@ -70,22 +70,43 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
 .stores--light .store__soon { background: var(--navy-800); color: #fff; }
 
 /* ---------- Header ---------- */
+@keyframes header-raise {
+  to {
+    border-bottom-color: var(--line);
+    box-shadow: var(--sh-xs);
+    background-color: rgba(248, 248, 245, 0.94);
+  }
+}
 .header {
   position: sticky;
   top: 0;
   z-index: 100;
   height: var(--header-h);
-  background: rgba(248, 248, 245, 0.84);
-  -webkit-backdrop-filter: saturate(160%) blur(16px);
-  backdrop-filter: saturate(160%) blur(16px);
+  background-color: rgba(248, 248, 245, 0.86);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  backdrop-filter: saturate(160%) blur(14px);
   border-bottom: 1px solid transparent;
-  transition: border-color 0.25s, box-shadow 0.25s, background-color 0.25s;
 }
-.header.is-scrolled,
+/* The scrolled state is scroll-driven CSS — no scroll listener, no re-render.
+   Browsers without scroll timelines get the settled state from the start. */
+@supports (animation-timeline: scroll()) {
+  .header {
+    animation: header-raise linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 24px;
+  }
+}
+@supports not (animation-timeline: scroll()) {
+  .header { border-bottom-color: var(--line); }
+}
 .header.is-drawer {
+  animation: none;
   border-bottom-color: var(--line);
-  box-shadow: var(--sh-xs);
-  background: rgba(248, 248, 245, 0.94);
+  background-color: var(--ivory);
+  /* backdrop-filter makes the header the containing block for position:fixed
+     descendants, which would collapse the drawer into the header bar. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .header__inner {
   height: 100%;
@@ -97,34 +118,37 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
 .header__nav { display: none; flex: 1; justify-content: center; }
 .header__list { display: flex; align-items: center; gap: 2px; }
 .header__trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 44px;
-  padding: 0 14px;
+  gap: 6px;
+  height: 46px;
+  padding: 0 15px;
   border: 0;
   border-radius: var(--r-pill);
   background: transparent;
-  font-size: 0.96rem;
-  font-weight: 560;
-  letter-spacing: -0.01em;
-  color: var(--ink-700);
-  transition: background-color 0.2s, color 0.2s;
+  font-size: 1.02rem;
+  font-weight: 620;
+  letter-spacing: -0.012em;
+  color: var(--ink-900);
+  transition: background-color var(--t-fast), color var(--t-fast);
 }
 .header__trigger:hover,
-.header__trigger.is-open { background: rgba(8, 43, 87, 0.06); color: var(--navy-800); }
-.header__chev { transition: transform 0.25s var(--ease); opacity: 0.6; }
-.header__trigger.is-open .header__chev { transform: rotate(180deg); }
+.header__trigger.is-open { background: rgba(8, 43, 87, 0.065); color: var(--navy-800); }
+.header__chev { transition: transform var(--t-med) var(--ease); opacity: 0.55; }
+.header__trigger.is-open .header__chev { transform: rotate(180deg); opacity: 0.9; }
 
-.header__actions { display: flex; align-items: center; gap: 10px; }
+.header__actions { display: flex; align-items: center; gap: 12px; }
 .header__signin {
   display: none;
-  padding: 0 10px;
-  font-weight: 600;
+  padding: 0 12px;
+  font-size: 1.02rem;
+  font-weight: 620;
   color: var(--navy-800);
 }
 .header__signin--soon { opacity: 0.55; cursor: default; }
 .header__download { display: none; }
+.header .btn--sm { min-height: 46px; padding: 0 22px; font-size: 0.98rem; }
 .header__burger {
   display: grid;
   place-items: center;
@@ -141,61 +165,98 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
   .header__signin, .header__download { display: inline-flex; align-items: center; }
   .header__burger { display: none; }
 }
+@media (min-width: 1100px) and (max-width: 1239px) {
+  .header__inner { gap: 16px; }
+  .header__trigger { padding: 0 10px; font-size: 0.97rem; }
+  .header__signin { padding: 0 6px; font-size: 0.97rem; }
+}
 
-/* ---------- Mega menu (desktop) ---------- */
+/* ---------- Mega menu (desktop) ----------
+   Opens on hover/click with no hover-intent delay. The panel fades in over
+   120ms and closes in 90ms; switching between panels is a straight swap. */
 .mega { position: absolute; left: 0; right: 0; top: 100%; pointer-events: none; display: none; }
 @media (min-width: 1100px) { .mega { display: block; } }
 .mega__frame { position: relative; }
 .mega__panel {
   position: absolute;
-  top: 4px;
+  top: 8px;
   left: 0;
   right: 0;
-  padding: 26px 28px 20px;
+  padding: 22px;
   background: #fff;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-xl);
-  box-shadow: var(--sh-lg);
+  box-shadow: 0 30px 70px rgba(8, 43, 87, 0.16), 0 6px 18px rgba(8, 43, 87, 0.06);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-8px) scale(0.995);
-  transform-origin: top center;
-  transition: opacity 0.22s var(--ease), transform 0.26s var(--ease), visibility 0s linear 0.26s;
+  transform: translateY(-4px);
+  transition: opacity 90ms linear, transform 90ms var(--ease), visibility 0s linear 90ms;
 }
 .mega__panel.is-open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transform: none;
-  transition-delay: 0s;
+  transition: opacity 120ms linear, transform 120ms var(--ease), visibility 0s;
 }
+/* Invisible bridge over the gap between header and panel, so the pointer never
+   "leaves" the menu while travelling down to it. */
+.mega__panel.is-open::before { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 14px; }
+
+/* Grid panels: a titled lead column + items. */
+.mega-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; }
+.mega-lead {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(160deg, var(--ivory) 0%, var(--ivory-2) 100%);
+  border: 1px solid var(--line-soft);
+}
+.mega-lead__kicker { font-size: 0.72rem; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-700); }
+.mega-lead__title { margin-top: 8px; font-size: 1.6rem; font-weight: 760; letter-spacing: -0.035em; line-height: 1.1; color: var(--navy-800); }
+
 .mega__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 18px;
-  padding-top: 16px;
+  margin-top: 14px;
+  padding: 14px 8px 2px;
   border-top: 1px solid var(--line-soft);
 }
-.mega__note { font-size: 0.9rem; color: var(--ink-500); }
+.mega__note { font-size: 0.94rem; color: var(--ink-500); }
 
-.mega-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.mega-grid--two { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.mega-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .mega-item {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 16px;
   height: 100%;
-  padding: 18px;
+  padding: 16px 44px 16px 16px;
   border-radius: var(--r-md);
-  transition: background-color 0.2s, transform 0.25s var(--ease);
+  transition: background-color var(--t-fast);
 }
-.mega-grid--two .mega-item { flex-direction: row; align-items: center; gap: 14px; padding: 12px 14px; }
-.mega-item:hover { background: var(--ivory); transform: translateY(-2px); }
-.mega-item__text { display: flex; flex-direction: column; gap: 3px; }
-.mega-item__title { font-weight: 680; letter-spacing: -0.015em; color: var(--navy-800); font-size: 1.02rem; }
-.mega-item__desc { font-size: 0.9rem; line-height: 1.4; color: var(--ink-500); }
+.mega-item:hover,
+.mega-item:focus-visible { background: var(--ivory); }
+.mega-item .icon-tile { width: 48px; height: 48px; border-radius: 14px; }
+.mega-item__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mega-item__title { font-weight: 700; letter-spacing: -0.018em; color: var(--navy-800); font-size: 1.08rem; line-height: 1.25; }
+.mega-item__desc { font-size: 0.94rem; line-height: 1.4; color: var(--ink-500); }
+.mega-item__go {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  translate: -4px -50%;
+  color: var(--teal-600);
+  opacity: 0;
+  transition: opacity var(--t-fast), translate var(--t-fast) var(--ease);
+}
+.mega-item:hover .mega-item__go,
+.mega-item:focus-visible .mega-item__go { opacity: 1; translate: 0 -50%; }
 
 /* Five-step progression */
 .mega-steps { display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
@@ -206,24 +267,25 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px 18px 18px;
+  padding: 18px 20px 20px;
   border-radius: var(--r-md);
-  transition: background-color 0.2s, transform 0.25s var(--ease);
+  transition: background-color var(--t-fast);
 }
-.mega-step:hover { background: var(--ivory); transform: translateY(-2px); }
+.mega-step:hover,
+.mega-step:focus-visible { background: var(--ivory); }
 .mega-step__num {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 750;
   letter-spacing: 0.14em;
   color: var(--t-fg);
 }
-.mega-step .icon-tile { margin: 4px 0 6px; }
-.mega-step__title { font-weight: 700; font-size: 1.06rem; letter-spacing: -0.02em; color: var(--navy-800); }
-.mega-step__desc { font-size: 0.88rem; line-height: 1.4; color: var(--ink-500); }
+.mega-step .icon-tile { width: 48px; height: 48px; border-radius: 14px; margin: 4px 0 6px; }
+.mega-step__title { font-weight: 720; font-size: 1.14rem; letter-spacing: -0.022em; color: var(--navy-800); }
+.mega-step__desc { font-size: 0.93rem; line-height: 1.42; color: var(--ink-500); }
 .mega-steps__arrow {
   position: absolute;
   right: -11px;
-  top: 47px;
+  top: 50px;
   z-index: 2;
   width: 22px;
   height: 22px;
@@ -236,12 +298,12 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
 }
 
 /* AI Intelligence panel */
-.mega-intel { display: grid; grid-template-columns: 1fr 300px; gap: 28px; }
+.mega-intel { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; }
 .mega-intel__aside {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 22px;
+  padding: 24px;
   border-radius: var(--r-lg);
   background: linear-gradient(160deg, var(--navy-800), var(--navy-950));
   color: #fff;
@@ -257,11 +319,11 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.mega-intel__metric { margin-top: 8px; font-size: 0.86rem; color: #b9c9e0; }
+.mega-intel__metric { margin-top: 8px; font-size: 0.9rem; color: #b9c9e0; }
 .mega-intel__chart { width: 100%; height: auto; margin: 6px 0 2px; }
-.mega-intel__line { font-size: 1.15rem; color: #fff; }
+.mega-intel__line { font-size: 1.2rem; color: #fff; }
 .mega-intel__line b { font-weight: 750; letter-spacing: -0.02em; }
-.mega-intel__sub { font-size: 0.8rem; color: #9fb2cf; line-height: 1.4; }
+.mega-intel__sub { font-size: 0.82rem; color: #9fb2cf; line-height: 1.4; }
 
 /* ---------- Mobile drawer ---------- */
 .drawer {
@@ -271,38 +333,38 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px var(--gutter) 28px;
   background: var(--ivory);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-10px);
-  transition: opacity 0.24s var(--ease), transform 0.28s var(--ease), visibility 0s linear 0.28s;
+  transition: opacity 100ms linear, visibility 0s linear 100ms;
 }
-.drawer.is-open { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.drawer.is-open { opacity: 1; visibility: visible; transition: opacity 120ms linear, visibility 0s; }
 @media (min-width: 1100px) { .drawer { display: none; } }
 .drawer__group { border-bottom: 1px solid var(--line); }
 .drawer__toggle {
   width: 100%;
-  min-height: 62px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0;
   border: 0;
   background: none;
-  font-size: 1.32rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 720;
   letter-spacing: -0.03em;
   color: var(--navy-800);
   text-align: left;
 }
 .drawer__toggle--link { color: var(--navy-800); }
-.drawer__chev { transition: transform 0.25s var(--ease); color: var(--teal-600); }
+.drawer__chev { transition: transform var(--t-med) var(--ease); color: var(--teal-600); }
 .drawer__toggle[aria-expanded='true'] .drawer__chev { transform: rotate(180deg); }
 .drawer__sub {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.3s var(--ease);
+  transition: grid-template-rows var(--t-med) var(--ease);
 }
 .drawer__sub > ul { overflow: hidden; }
 .drawer__sub.is-open { grid-template-rows: 1fr; }
@@ -311,10 +373,12 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 56px;
-  padding: 8px 4px;
+  min-height: 58px;
+  padding: 8px 6px;
   border-radius: var(--r-md);
+  transition: background-color var(--t-fast);
 }
+.drawer__link:active { background: var(--ivory-2); }
 .drawer__num {
   display: grid;
   place-items: center;
@@ -329,7 +393,7 @@ a.store:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(4, 24,
   letter-spacing: 0.04em;
 }
 .drawer__text { display: flex; flex-direction: column; }
-.drawer__title { font-weight: 650; color: var(--navy-800); }
-.drawer__desc { font-size: 0.9rem; color: var(--ink-500); line-height: 1.35; }
+.drawer__title { font-size: 1.04rem; font-weight: 680; color: var(--navy-800); }
+.drawer__desc { font-size: 0.92rem; color: var(--ink-500); line-height: 1.35; }
 .drawer__cta { margin-top: auto; padding-top: 28px; display: grid; gap: 12px; }
 .drawer__cta .btn { width: 100%; }

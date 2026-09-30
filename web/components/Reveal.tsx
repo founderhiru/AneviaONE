@@ -1,54 +1,23 @@
-'use client';
-
-import { useEffect, useRef, type CSSProperties, type ElementType, type ReactNode } from 'react';
+import type { CSSProperties, ElementType, ReactNode } from 'react';
 
 type RevealProps = {
   children: ReactNode;
   as?: ElementType;
   className?: string;
-  /** Stagger delay in ms. */
-  delay?: number;
   style?: CSSProperties;
   id?: string;
 };
 
 /**
- * Subtle fade + small upward reveal, triggered once when the element enters
- * the viewport. CSS handles prefers-reduced-motion (content is simply shown).
- * Also toggles `is-in` so child SVG lines (`.draw-line`) can animate.
+ * Subtle fade + rise as the element scrolls into view. Pure CSS (scroll-driven
+ * animation, see `.reveal` in base.css): no observer, no client JS, and no
+ * hydration cost. Content is fully visible by default — the effect only
+ * applies in browsers that support `animation-timeline: view()` and when the
+ * user hasn't asked for reduced motion — so it never hides content without JS.
  */
-export function Reveal({ children, as: Tag = 'div', className = '', delay = 0, style, id }: RevealProps) {
-  const ref = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      el.classList.add('is-in');
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-in');
-            io.unobserve(entry.target);
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+export function Reveal({ children, as: Tag = 'div', className = '', style, id }: RevealProps) {
   return (
-    <Tag
-      ref={ref}
-      id={id}
-      className={`reveal ${className}`.trim()}
-      style={{ ...(delay ? ({ '--d': `${delay}ms` } as CSSProperties) : null), ...style }}
-    >
+    <Tag id={id} className={`reveal ${className}`.trim()} style={style}>
       {children}
     </Tag>
   );

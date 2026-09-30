@@ -39,11 +39,13 @@ export function Footer() {
         </div>
 
         <div className="footer__bottom">
-          <p>AneviaOne is a product of {BRAND.parent}.</p>
+          <p>
+            {BRAND.name} is a product of {BRAND.parent}.
+          </p>
           <p>© 2026 {BRAND.parent}. All rights reserved.</p>
         </div>
         <p className="footer__disclaimer">
-          AneviaOne is a consumer health-information product. It helps you organize and understand your own records; it
+          {BRAND.name} is a consumer health-information product. It helps you organize and understand your own records; it
           does not diagnose, treat or replace professional medical advice.
         </p>
       </div>

@@ -1,5 +1,6 @@
 import { Icon, type IconName } from './Icon';
 import { Reveal } from './Reveal';
+import { WORDMARK } from '@/lib/config';
 
 const SOURCES: { label: string; icon: IconName; tone: string }[] = [
   { label: 'Hospital portals', icon: 'building', tone: 'blue' },
@@ -31,7 +32,7 @@ export function ProblemSection() {
           <ul className="converge__chips" aria-label="Places your health information lives today">
             {SOURCES.map((s, i) => (
               <li key={s.label} className={`converge__chip tone-${s.tone}`} style={{ '--i': i } as React.CSSProperties}>
-                <Reveal delay={i * 60}>
+                <Reveal>
                   <span className="schip">
                     <span className="icon-tile">
                       <Icon name={s.icon} size={20} />
@@ -67,7 +68,7 @@ export function ProblemSection() {
             </svg>
           </Reveal>
 
-          <Reveal className="converge__core" delay={200}>
+          <Reveal className="converge__core">
             <div className="core card">
               <svg width="46" height="46" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
                 <rect width="34" height="34" rx="11" fill="#082b57" />
@@ -78,7 +79,8 @@ export function ProblemSection() {
               </svg>
               <div>
                 <p className="core__name">
-                  Anevia<span className="accent">One</span>
+                  {WORDMARK.lead}
+                  <span className="accent">{WORDMARK.accent}</span>
                 </p>
                 <p className="core__line">One connected health history.</p>
               </div>

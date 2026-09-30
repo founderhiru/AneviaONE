@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { BRAND } from '@/lib/config';
+import { BRAND, WORDMARK } from '@/lib/config';
 
 /** Text wordmark with a small "connected history" mark (no logo asset exists yet). */
 export function Logo({ tone = 'light', tagline = false }: { tone?: 'light' | 'dark'; tagline?: boolean }) {
@@ -15,7 +15,8 @@ export function Logo({ tone = 'light', tagline = false }: { tone?: 'light' | 'da
       </svg>
       <span className="logo__text">
         <span className="logo__name">
-          Anevia<span className="logo__one">One</span>
+          {WORDMARK.lead}
+          <span className="logo__one">{WORDMARK.accent}</span>
         </span>
         {tagline ? <span className="logo__tag">{BRAND.category}</span> : null}
       </span>

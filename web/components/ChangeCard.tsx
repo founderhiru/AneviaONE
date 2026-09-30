@@ -1,12 +1,13 @@
 import { Icon } from './Icon';
 import { CHANGES } from '@/lib/sample';
+import { BRAND } from '@/lib/config';
 
 /** "Spot what changed": current information compared with past history. */
 export function ChangeCard() {
   return (
     <article className="icard icard--change">
       <p className="icard__kicker">Spot what changed</p>
-      <p className="icard__text">AneviaOne compares your current information with your past history.</p>
+      <p className="icard__text">{BRAND.name} compares your current information with your past history.</p>
 
       <ul className="changes">
         {CHANGES.map((c) => (

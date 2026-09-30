@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Icon } from './Icon';
 import { Reveal } from './Reveal';
+import { BRAND } from '@/lib/config';
 
 export function WhatsAppSection() {
   return (
@@ -12,12 +13,12 @@ export function WhatsAppSection() {
           <h2 id="wa-title" className="h2">
             Start anywhere with WhatsApp.
           </h2>
-          <p className="lede">Send a report through WhatsApp and continue your health journey in AneviaOne.</p>
+          <p className="lede">Send a report through WhatsApp and continue your health journey in {BRAND.name}.</p>
           <p className="wa__pill">
             <span className="pill tone-mint">Rolling out</span>
           </p>
           <p className="fine wa__note">
-            WhatsApp is just a way to send reports in. Your health history lives in AneviaOne, not in WhatsApp — and
+            WhatsApp is just a way to send reports in. Your health history lives in {BRAND.name}, not in WhatsApp — and
             messages sent back to you stay generic.
           </p>
           <Link href="/how-it-works#capture" className="link-arrow wa__link">
@@ -25,7 +26,7 @@ export function WhatsAppSection() {
           </Link>
         </Reveal>
 
-        <Reveal className="wa__seq" delay={120}>
+        <Reveal className="wa__seq">
           <ol className="seq" aria-label="What happens when you send a report">
             <li className="seq__card seq__card--chat">
               <div className="seq__head">

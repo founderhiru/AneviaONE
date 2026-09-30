@@ -6,7 +6,7 @@ import { PatternCard } from './PatternCard';
 import { Reveal } from './Reveal';
 import { StoreButtons } from './StoreButtons';
 import { TrendCard } from './TrendCard';
-import { LINKS } from '@/lib/config';
+import { BRAND, LINKS } from '@/lib/config';
 import type { Block, Item, PageDef } from '@/lib/pages';
 
 export function PageHero({
@@ -22,8 +22,6 @@ export function PageHero({
 }) {
   return (
     <section className="page-hero" aria-labelledby="page-title">
-      <div className="hero__glow hero__glow--a" aria-hidden="true" />
-      <div className="hero__glow hero__glow--b" aria-hidden="true" />
       <div className="container page-hero__inner">
         <Reveal>
           <p className="eyebrow">{eyebrow}</p>
@@ -40,8 +38,8 @@ export function PageHero({
 function CardGrid({ items, columns = 3 }: { items: Item[]; columns?: 2 | 3 | 4 }) {
   return (
     <div className={`pgrid pgrid--${columns}`}>
-      {items.map((it, i) => (
-        <Reveal key={it.title} delay={i * 60} className={`pcard hover-lift tone-${it.tone}`}>
+      {items.map((it) => (
+        <Reveal key={it.title} className={`pcard hover-lift tone-${it.tone}`}>
           <span className="icon-tile icon-tile--lg">
             <Icon name={it.icon} size={26} />
           </span>
@@ -98,7 +96,7 @@ function BlockView({ block }: { block: Block }) {
                 </ul>
               ) : null}
             </Reveal>
-            <Reveal className="split__visual on-dark" delay={100}>
+            <Reveal className="split__visual on-dark">
               <div className="dark-panel">
                 <SplitCard card={block.card} />
               </div>
@@ -112,8 +110,8 @@ function BlockView({ block }: { block: Block }) {
         <section className="section page-section">
           <div className="container">
             <ol className="hsteps">
-              {block.items.map((s, i) => (
-                <Reveal as="li" key={s.id} id={s.id} delay={i * 40} className={`hstep tone-${s.tone}`}>
+              {block.items.map((s) => (
+                <Reveal as="li" key={s.id} id={s.id} className={`hstep tone-${s.tone}`}>
                   <span className="hstep__marker">
                     <Icon name={s.icon} size={26} />
                   </span>
@@ -196,7 +194,9 @@ function BlockView({ block }: { block: Block }) {
                 // TODO(launch): set NEXT_PUBLIC_CONTACT_EMAIL to a monitored inbox.
                 <p className="contact__soon">Contact details will be published here at launch.</p>
               )}
-              <p className="fine">AneviaOne is a product of MedhaIQ Systems.</p>
+              <p className="fine">
+                {BRAND.name} is a product of {BRAND.parent}.
+              </p>
             </Reveal>
           </div>
         </section>
@@ -213,7 +213,7 @@ export function ClosingCta({ kind }: { kind: 'download' | 'contact' | 'none' }) 
           {kind === 'download' ? (
             <>
               <h2 className="h2">Your health story, for life.</h2>
-              <p className="lede">Start building your intelligent health history with AneviaOne.</p>
+              <p className="lede">Start building your intelligent health history with {BRAND.name}.</p>
               <StoreButtons tone="light" className="page-cta__stores" />
               {!LINKS.appStore && !LINKS.googlePlay ? <p className="fine">App store links will appear here at launch.</p> : null}
             </>

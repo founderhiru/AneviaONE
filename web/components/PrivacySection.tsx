@@ -23,8 +23,8 @@ export function PrivacySection() {
         </Reveal>
 
         <div className="privacy__grid">
-          {BLOCKS.map((b, i) => (
-            <Reveal key={b.title} delay={i * 80} className={`pblock hover-lift tone-${b.tone}`}>
+          {BLOCKS.map((b) => (
+            <Reveal key={b.title} className={`pblock hover-lift tone-${b.tone}`}>
               <span className="icon-tile icon-tile--lg">
                 <Icon name={b.icon} size={26} />
               </span>
@@ -34,7 +34,7 @@ export function PrivacySection() {
           ))}
         </div>
 
-        <Reveal className="privacy__compliance" delay={100}>
+        <Reveal className="privacy__compliance">
           <span className="icon-tile tone-mint">
             <Icon name="badge" size={20} />
           </span>

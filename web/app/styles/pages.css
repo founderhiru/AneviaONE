@@ -2,9 +2,16 @@
    Secondary pages
    ========================================================================== */
 
-.page-hero { position: relative; overflow-x: clip; padding: clamp(48px, 7vw, 104px) 0 clamp(24px, 4vw, 48px); }
+.page-hero {
+  position: relative;
+  overflow-x: clip;
+  padding: clamp(48px, 7vw, 112px) 0 clamp(24px, 4vw, 56px);
+  background:
+    radial-gradient(50% 70% at 92% 0%, rgba(213, 234, 248, 0.85) 0%, rgba(213, 234, 248, 0) 70%),
+    radial-gradient(34% 40% at 0% 55%, rgba(224, 243, 233, 0.6) 0%, rgba(224, 243, 233, 0) 70%);
+}
 .page-hero__inner { position: relative; }
-.page-hero__title { max-width: 16ch; font-size: clamp(2.5rem, 5.4vw, 4.4rem); text-wrap: balance; }
+.page-hero__title { max-width: 16ch; font-size: clamp(2.6rem, 6vw, 4.9rem); line-height: 0.99; text-wrap: balance; }
 .page-hero .lede { max-width: 60ch; }
 
 .page-section { padding-block: clamp(40px, 6vw, 88px); }
@@ -72,11 +79,11 @@
 
 /* FAQ */
 .faq { display: grid; gap: 12px; }
-.faq__item { border-radius: 22px; background: #fff; border: 1px solid var(--line-soft); box-shadow: var(--sh-xs); transition: box-shadow 0.25s var(--ease); }
+.faq__item { border-radius: 22px; background: #fff; border: 1px solid var(--line-soft); box-shadow: var(--sh-xs); transition: box-shadow var(--t-med) var(--ease); }
 .faq__item[open] { box-shadow: var(--sh-md); }
 .faq__q { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 16px 24px; font-size: 1.12rem; font-weight: 680; letter-spacing: -0.02em; color: var(--navy-800); cursor: pointer; list-style: none; border-radius: 22px; }
 .faq__q::-webkit-details-marker { display: none; }
-.faq__chev { flex: none; color: var(--teal-600); transition: transform 0.25s var(--ease); }
+.faq__chev { flex: none; color: var(--teal-600); transition: transform var(--t-med) var(--ease); }
 .faq__item[open] .faq__chev { transform: rotate(180deg); }
 .faq__a { padding: 0 24px 22px; max-width: 64ch; line-height: 1.7; color: var(--ink-700); }
 

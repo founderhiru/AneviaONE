@@ -1,5 +1,6 @@
 import { Icon, type IconName } from './Icon';
 import { Reveal } from './Reveal';
+import { BRAND } from '@/lib/config';
 
 const CARDS: { key: string; title: string; text: string; icon: IconName; tone: string; visual: 'line' | 'rows' | 'bars' }[] = [
   { key: 'remember', title: 'Remember', text: 'Your health history stays connected across years.', icon: 'layers', tone: 'blue', visual: 'line' },
@@ -60,7 +61,7 @@ export function HealthMemorySection() {
   return (
     <section id="memory" className="section memory" aria-labelledby="memory-title">
       <div className="container">
-        <Reveal className="section-head">
+        <Reveal className="section-head section-head--split">
           <p className="eyebrow">Health memory</p>
           <h2 id="memory-title" className="h2">
             Not a health locker.
@@ -68,27 +69,30 @@ export function HealthMemorySection() {
             <span className="accent">A health memory.</span>
           </h2>
           <p className="lede">
-            Storing your reports is only the beginning. AneviaOne turns your records into structured health history —
+            Storing your reports is only the beginning. {BRAND.name} turns your records into structured health history —
             helping you see what changed, what stayed consistent, and how your health has evolved over time.
           </p>
         </Reveal>
 
         <div className="memory__grid">
           {CARDS.map((c, i) => (
-            <Reveal key={c.key} delay={i * 90} className={`mcard hover-lift tone-${c.tone}`}>
+            <Reveal key={c.key} className={`mcard hover-lift tone-${c.tone}`}>
               <div className="mcard__top">
                 <span className="icon-tile icon-tile--lg">
                   <Icon name={c.icon} size={26} />
                 </span>
-                <span className="mcard__kicker">{c.title.toUpperCase()}</span>
+                <span className="mcard__num" aria-hidden="true">
+                  0{i + 1}
+                </span>
               </div>
+              <h3 className="mcard__title">{c.title}</h3>
               <p className="mcard__text">{c.text}</p>
               <MiniVisual kind={c.visual} />
             </Reveal>
           ))}
         </div>
 
-        <Reveal className="versus" delay={120}>
+        <Reveal className="versus">
           <div className="versus__old">
             <span className="versus__tag">A locker</span>
             <p>Store your medical records.</p>
@@ -97,7 +101,7 @@ export function HealthMemorySection() {
             <Icon name="arrow" size={22} />
           </span>
           <div className="versus__new">
-            <span className="versus__tag">AneviaOne</span>
+            <span className="versus__tag">{BRAND.name}</span>
             <ul>
               {['Remember your health history', 'Understand it', 'Compare it', 'Find trends', 'See what changed', 'Ask questions about it'].map((t) => (
                 <li key={t}>

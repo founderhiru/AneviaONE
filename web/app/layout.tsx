@@ -72,11 +72,10 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // data-scroll-behavior lets Next.js turn smooth scrolling off during route
+    // transitions, so page changes land instantly at the top.
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
-        <noscript>
-          <style>{`.reveal{opacity:1!important;transform:none!important}.draw-line{stroke-dashoffset:0!important}`}</style>
-        </noscript>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}

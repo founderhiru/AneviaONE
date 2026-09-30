@@ -32,7 +32,7 @@
   display: inline-block;
   padding: 6px 0;
   color: #dbe6f5;
-  transition: color 0.2s;
+  transition: color var(--t-fast);
 }
 .footer__col a:hover { color: var(--teal-300); }
 .footer__bottom {

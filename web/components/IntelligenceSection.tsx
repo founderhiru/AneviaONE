@@ -3,6 +3,7 @@ import { Icon } from './Icon';
 import { PatternCard } from './PatternCard';
 import { Reveal } from './Reveal';
 import { TrendCard } from './TrendCard';
+import { BRAND } from '@/lib/config';
 
 /** The visual anchor of the site: history becomes trends, changes and patterns. */
 export function IntelligenceSection() {
@@ -10,7 +11,7 @@ export function IntelligenceSection() {
     <section id="intelligence" className="section intel on-dark" aria-labelledby="intel-title">
       <div className="intel__bg" aria-hidden="true" />
       <div className="container">
-        <Reveal className="section-head">
+        <Reveal className="section-head section-head--split">
           <p className="eyebrow">The AI intelligence</p>
           <h2 id="intel-title" className="h2">
             Your health history
@@ -18,24 +19,24 @@ export function IntelligenceSection() {
             <span className="accent">becomes intelligence.</span>
           </h2>
           <p className="lede">
-            AneviaOne analyzes your records over time to identify meaningful trends, changes and patterns — so you can
+            {BRAND.name} analyzes your records over time to identify meaningful trends, changes and patterns — so you can
             understand what is happening, not just what happened in one report.
           </p>
         </Reveal>
 
         <div className="intel__grid">
-          <Reveal delay={0}>
+          <Reveal>
             <TrendCard />
           </Reveal>
-          <Reveal delay={100}>
+          <Reveal>
             <ChangeCard />
           </Reveal>
-          <Reveal delay={200}>
+          <Reveal>
             <PatternCard />
           </Reveal>
         </div>
 
-        <Reveal className="intel__strip" delay={80}>
+        <Reveal className="intel__strip">
           <span className="intel__strip-a">
             <Icon name="file" size={18} /> A locker <b>stores</b> information.
           </span>
@@ -43,7 +44,7 @@ export function IntelligenceSection() {
             <Icon name="arrow" size={20} />
           </span>
           <span className="intel__strip-b">
-            <Icon name="pulse" size={18} /> AneviaOne <b>analyzes</b> it over time.
+            <Icon name="pulse" size={18} /> {BRAND.name} <b>analyzes</b> it over time.
           </span>
         </Reveal>
       </div>

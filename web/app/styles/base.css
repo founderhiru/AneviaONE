@@ -85,8 +85,11 @@
 
   --gutter: 24px;
   --container: 1280px;
-  --header-h: 76px;
+  --header-h: 80px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Interaction timing — UI feedback stays in the 100–150ms band. */
+  --t-fast: 110ms;
+  --t-med: 150ms;
 }
 
 @media (max-width: 720px) {
@@ -177,7 +180,7 @@ ol {
   background: var(--navy-800);
   color: #fff;
   font-weight: 600;
-  transition: top 0.2s var(--ease);
+  transition: top var(--t-med) var(--ease);
 }
 .skip-link:focus {
   top: 12px;
@@ -204,7 +207,7 @@ ol {
 }
 
 .section {
-  padding-block: clamp(72px, 9vw, 132px);
+  padding-block: clamp(72px, 8.5vw, 128px);
   position: relative;
 }
 .section--tight {
@@ -221,6 +224,18 @@ ol {
 }
 .section-head--center .lede {
   margin-inline: auto;
+}
+/* Wide screens: headline left, supporting copy right — less dead space. */
+@media (min-width: 1000px) {
+  .section-head--split {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    column-gap: clamp(40px, 6vw, 96px);
+    align-items: end;
+  }
+  .section-head--split .eyebrow { grid-column: 1 / -1; }
+  .section-head--split .lede { margin-top: 0; padding-bottom: 6px; }
 }
 
 /* ---------- Type ---------- */
@@ -265,7 +280,8 @@ ol {
   letter-spacing: -0.042em;
 }
 .h2 {
-  font-size: clamp(2.05rem, 4.2vw, 3.5rem);
+  font-size: clamp(2.2rem, 4.6vw, 3.9rem);
+  line-height: 1.02;
   text-wrap: balance;
 }
 .h3 {
@@ -317,16 +333,16 @@ ol {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 52px;
-  padding: 0 26px;
+  min-height: 54px;
+  padding: 0 28px;
   border: 1.5px solid transparent;
   border-radius: var(--r-pill);
   font-size: 1rem;
   font-weight: 650;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background-color 0.2s var(--ease),
-    border-color 0.2s var(--ease), color 0.2s var(--ease);
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 .btn--sm {
   min-height: 44px;
@@ -340,7 +356,7 @@ ol {
 }
 .btn--primary:hover {
   background: var(--navy-700);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(8, 43, 87, 0.26);
 }
 .btn--ghost {
@@ -351,7 +367,10 @@ ol {
 .btn--ghost:hover {
   background: #fff;
   border-color: var(--navy-800);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0) scale(0.985);
 }
 .btn--light {
   background: #fff;
@@ -381,7 +400,7 @@ ol {
   gap: 8px;
   font-weight: 650;
   color: var(--teal-700);
-  transition: gap 0.2s var(--ease), color 0.2s;
+  transition: gap var(--t-fast) var(--ease), color var(--t-fast);
 }
 .link-arrow:hover {
   gap: 13px;
@@ -404,10 +423,10 @@ ol {
   box-shadow: var(--sh-sm);
 }
 .hover-lift {
-  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  transition: transform var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease);
 }
 .hover-lift:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
   box-shadow: var(--sh-md);
 }
 
@@ -447,46 +466,47 @@ ol {
   color: var(--t-fg, var(--blue-600));
 }
 
-/* ---------- Motion ---------- */
-.reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
-  transition-delay: var(--d, 0ms);
+/* ---------- Motion ----------
+   Scroll-driven, CSS only. Everything is visible by default; the reveal is
+   layered on top only where `animation-timeline: view()` is supported and the
+   user hasn't asked for reduced motion. No JS, no observers, no hidden-until-
+   hydrated content. */
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: none; }
 }
-.reveal.is-in {
-  opacity: 1;
-  transform: none;
+@keyframes draw-in {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
-
 .draw-line {
   stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 1.6s var(--ease) 0.2s;
-}
-.is-in .draw-line,
-.draw-line.is-in {
   stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+    .draw-line {
+      animation: draw-in linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 45%;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-  .draw-line {
-    stroke-dashoffset: 0;
-    transition: none;
-  }
   *,
   *::before,
   *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
     transition-duration: 0.001ms !important;
   }
 }

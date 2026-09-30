@@ -1,4 +1,5 @@
 import type { IconName } from '@/components/Icon';
+import { BRAND } from '@/lib/config';
 
 export type Tone = 'blue' | 'teal' | 'lavender' | 'cream' | 'mint';
 
@@ -33,7 +34,7 @@ export const NAV_GROUPS: NavGroup[] = [
     href: '/product',
     variant: 'grid',
     items: [
-      { title: 'Overview', description: 'See what AneviaOne does', href: '/product', icon: 'overview', tone: 'blue' },
+      { title: 'Overview', description: `See what ${BRAND.name} does`, href: '/product', icon: 'overview', tone: 'blue' },
       { title: 'App Features', description: 'Explore key features', href: '/product#features', icon: 'sparkle', tone: 'teal' },
       { title: 'Use Cases', description: 'For individuals & families', href: '/product#use-cases', icon: 'users', tone: 'lavender' },
       { title: 'App Screens', description: 'Take a visual tour', href: '/#screens', icon: 'phone', tone: 'cream' },
@@ -83,7 +84,7 @@ export const NAV_GROUPS: NavGroup[] = [
     href: '/about',
     variant: 'grid',
     items: [
-      { title: 'Our Mission', description: 'Why we built AneviaOne', href: '/about#mission', icon: 'compass', tone: 'blue' },
+      { title: 'Our Mission', description: `Why we built ${BRAND.name}`, href: '/about#mission', icon: 'compass', tone: 'blue' },
       { title: 'Our Team', description: 'People behind the product', href: '/about#team', icon: 'users', tone: 'teal' },
       { title: 'Careers', description: 'Join us', href: '/about#careers', icon: 'briefcase', tone: 'lavender' },
       { title: 'Contact', description: 'Get in touch', href: '/contact', icon: 'mail', tone: 'cream' },

@@ -1,8 +1,9 @@
 import { Icon, type IconName } from './Icon';
 import { ASK_SOURCES, CHANGES, LDL_SERIES, TIMELINE_EVENTS } from '@/lib/sample';
+import { BRAND, WORDMARK } from '@/lib/config';
 
 /**
- * Faithful HTML/CSS renderings of the AneviaOne app screens. They follow the
+ * Faithful HTML/CSS renderings of the app screens. They follow the
  * real app's structure (tabs: Home · Timeline · Health · Ask · Me; "From your
  * records" evidence badge; the Health History Line motif) using sample data.
  */
@@ -49,7 +50,8 @@ export function HomeScreen() {
       <div className="app__body">
         <div className="app__top">
           <span className="app__brand">
-            Anevia<b>One</b>
+            {WORDMARK.lead}
+            <b>{WORDMARK.accent}</b>
           </span>
           <span className="app__avatar">A</span>
         </div>
@@ -214,7 +216,7 @@ export function AskScreen() {
   return (
     <div className="app">
       <div className="app__body app__body--ask">
-        <h3 className="app__h">Ask AneviaOne</h3>
+        <h3 className="app__h">Ask {BRAND.name}</h3>
         <p className="app__sub">Answers grounded in your records</p>
         <div className="bubble bubble--user">How has my cholesterol changed over the last five years?</div>
         <div className="bubble bubble--ai">

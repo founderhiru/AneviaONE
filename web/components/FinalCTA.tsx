@@ -1,6 +1,6 @@
 import { Reveal } from './Reveal';
 import { StoreButtons } from './StoreButtons';
-import { LINKS } from '@/lib/config';
+import { BRAND, LINKS } from '@/lib/config';
 
 export function FinalCTA() {
   const configured = Boolean(LINKS.appStore || LINKS.googlePlay);
@@ -44,10 +44,10 @@ export function FinalCTA() {
           <h2 id="cta-title" className="h2 cta__title">
             Your health story, for life.
           </h2>
-          <p className="lede cta__lede">Start building your intelligent health history with AneviaOne.</p>
+          <p className="lede cta__lede">Start building your intelligent health history with {BRAND.name}.</p>
         </Reveal>
-        <Reveal delay={100} className="cta__actions">
-          <p className="cta__label">Download AneviaOne</p>
+        <Reveal className="cta__actions">
+          <p className="cta__label">Download {BRAND.name}</p>
           <StoreButtons tone="light" className="cta__stores" />
           {!configured ? <p className="fine cta__note">App store links will appear here at launch.</p> : null}
         </Reveal>

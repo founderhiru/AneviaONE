@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { Icon } from './Icon';
+import { BRAND } from '@/lib/config';
 import type { NavGroup } from '@/lib/nav';
 
 type Props = {
@@ -45,7 +46,7 @@ export function MegaPanel({ group, open, onNavigate }: Props) {
       ) : group.variant === 'intelligence' ? (
         <div className="mega-intel">
           <div className="mega-intel__main">
-            <ul className="mega-grid mega-grid--two">
+            <ul className="mega-grid">
               {group.items.map((item) => (
                 <MegaItem key={item.title} item={item} onNavigate={onNavigate} />
               ))}
@@ -68,14 +69,22 @@ export function MegaPanel({ group, open, onNavigate }: Props) {
           </aside>
         </div>
       ) : (
-        <>
+        <div className="mega-layout">
+          <div className="mega-lead">
+            <div>
+              <p className="mega-lead__kicker">{BRAND.name}</p>
+              <p className="mega-lead__title">{group.label}</p>
+            </div>
+            <Link href={group.href} className="link-arrow" onClick={onNavigate}>
+              Explore {group.label} <Icon name="arrow" size={16} />
+            </Link>
+          </div>
           <ul className="mega-grid">
             {group.items.map((item) => (
               <MegaItem key={item.title} item={item} onNavigate={onNavigate} />
             ))}
           </ul>
-          <PanelFooter group={group} onNavigate={onNavigate} />
-        </>
+        </div>
       )}
     </div>
   );
@@ -92,6 +101,7 @@ function MegaItem({ item, onNavigate }: { item: NavGroup['items'][number]; onNav
           <span className="mega-item__title">{item.title}</span>
           <span className="mega-item__desc">{item.description}</span>
         </span>
+        <Icon name="arrow" size={18} className="mega-item__go" />
       </Link>
     </li>
   );

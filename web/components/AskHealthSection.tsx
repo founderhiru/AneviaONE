@@ -1,11 +1,12 @@
 import { Icon } from './Icon';
 import { Reveal } from './Reveal';
 import { ASK_SOURCES } from '@/lib/sample';
+import { BRAND } from '@/lib/config';
 
 const POINTS = [
   { icon: 'evidence', title: 'Grounded in your records', text: 'Every answer points back to the documents it came from.' },
   { icon: 'sparkle', title: 'Facts and explanations, kept apart', text: 'What your records say is shown separately from AI explanation.' },
-  { icon: 'shield', title: 'Not a diagnosis', text: 'AneviaOne helps you understand your records. It does not diagnose.' },
+  { icon: 'shield', title: 'Not a diagnosis', text: `${BRAND.name} helps you understand your records. It does not diagnose.` },
 ] as const;
 
 export function AskHealthSection() {
@@ -13,7 +14,7 @@ export function AskHealthSection() {
     <section id="ask" className="section ask" aria-labelledby="ask-title">
       <div className="container ask__grid">
         <Reveal className="ask__copy">
-          <p className="eyebrow">Ask AneviaOne</p>
+          <p className="eyebrow">Ask {BRAND.name}</p>
           <h2 id="ask-title" className="h2">
             Ask your <span className="accent">health history.</span>
           </h2>
@@ -35,7 +36,7 @@ export function AskHealthSection() {
           </ul>
         </Reveal>
 
-        <Reveal className="ask__chat" delay={120}>
+        <Reveal className="ask__chat">
           <div className="chat card" role="group" aria-label="Example conversation">
             <div className="chat__msg chat__msg--user">
               <span className="chat__who">You</span>
@@ -63,7 +64,7 @@ export function AskHealthSection() {
             </div>
           </div>
           <p className="fine ask__note">
-            Illustrative example with sample data. AneviaOne explains what your records show — it doesn&rsquo;t diagnose or
+            Illustrative example with sample data. {BRAND.name} explains what your records show — it doesn&rsquo;t diagnose or
             replace advice from your doctor.
           </p>
         </Reveal>
