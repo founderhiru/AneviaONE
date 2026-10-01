@@ -1,5 +1,5 @@
+import type { ChapterVisualKey } from '@/components/ChapterVisual';
 import type { IconName } from '@/components/Icon';
-import type { Tone } from '@/lib/nav';
 import { BRAND } from '@/lib/config';
 
 /**
@@ -11,7 +11,22 @@ import { BRAND } from '@/lib/config';
  * yet, the page says so.
  */
 
+/** Soft semantic tint for an item's icon. */
+export type Tone = 'blue' | 'teal' | 'lavender' | 'cream' | 'mint';
+
 export type Item = { icon: IconName; title: string; text: string; tone: Tone };
+
+export type Row = { id?: string; title: string; text?: string };
+
+export type Chapter = {
+  id: string;
+  title: string;
+  /** One-sentence headline under the title. */
+  lead: string;
+  paragraphs: string[];
+  points?: string[];
+  visual: ChapterVisualKey;
+};
 
 export type Block =
   | { type: 'cards'; id?: string; eyebrow?: string; title: string; intro?: string; columns?: 2 | 3 | 4; items: Item[] }
@@ -25,12 +40,12 @@ export type Block =
       card?: 'trend' | 'change' | 'pattern' | 'ask';
       reverse?: boolean;
     }
-  | {
-      type: 'steps';
-      items: { id: string; n: string; icon: IconName; tone: Tone; title: string; text: string; points: string[] }[];
-    }
+  /** Editorial list: thin rules, large type, optional anchor ids per row. */
+  | { type: 'rows'; id?: string; eyebrow?: string; title: string; intro?: string; numbered?: boolean; items: Row[] }
+  /** Alternating copy + visual chapters; numbered for a sequence, plain for concepts. */
+  | { type: 'chapters'; numbered?: boolean; items: Chapter[] }
   | { type: 'prose'; id?: string; eyebrow?: string; title: string; paragraphs: string[]; bullets?: string[] }
-  | { type: 'notice'; tone: 'info' | 'draft'; title: string; text: string }
+  | { type: 'notice'; id?: string; tone: 'info' | 'draft'; title: string; text: string; link?: { label: string; href: string } }
   | { type: 'contact' };
 
 export type PageDef = {
@@ -51,40 +66,37 @@ export const PAGES: Record<string, PageDef> = {
     slug: 'product',
     title: 'Product',
     description:
-      `See what ${BRAND.name} does: a connected, longitudinal health history you can understand, compare and ask questions about.`,
+      `What ${BRAND.name} is designed to do: Health Memory, Timeline, What Changed, Trends and Ask My Health — built on one connected history.`,
     eyebrow: 'Product',
     headline: 'One intelligent',
     accent: 'health history.',
-    lede: `${BRAND.name} turns scattered records into a connected health history — then helps you see trends, spot what changed and ask questions grounded in your own documents.`,
+    lede: `${BRAND.name} is designed to turn scattered records into a connected health history — then help you see trends, spot what changed and ask questions grounded in your own documents.`,
     blocks: [
       {
-        type: 'cards',
+        type: 'rows',
         id: 'features',
-        eyebrow: 'App features',
-        title: 'Everything starts from your records.',
-        intro: `Each part of ${BRAND.name} builds on the same connected history.`,
-        columns: 3,
+        eyebrow: 'Inside the app',
+        title: 'What it’s designed to do.',
+        intro: `Each part of ${BRAND.name} is designed to build on the same connected history. Today you can add PDF reports and keep them together in private storage; the rest is being built next.`,
         items: [
-          { icon: 'layers', tone: 'blue', title: 'Health Memory', text: 'Reports, prescriptions, scans and consultations organized into one history that stays connected across years.' },
-          { icon: 'clock', tone: 'teal', title: 'Health Timeline', text: 'Your health story over time — every record placed where it belongs, from your earliest to your latest.' },
-          { icon: 'trend', tone: 'mint', title: 'Trends', text: 'A longitudinal view of key measures, so you see direction over months and years, not just one result.' },
-          { icon: 'compare', tone: 'lavender', title: 'What Changed', text: 'Your current information compared with your own past history, with the change and the dates made clear.' },
-          { icon: 'chat', tone: 'cream', title: `Ask ${BRAND.name}`, text: 'Ask questions in plain language. Answers come from your records and show the sources behind them.' },
-          { icon: 'pill', tone: 'blue', title: 'Medications', text: 'Keep your medication history alongside the records it came from.' },
+          { id: 'memory', title: 'Health Memory', text: 'Available today: add PDF reports and keep the originals together in private storage. Not yet available: organizing reports, prescriptions, scans and consultations into one history that stays connected across years.' },
+          { id: 'timeline', title: 'Timeline', text: 'Not yet available. Designed to tell your health story over time — every record placed where it belongs, from your earliest to your latest.' },
+          { id: 'changes', title: 'What Changed', text: 'Not yet available. Designed to compare your current information with your own past history, with the change and the dates made clear.' },
+          { id: 'ask', title: 'Ask My Health', text: 'Not yet available. Designed to answer questions in plain language from your records, showing the sources behind each answer.' },
+          { id: 'trends', title: 'Trends', text: 'Not yet available. Designed to give a longitudinal view of key measures, so you see direction over months and years, not just one result.' },
+          { id: 'medications', title: 'Medications', text: 'Not yet available. Designed to keep your medication history alongside the records it came from.' },
         ],
       },
       {
-        type: 'cards',
+        type: 'rows',
         id: 'use-cases',
         eyebrow: 'Use cases',
-        title: 'For individuals & families.',
-        intro: `A few of the moments ${BRAND.name} is built for.`,
-        columns: 2,
+        title: 'Built for real moments.',
         items: [
-          { icon: 'compass', tone: 'teal', title: 'Understand your own history', text: 'See how a measure you care about has moved across years, in one place, without digging through folders and chats.' },
-          { icon: 'file', tone: 'lavender', title: 'Make sense of a new report', text: 'Read a new result in the context of what came before it, with plain-language explanations kept separate from the facts.' },
-          { icon: 'calendar', tone: 'cream', title: 'Prepare for an appointment', text: 'Have your history at your fingertips, so the conversation with your doctor starts from the full picture.' },
-          { icon: 'users', tone: 'mint', title: 'Keep family records (coming soon)', text: 'Family health is on the roadmap: parents, children and dependents in one place. It is not available yet.' },
+          { title: 'Understand your own history', text: 'Not yet available. Designed to show how a measure you care about has moved across years, in one place, without digging through folders and chats.' },
+          { title: 'Make sense of a new report', text: 'Not yet available. Designed to read a new result in the context of what came before it, with plain-language explanations kept separate from the facts.' },
+          { title: 'Prepare for an appointment', text: 'Available today: keep your PDF reports in one place and open the originals whenever you need them. A connected view of your history, so the conversation with your doctor starts from the full picture, is not yet available.' },
+          { title: 'Keep family records (coming soon)', text: 'Family health is on the roadmap: parents, children and dependents in one place. It is not available yet.' },
         ],
       },
       {
@@ -92,6 +104,7 @@ export const PAGES: Record<string, PageDef> = {
         tone: 'info',
         title: `What ${BRAND.name} is — and isn’t`,
         text: `${BRAND.name} is a consumer health-information product. It helps you organize and understand your own records. It does not diagnose, treat or replace your doctor.`,
+        link: { label: 'What is available today', href: '/faq' },
       },
     ],
   },
@@ -99,86 +112,123 @@ export const PAGES: Record<string, PageDef> = {
   'how-it-works': {
     slug: 'how-it-works',
     title: 'How It Works',
-    description:
-      'From records to understanding: capture, understand, remember, compare and ask — in five steps.',
+    description: 'The five stages from scattered records to understanding: capture, understand, remember, compare and ask.',
     eyebrow: 'How it works',
     headline: 'From records to',
     accent: 'understanding.',
-    lede: 'Five steps take you from a scattered pile of documents to a health history you can actually use.',
+    lede: 'Five stages are designed to take you from a scattered pile of documents to a health history you can actually use. Here is what each one does — and what is available today.',
     blocks: [
       {
-        type: 'steps',
+        type: 'chapters',
+        numbered: true,
         items: [
-          { id: 'capture', n: '01', icon: 'upload', tone: 'blue', title: 'Capture', text: 'Upload a report, scan a document or send it through WhatsApp.', points: ['Upload a file or scan a paper document in the app.', 'WhatsApp capture is rolling out — it is a way to send reports in, not where your history lives.', 'Your original document is kept, so there is always a source to check.'] },
-          { id: 'understand', n: '02', icon: 'scan', tone: 'teal', title: 'Understand', text: `${BRAND.name} extracts relevant information and organizes it.`, points: ['Dates, results, medications and other details are read from your documents.', 'Extracted information stays linked to the document it came from.', 'AI explanations are kept separate from what your records actually say.'] },
-          { id: 'remember', n: '03', icon: 'layers', tone: 'lavender', title: 'Remember', text: 'Your information becomes part of your longitudinal health history.', points: ['Each record is placed on your timeline.', 'Measures are connected across documents and years.', 'Your history grows with every record you add.'] },
-          { id: 'compare', n: '04', icon: 'compare', tone: 'mint', title: 'Compare', text: 'See meaningful changes, trends and patterns across months and years.', points: ['Trends show direction over time for key measures.', 'What Changed compares the present with your own past.', 'Patterns surface when readings move consistently.'] },
-          { id: 'ask', n: '05', icon: 'chat', tone: 'cream', title: 'Ask', text: 'Ask questions about your health history and get evidence-based answers.', points: ['Ask in plain language.', 'Answers are drawn from your records and show their sources.', `${BRAND.name} explains — it does not diagnose.`] },
+          {
+            id: 'capture',
+            title: 'Capture · Available today',
+            lead: 'Bring your health records together.',
+            paragraphs: ['Add a report in the app. Every record starts as a document you already have — nothing needs retyping.'],
+            points: ['Upload a PDF report in the app.', 'WhatsApp capture is not live yet.', 'Your original document is kept, so there is always a source to check.'],
+            visual: 'capture',
+          },
+          {
+            id: 'understand',
+            title: 'Understand · Not yet available',
+            lead: 'Extract and organize relevant information.',
+            paragraphs: [`Designed to turn reports into structured health information. Reading your reports is at the core of what ${BRAND.name} is being built to do.`],
+            points: ['Designed to read dates, results, medications and other details from your documents.', 'Extracted information will stay linked to the document it came from.', 'AI explanations will be kept separate from what your records actually say.'],
+            visual: 'understand',
+          },
+          {
+            id: 'remember',
+            title: 'Remember · Not yet available',
+            lead: 'Build your longitudinal health history.',
+            paragraphs: ['Designed to make each record part of one history that grows with you.'],
+            points: ['Each record will be placed on your timeline.', 'Measures will be connected across documents and years.', 'Today, the reports you add are kept together in private storage, ready for this step.'],
+            visual: 'remember',
+          },
+          {
+            id: 'compare',
+            title: 'Compare · Not yet available',
+            lead: 'See meaningful changes across months and years.',
+            paragraphs: ['Designed to read the present against your own past, once your history is in place.'],
+            points: ['Trends will show direction over time for key measures.', 'What Changed will compare the present with your own past.', 'Patterns will surface when readings move consistently.'],
+            visual: 'compare',
+          },
+          {
+            id: 'ask',
+            title: 'Ask · Not yet available',
+            lead: 'Explore your health history conversationally.',
+            paragraphs: ['Ask My Health is designed to answer plain-language questions about your history.'],
+            points: ['Answers will be drawn from your records and show their sources.', `${BRAND.name} explains — it does not diagnose.`],
+            visual: 'ask',
+          },
         ],
+      },
+      {
+        type: 'notice',
+        tone: 'info',
+        title: 'What is available today',
+        text: 'Illustrated with sample data. Today you can add PDF reports and keep them together in private storage. Stages marked “Not yet available” are being built next — the FAQ lists exactly what the current version does.',
+        link: { label: 'See the FAQ', href: '/faq' },
       },
     ],
   },
 
   'ai-intelligence': {
     slug: 'ai-intelligence',
-    title: 'AI Intelligence',
-    description:
-      'Trends, changes and patterns from your own health history — with explanations and sources you can check.',
-    eyebrow: 'AI intelligence',
-    headline: 'Your health history',
-    accent: 'becomes intelligence.',
-    lede: `${BRAND.name} analyzes your records over time to identify meaningful trends, changes and patterns — so you can understand what is happening, not just what happened in one report.`,
+    title: 'Intelligence',
+    description: `How ${BRAND.name} is designed to turn separate records into something you can understand: structure, evidence, time, context and questions.`,
+    eyebrow: 'Intelligence',
+    headline: 'Your history,',
+    accent: 'made understandable.',
+    lede: `One report tells you about a day. The intelligence layer is how ${BRAND.name} is designed to turn many reports into something you can understand — with the evidence always in view.`,
     blocks: [
       {
-        type: 'split',
-        id: 'trends',
-        eyebrow: 'Trends & insights',
-        title: 'See how your health changes.',
-        paragraphs: [`A single result is a moment. A trend is a story. ${BRAND.name} lines up your readings across months and years so the direction is easy to see.`],
-        points: ['Longitudinal charts for key measures', 'Clear labels for direction and time span', 'Every point traces back to a record'],
-        card: 'trend',
-      },
-      {
-        type: 'split',
-        id: 'changes',
-        eyebrow: 'What changed',
-        title: 'Compare across time.',
-        paragraphs: [`${BRAND.name} compares your current information with your own past history and tells you what moved, by how much, and between which dates.`],
-        points: ['Before → after values with dates', 'Improvements, increases and decreases shown plainly', 'Colors carry meaning only — never decoration'],
-        card: 'change',
-        reverse: true,
-      },
-      {
-        type: 'split',
-        id: 'patterns',
-        eyebrow: 'Pattern detection',
-        title: 'Find meaningful patterns.',
-        paragraphs: [`Some things only show up across many records. ${BRAND.name} looks for consistent movement and points you to the records behind it.`],
-        points: ['Patterns described in plain language', 'Supporting records one tap away', 'A prompt to review, never a diagnosis'],
-        card: 'pattern',
-      },
-      {
-        type: 'cards',
-        id: 'explanations',
-        eyebrow: 'AI explanations',
-        title: 'Easy-to-understand insights.',
-        intro: 'Explanations are there to help you read your records — and they are always labelled as explanations.',
-        columns: 2,
+        type: 'chapters',
         items: [
-          { icon: 'lightbulb', tone: 'cream', title: 'Plain language', text: 'Complex terms and reports explained in words you can follow.' },
-          { icon: 'evidence', tone: 'teal', title: 'Facts and explanations kept apart', text: 'What your record says is shown separately from AI explanation, so you always know which is which.' },
+          {
+            id: 'memory',
+            title: 'Health Memory · Not yet available',
+            lead: 'Structured, longitudinal history.',
+            paragraphs: [`A result is most useful next to the results that came before it. ${BRAND.name} is designed to keep measures, dates and documents connected, so your history reads as one record rather than a folder of files.`],
+            visual: 'memory',
+          },
+          {
+            id: 'evidence',
+            title: 'Evidence · Not yet available',
+            lead: 'Insights grounded in your records.',
+            paragraphs: ['Answers and insights will be drawn from your own documents, with the sources shown alongside them so you can open the original and check.', 'What your record says and what AI says about it will be shown, and labelled, separately.'],
+            visual: 'evidence',
+          },
+          {
+            id: 'time',
+            title: 'Time · Not yet available',
+            lead: 'Comparisons across dates.',
+            paragraphs: ['A single result is a moment. A trend is a story. Designed to line up readings across months and years so the direction — and the dates behind it — are easy to see.'],
+            visual: 'time',
+          },
+          {
+            id: 'context',
+            title: 'Context · Not yet available',
+            lead: 'History makes individual records more meaningful.',
+            paragraphs: [`Some things only show up across many records. ${BRAND.name} is designed to look for consistent movement and point you to the records behind it — a prompt to review, never a diagnosis.`],
+            visual: 'context',
+          },
+          {
+            id: 'ask',
+            title: 'Ask · Not yet available',
+            lead: 'Conversational access to your own history.',
+            paragraphs: ['Ask My Health is designed to answer plain-language questions from your records, with their sources.', `AI can make mistakes — including when reading a document or explaining a result. That is why sources will be shown, and why ${BRAND.name} is not a substitute for professional medical advice.`],
+            visual: 'prompts',
+          },
         ],
       },
       {
-        type: 'prose',
-        id: 'sources',
-        eyebrow: 'Accuracy & sources',
-        title: 'Always grounded in your records.',
-        paragraphs: [
-          'Answers and insights are drawn from your own documents, and the sources are shown alongside them so you can open the original and check.',
-          `AI can make mistakes — including when reading a document or explaining a result. That is why sources are shown, and why ${BRAND.name} is not a substitute for professional medical advice.`,
-        ],
-        bullets: ['Sources shown with answers', 'Original documents kept', 'No diagnosis, treatment or prevention claims'],
+        type: 'notice',
+        tone: 'info',
+        title: 'What is available today',
+        text: 'Illustrated with sample data. The intelligence described on this page is not yet available — today you can add PDF reports and keep them together in private storage. The FAQ lists exactly what the current version does.',
+        link: { label: 'See the FAQ', href: '/faq' },
       },
     ],
   },
@@ -272,28 +322,41 @@ export const PAGES: Record<string, PageDef> = {
   about: {
     slug: 'about',
     title: 'About',
-    description: `Why we built ${BRAND.name}, and the company behind it: MedhaIQ Systems.`,
+    description: `Why we built ${BRAND.name}, and the company behind it: ${BRAND.parent}.`,
     eyebrow: 'About',
-    headline: 'Your health has a history.',
-    accent: 'We help you use it.',
-    lede: `${BRAND.name} is a product of MedhaIQ Systems.`,
+    headline: 'Healthcare has a',
+    accent: 'memory problem.',
+    lede: `Your lab has one record. Your doctor has another. Your hospital has another. ${BRAND.name} brings the history together.`,
     blocks: [
       {
         type: 'prose',
         id: 'mission',
-        eyebrow: 'Our mission',
-        title: `Why we built ${BRAND.name}.`,
+        eyebrow: 'Why we built it',
+        title: 'Each record makes sense alone. Together, they tell a story nobody can easily see.',
         paragraphs: [
-          'Most of us carry our health history in pieces — a hospital portal here, a PDF there, a prescription photo in a chat. Each record makes sense alone. Together they tell a story nobody can easily see.',
+          'Most of us carry our health history in pieces — a hospital portal here, a PDF there, a prescription photo in a chat.',
           `We are building ${BRAND.name} to connect those pieces into one history, and to help people understand how their health changes over time — with the evidence always one tap away.`,
         ],
-        bullets: ['Remember your health history', 'Understand it', 'Compare it', 'Ask questions about it'],
       },
       {
-        type: 'notice',
-        tone: 'info',
-        title: 'Our team',
-        text: 'Team profiles are coming soon.',
+        type: 'rows',
+        id: 'principles',
+        eyebrow: 'What we believe',
+        title: 'Principles.',
+        numbered: true,
+        items: [
+          { title: 'Your data should remain understandable.' },
+          { title: 'AI should explain, not invent.' },
+          { title: 'Every insight should have context.' },
+          { title: 'Your health history should remain yours.' },
+        ],
+      },
+      {
+        type: 'prose',
+        id: 'company',
+        eyebrow: 'The company',
+        title: `${BRAND.name} is a product of ${BRAND.parent}.`,
+        paragraphs: ['Team profiles are coming soon.'],
       },
       {
         type: 'prose',
@@ -309,7 +372,7 @@ export const PAGES: Record<string, PageDef> = {
   contact: {
     slug: 'contact',
     title: 'Contact',
-    description: `Get in touch with the ${BRAND.name} team at MedhaIQ Systems.`,
+    description: `Get in touch with the ${BRAND.name} team at ${BRAND.parent}.`,
     eyebrow: 'Contact',
     headline: 'Get in',
     accent: 'touch.',
@@ -350,7 +413,7 @@ export const PAGES: Record<string, PageDef> = {
     eyebrow: 'FAQ',
     headline: 'Questions,',
     accent: 'answered.',
-    lede: `Straight answers about what ${BRAND.name} does, and what it doesn’t.`,
+    lede: `Straight answers about what ${BRAND.name} does today, what’s coming next, and what it doesn’t do.`,
     blocks: [],
   },
 
@@ -381,18 +444,3 @@ export const PAGES: Record<string, PageDef> = {
     closing: 'none',
   },
 };
-
-export type FaqItem = { q: string; a: string };
-
-export const FAQS: FaqItem[] = [
-  { q: `What is ${BRAND.name}?`, a: `${BRAND.name} is a Personal Health Intelligence app. It brings your health records, reports, medications and changes together into one connected health history, then helps you see trends, spot what changed and ask questions about it.` },
-  { q: 'Is it just a place to store my medical records?', a: `No. Storing files is only the starting point. ${BRAND.name} turns your records into structured history so you can compare across time, see trends and ask questions grounded in your own documents.` },
-  { q: `Does ${BRAND.name} diagnose conditions or give medical advice?`, a: `No. ${BRAND.name} is a consumer health-information product. It helps you organize and understand your own records. It does not diagnose, treat or replace your doctor.` },
-  { q: 'Where do the answers come from?', a: 'From your own records. Answers show the sources they are based on, so you can open the original document and check. AI can make mistakes, which is why sources are always shown.' },
-  { q: 'Can I trust the AI explanations?', a: 'Treat them as help reading your records, not as medical advice. They are labelled separately from what your documents actually say, and you should talk to a doctor about any health decision.' },
-  { q: `Do I need WhatsApp to use ${BRAND.name}?`, a: `No. You can add records in the app. WhatsApp capture is a convenience that is rolling out — a way to send a report in. Your health history lives in ${BRAND.name}, not in WhatsApp.` },
-  { q: 'Who can see my records?', a: 'The product is designed so that each account can access only its own records. Sharing with anyone else, such as your doctor, is something you choose to do.' },
-  { q: 'Can I delete my data?', a: 'Access, sharing and deletion controls are part of the app’s Privacy screen. Some are still being finalized before launch, and we’ll be specific about what is available when we launch.' },
-  { q: `Does ${BRAND.name} support my family’s records?`, a: 'Not yet. Family health is coming soon.' },
-  { q: 'When can I download it, and what will it cost?', a: `${BRAND.name} is not in the app stores yet, and pricing has not been announced. Store links will appear on this site at launch.` },
-];

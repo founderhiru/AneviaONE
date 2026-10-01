@@ -29,6 +29,8 @@ export const BRAND = {
   category: 'Personal Health Intelligence',
   /** Core product promise, used on Welcome and the launch sequence. */
   tagline: 'Every record. Every change. One intelligent health history.',
+  /** Short line shown only under the wordmark in the launch sequence. */
+  launchTagline: 'Understand your health. Over time.',
   /** Aliases kept so existing screens don't need to change. */
   name: PRODUCT_NAME,
   shortName: PRODUCT_SHORT_NAME,
@@ -46,6 +48,16 @@ export function taglineLines(tagline: string = BRAND.tagline): [string, string] 
   const parts = tagline.split(/(?<=\.)\s+/);
   if (parts.length < 2) return [tagline, ''];
   return [parts.slice(0, -1).join(' '), parts[parts.length - 1]];
+}
+
+/**
+ * The product name as a two-part wordmark: everything before its final
+ * capitalised word, then that word ("Anevia" / "One"), so the second part can
+ * take an accent colour. Falls back to the whole name with no accent.
+ */
+export function wordmarkParts(name: string = BRAND.productName): [string, string] {
+  const match = /^(.*[a-z])([A-Z][a-z]*)$/.exec(name);
+  return match ? [match[1], match[2]] : [name, ''];
 }
 
 /**

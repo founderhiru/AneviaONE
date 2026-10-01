@@ -1,12 +1,13 @@
 import Link from 'next/link';
 
 import { ChangeCard } from './ChangeCard';
+import { ChapterVisual } from './ChapterVisual';
 import { Icon } from './Icon';
 import { PatternCard } from './PatternCard';
 import { Reveal } from './Reveal';
 import { StoreButtons } from './StoreButtons';
 import { TrendCard } from './TrendCard';
-import { BRAND, LINKS } from '@/lib/config';
+import { BRAND, LINKS, PRIMARY_CTA } from '@/lib/config';
 import type { Block, Item, PageDef } from '@/lib/pages';
 
 export function PageHero({
@@ -39,7 +40,7 @@ function CardGrid({ items, columns = 3 }: { items: Item[]; columns?: 2 | 3 | 4 }
   return (
     <div className={`pgrid pgrid--${columns}`}>
       {items.map((it) => (
-        <Reveal key={it.title} className={`pcard hover-lift tone-${it.tone}`}>
+        <Reveal key={it.title} className={`pcard tone-${it.tone}`}>
           <span className="icon-tile icon-tile--lg">
             <Icon name={it.icon} size={26} />
           </span>
@@ -105,33 +106,60 @@ function BlockView({ block }: { block: Block }) {
         </section>
       );
 
-    case 'steps':
+    case 'rows':
       return (
-        <section className="section page-section">
-          <div className="container">
-            <ol className="hsteps">
-              {block.items.map((s) => (
-                <Reveal as="li" key={s.id} id={s.id} className={`hstep tone-${s.tone}`}>
-                  <span className="hstep__marker">
-                    <Icon name={s.icon} size={26} />
-                  </span>
-                  <div className="hstep__card card">
-                    <span className="hstep__num">{s.n}</span>
-                    <h2 className="h3 hstep__title">{s.title}</h2>
-                    <p className="hstep__text">{s.text}</p>
-                    <ul className="checklist">
-                      {s.points.map((pt) => (
-                        <li key={pt}>
-                          <Icon name="check" size={18} /> {pt}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </Reveal>
+        <section id={block.id} className="section page-section">
+          <div className="container rows">
+            <Reveal className="rows__head">
+              {block.eyebrow ? <p className="eyebrow">{block.eyebrow}</p> : null}
+              <h2 className="h2">{block.title}</h2>
+              {block.intro ? <p className="lede">{block.intro}</p> : null}
+            </Reveal>
+            <ol className={`rows__list${block.numbered ? ' rows__list--numbered' : ''}`}>
+              {block.items.map((row, i) => (
+                <li key={row.title} id={row.id} className="rows__item">
+                  {block.numbered ? <span className="rows__num">{String(i + 1).padStart(2, '0')}</span> : null}
+                  <h3 className={`rows__title${row.text ? '' : ' rows__title--statement'}`}>{row.title}</h3>
+                  {row.text ? <p className="rows__text">{row.text}</p> : null}
+                </li>
               ))}
             </ol>
           </div>
         </section>
+      );
+
+    case 'chapters':
+      return (
+        <div className={`chapters${block.numbered ? ' chapters--numbered' : ''}`}>
+          {block.items.map((c, i) => (
+            <section key={c.id} id={c.id} className="chapter" aria-labelledby={`${c.id}-title`}>
+              <div className="container chapter__grid">
+                <div className="chapter__copy">
+                  <p className="chapter__kicker">
+                    {block.numbered ? <span className="chapter__num">{String(i + 1).padStart(2, '0')}</span> : null}
+                    <span id={`${c.id}-title`}>{c.title}</span>
+                  </p>
+                  <h2 className="chapter__lead">{c.lead}</h2>
+                  {c.paragraphs.map((p) => (
+                    <p key={p} className="chapter__text">
+                      {p}
+                    </p>
+                  ))}
+                  {c.points ? (
+                    <ul className="chapter__points">
+                      {c.points.map((pt) => (
+                        <li key={pt}>{pt}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+                <Reveal className="chapter__visual">
+                  <ChapterVisual kind={c.visual} />
+                </Reveal>
+              </div>
+            </section>
+          ))}
+        </div>
       );
 
     case 'prose':
@@ -171,6 +199,11 @@ function BlockView({ block }: { block: Block }) {
               <div>
                 <p className="notice__title">{block.title}</p>
                 <p>{block.text}</p>
+                {block.link ? (
+                  <Link href={block.link.href} className="link-arrow notice__link">
+                    {block.link.label} <Icon name="arrow" size={16} />
+                  </Link>
+                ) : null}
               </div>
             </Reveal>
           </div>
@@ -212,8 +245,10 @@ export function ClosingCta({ kind }: { kind: 'download' | 'contact' | 'none' }) 
         <Reveal className="page-cta__card on-dark">
           {kind === 'download' ? (
             <>
-              <h2 className="h2">Your health story, for life.</h2>
-              <p className="lede">Start building your intelligent health history with {BRAND.name}.</p>
+              <h2 className="h2">
+                Your health has a history. <span className="accent">Start making sense of it.</span>
+              </h2>
+              <p className="page-cta__label">{PRIMARY_CTA.label}</p>
               <StoreButtons tone="light" className="page-cta__stores" />
               {!LINKS.appStore && !LINKS.googlePlay ? <p className="fine">App store links will appear here at launch.</p> : null}
             </>

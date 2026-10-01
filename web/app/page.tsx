@@ -1,33 +1,28 @@
-import { AskHealthSection } from '@/components/AskHealthSection';
-import { FamilySection } from '@/components/FamilySection';
 import { FinalCTA } from '@/components/FinalCTA';
-import { HealthMemorySection } from '@/components/HealthMemorySection';
 import { Hero } from '@/components/Hero';
-import { HowItWorks } from '@/components/HowItWorks';
-import { IntelligenceSection } from '@/components/IntelligenceSection';
-import { PrivacySection } from '@/components/PrivacySection';
-import { ProblemSection } from '@/components/ProblemSection';
-import { ProductShowcase } from '@/components/ProductShowcase';
-import { WhatsAppSection } from '@/components/WhatsAppSection';
+import { HowPreview } from '@/components/home/HowPreview';
+import { IntelligencePreview } from '@/components/home/IntelligencePreview';
+import { ProblemSection } from '@/components/home/ProblemSection';
+import { ProductSection } from '@/components/home/ProductSection';
+import { TrustSection } from '@/components/home/TrustSection';
 
 /**
- * Home narrative:
- * scattered records → one health memory → AI intelligence →
- * trends + changes + patterns → ask your health history.
+ * The homepage is the concise story; each section has one job and hands off
+ * to a dedicated page for depth:
+ *   Hero → what it is · Problem → why it exists · Product → what you get
+ *   How it works → the five-stage concept (/how-it-works has the detail)
+ *   Intelligence → three ideas (/ai-intelligence has the detail)
+ *   Trust → principles (/privacy, /security have the specifics) · Final CTA
  */
 export default function Home() {
   return (
     <>
       <Hero />
       <ProblemSection />
-      <HealthMemorySection />
-      <IntelligenceSection />
-      <HowItWorks />
-      <ProductShowcase />
-      <AskHealthSection />
-      <WhatsAppSection />
-      <PrivacySection />
-      <FamilySection />
+      <ProductSection />
+      <HowPreview />
+      <IntelligencePreview />
+      <TrustSection />
       <FinalCTA />
     </>
   );

@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { Logo } from './Logo';
 import { BRAND } from '@/lib/config';
-import { FOOTER_LEGAL_LINKS, FOOTER_PRODUCT_LINKS } from '@/lib/nav';
+import { FOOTER_COLUMNS } from '@/lib/nav';
 
 export function Footer() {
   return (
@@ -15,27 +15,20 @@ export function Footer() {
             <p className="footer__tag">{BRAND.tagline}</p>
           </div>
 
-          <nav className="footer__col" aria-label="Footer — explore">
-            <h2 className="footer__h">Explore</h2>
-            <ul>
-              {FOOTER_PRODUCT_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href}>{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <nav className="footer__col" aria-label="Footer — legal">
-            <h2 className="footer__h">Legal</h2>
-            <ul>
-              {FOOTER_LEGAL_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href}>{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <div className="footer__cols">
+            {FOOTER_COLUMNS.map((col) => (
+              <nav key={col.title} className="footer__col" aria-label={`Footer — ${col.title}`}>
+                <h2 className="footer__h">{col.title}</h2>
+                <ul>
+                  {col.links.map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href}>{l.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
+          </div>
         </div>
 
         <div className="footer__bottom">

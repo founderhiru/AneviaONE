@@ -1,112 +1,91 @@
-import type { IconName } from '@/components/Icon';
-import { BRAND } from '@/lib/config';
+/**
+ * Site navigation. The header dropdowns, the mobile drawer and the footer are
+ * all rendered from these structures.
+ *
+ * Primary nav: Product ▾ · Intelligence ▾ · How It Works · About · FAQ.
+ * Trust and legal pages (Privacy, Security, Data & AI Principles, Terms) live
+ * in the footer and the homepage Trust section, not the primary nav.
+ */
 
-export type Tone = 'blue' | 'teal' | 'lavender' | 'cream' | 'mint';
-
-export type NavItem = {
-  title: string;
-  description: string;
-  href: string;
-  icon: IconName;
-  tone: Tone;
-};
+export type NavItem = { title: string; description: string; href: string };
 
 export type NavGroup = {
   id: string;
   label: string;
-  /** Top-level destination (the group's overview page). */
+  /** Overview page for the group ("Explore … →"). */
   href: string;
-  /** Menu layout: plain grid or the numbered five-step progression. */
-  variant: 'grid' | 'steps' | 'intelligence';
   items: NavItem[];
 };
 
 export type NavLink = { id: string; label: string; href: string };
 
-/**
- * Header navigation. Desktop mega panels, the mobile drawer and the footer are
- * all rendered from this one structure.
- */
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'product',
     label: 'Product',
     href: '/product',
-    variant: 'grid',
     items: [
-      { title: 'Overview', description: `See what ${BRAND.name} does`, href: '/product', icon: 'overview', tone: 'blue' },
-      { title: 'App Features', description: 'Explore key features', href: '/product#features', icon: 'sparkle', tone: 'teal' },
-      { title: 'Use Cases', description: 'For individuals & families', href: '/product#use-cases', icon: 'users', tone: 'lavender' },
-      { title: 'App Screens', description: 'Take a visual tour', href: '/#screens', icon: 'phone', tone: 'cream' },
+      { title: 'Health Memory', description: 'Your longitudinal health history.', href: '/product#memory' },
+      { title: 'Timeline', description: 'Your health journey over time.', href: '/product#timeline' },
+      { title: 'What Changed', description: 'Meaningful changes across records.', href: '/product#changes' },
+      { title: 'Ask My Health', description: 'Questions grounded in your history.', href: '/product#ask' },
     ],
   },
   {
-    id: 'how',
-    label: 'How It Works',
-    href: '/how-it-works',
-    variant: 'steps',
-    items: [
-      { title: 'Capture', description: 'Upload or send via WhatsApp', href: '/how-it-works#capture', icon: 'upload', tone: 'blue' },
-      { title: 'Understand', description: 'AI extracts and organizes relevant information', href: '/how-it-works#understand', icon: 'scan', tone: 'teal' },
-      { title: 'Remember', description: 'Build your longitudinal health history', href: '/how-it-works#remember', icon: 'layers', tone: 'lavender' },
-      { title: 'Compare', description: 'Find trends and meaningful changes', href: '/how-it-works#compare', icon: 'compare', tone: 'mint' },
-      { title: 'Ask', description: 'Get answers from your own health records', href: '/how-it-works#ask', icon: 'chat', tone: 'cream' },
-    ],
-  },
-  {
-    id: 'ai',
-    label: 'AI Intelligence',
+    id: 'intelligence',
+    label: 'Intelligence',
     href: '/ai-intelligence',
-    variant: 'intelligence',
     items: [
-      { title: 'Trends & Insights', description: 'See how your health changes', href: '/ai-intelligence#trends', icon: 'trend', tone: 'teal' },
-      { title: 'What Changed', description: 'Compare across time', href: '/ai-intelligence#changes', icon: 'compare', tone: 'blue' },
-      { title: 'Pattern Detection', description: 'Find meaningful patterns', href: '/ai-intelligence#patterns', icon: 'pattern', tone: 'lavender' },
-      { title: 'AI Explanations', description: 'Easy-to-understand insights', href: '/ai-intelligence#explanations', icon: 'lightbulb', tone: 'cream' },
-      { title: 'Accuracy & Sources', description: 'Always grounded in your records', href: '/ai-intelligence#sources', icon: 'evidence', tone: 'mint' },
-    ],
-  },
-  {
-    id: 'privacy',
-    label: 'Privacy',
-    href: '/privacy',
-    variant: 'grid',
-    items: [
-      { title: 'Our Approach', description: 'Privacy by design', href: '/privacy', icon: 'shield', tone: 'blue' },
-      { title: 'Data Security', description: 'How your data is protected', href: '/security', icon: 'lock', tone: 'teal' },
-      { title: 'Your Control', description: 'Access, share, delete', href: '/privacy#control', icon: 'sliders', tone: 'lavender' },
-      { title: 'Compliance', description: 'Standards & regulations', href: '/security#compliance', icon: 'badge', tone: 'cream' },
-    ],
-  },
-  {
-    id: 'about',
-    label: 'About',
-    href: '/about',
-    variant: 'grid',
-    items: [
-      { title: 'Our Mission', description: `Why we built ${BRAND.name}`, href: '/about#mission', icon: 'compass', tone: 'blue' },
-      { title: 'Our Team', description: 'People behind the product', href: '/about#team', icon: 'users', tone: 'teal' },
-      { title: 'Careers', description: 'Join us', href: '/about#careers', icon: 'briefcase', tone: 'lavender' },
-      { title: 'Contact', description: 'Get in touch', href: '/contact', icon: 'mail', tone: 'cream' },
+      { title: 'Understand', description: 'Turn records into structured health information.', href: '/ai-intelligence#evidence' },
+      { title: 'Remember', description: 'Build a longitudinal health history.', href: '/ai-intelligence#memory' },
+      { title: 'Compare', description: 'See meaningful changes over time.', href: '/ai-intelligence#time' },
+      { title: 'Ask', description: 'Explore your health history conversationally.', href: '/ai-intelligence#ask' },
     ],
   },
 ];
 
-export const NAV_LINKS: NavLink[] = [{ id: 'faq', label: 'FAQ', href: '/faq' }];
-
-export const FOOTER_PRODUCT_LINKS = [
-  { label: 'Product', href: '/product' },
-  { label: 'How It Works', href: '/how-it-works' },
-  { label: 'AI Intelligence', href: '/ai-intelligence' },
-  { label: 'Privacy', href: '/privacy' },
-  { label: 'FAQ', href: '/faq' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
+export const NAV_LINKS: NavLink[] = [
+  { id: 'how', label: 'How It Works', href: '/how-it-works' },
+  { id: 'about', label: 'About', href: '/about' },
+  { id: 'faq', label: 'FAQ', href: '/faq' },
 ];
 
-export const FOOTER_LEGAL_LINKS = [
-  { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Terms of Service', href: '/terms' },
-  { label: 'Security', href: '/security' },
-  { label: 'Data & AI Principles', href: '/data-ai-principles' },
+export type FooterColumn = { title: string; links: { label: string; href: string }[] };
+
+export const FOOTER_COLUMNS: FooterColumn[] = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'Health Memory', href: '/product#memory' },
+      { label: 'Timeline', href: '/product#timeline' },
+      { label: 'What Changed', href: '/product#changes' },
+      { label: 'Ask My Health', href: '/product#ask' },
+    ],
+  },
+  {
+    title: 'Intelligence',
+    links: [
+      { label: 'Understand', href: '/ai-intelligence#evidence' },
+      { label: 'Compare', href: '/ai-intelligence#time' },
+      { label: 'Ask', href: '/ai-intelligence#ask' },
+      { label: 'How It Works', href: '/how-it-works' },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { label: 'About', href: '/about' },
+      { label: 'FAQ', href: '/faq' },
+      { label: 'Contact', href: '/contact' },
+    ],
+  },
+  {
+    title: 'Trust',
+    links: [
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Security', href: '/security' },
+      { label: 'Data & AI Principles', href: '/data-ai-principles' },
+      { label: 'Terms', href: '/terms' },
+    ],
+  },
 ];

@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { MegaPanel } from './MegaMenu';
 import { MobileNav } from './MobileNav';
-import { DOWNLOAD_ANCHOR, LINKS } from '@/lib/config';
+import { LINKS, PRIMARY_CTA } from '@/lib/config';
 import { NAV_GROUPS, NAV_LINKS } from '@/lib/nav';
 
 export function Header() {
@@ -15,7 +15,6 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const rootRef = useRef<HTMLElement | null>(null);
-  const panelsRef = useRef<HTMLDivElement | null>(null);
   const triggers = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const closeAll = useCallback(() => {
@@ -63,7 +62,7 @@ export function Header() {
       e.preventDefault();
       setOpenId(id);
       window.requestAnimationFrame(() => {
-        panelsRef.current?.querySelector<HTMLElement>(`#mega-${id} a`)?.focus();
+        rootRef.current?.querySelector<HTMLElement>(`#mega-${id} a`)?.focus();
       });
     }
   };
@@ -83,7 +82,7 @@ export function Header() {
             {NAV_GROUPS.map((g) => {
               const isOpen = openId === g.id;
               return (
-                <li key={g.id}>
+                <li key={g.id} className="header__item">
                   <button
                     type="button"
                     ref={(el) => {
@@ -101,6 +100,8 @@ export function Header() {
                     {g.label}
                     <Icon name="chevron" size={16} className="header__chev" />
                   </button>
+                  {/* Dropdown sits under its own trigger; absolutely positioned, so it never shifts layout. */}
+                  <MegaPanel group={g} open={isOpen} onNavigate={closeAll} />
                 </li>
               );
             })}
@@ -129,8 +130,8 @@ export function Header() {
               Sign In
             </span>
           )}
-          <Link href={DOWNLOAD_ANCHOR} className="btn btn--primary btn--sm header__download">
-            Download App
+          <Link href={PRIMARY_CTA.href} className="btn btn--primary btn--sm header__download">
+            {PRIMARY_CTA.label}
           </Link>
           <button
             id="mobile-toggle"
@@ -146,17 +147,6 @@ export function Header() {
           >
             <Icon name={mobileOpen ? 'close' : 'menu'} size={24} />
           </button>
-        </div>
-      </div>
-
-      {/* Desktop mega panels — absolutely positioned, so opening never shifts layout. */}
-      <div ref={panelsRef} className="mega">
-        <div className="container">
-          <div className="mega__frame">
-            {NAV_GROUPS.map((g) => (
-              <MegaPanel key={g.id} group={g} open={openId === g.id} onNavigate={closeAll} />
-            ))}
-          </div>
         </div>
       </div>
 

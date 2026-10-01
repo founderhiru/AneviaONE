@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import { Icon } from './Icon';
-import { DOWNLOAD_ANCHOR, LINKS } from '@/lib/config';
+import { LINKS, PRIMARY_CTA } from '@/lib/config';
 import { NAV_GROUPS, NAV_LINKS } from '@/lib/nav';
 
 type Props = { open: boolean; onClose: () => void };
@@ -54,16 +54,9 @@ export function MobileNav({ open, onClose }: Props) {
                 </button>
                 <div id={`drawer-${group.id}`} className={`drawer__sub${isOpen ? ' is-open' : ''}`} inert={!isOpen}>
                   <ul>
-                    {group.items.map((item, i) => (
+                    {group.items.map((item) => (
                       <li key={item.title}>
-                        <Link href={item.href} className={`drawer__link tone-${item.tone}`} onClick={onClose}>
-                          {group.variant === 'steps' ? (
-                            <span className="drawer__num">{String(i + 1).padStart(2, '0')}</span>
-                          ) : (
-                            <span className="icon-tile">
-                              <Icon name={item.icon} size={20} />
-                            </span>
-                          )}
+                        <Link href={item.href} className="drawer__link" onClick={onClose}>
                           <span className="drawer__text">
                             <span className="drawer__title">{item.title}</span>
                             <span className="drawer__desc">{item.description}</span>
@@ -71,6 +64,11 @@ export function MobileNav({ open, onClose }: Props) {
                         </Link>
                       </li>
                     ))}
+                    <li>
+                      <Link href={group.href} className="drawer__explore" onClick={onClose}>
+                        Explore {group.label} <Icon name="arrow" size={16} />
+                      </Link>
+                    </li>
                   </ul>
                 </div>
               </li>
@@ -87,8 +85,8 @@ export function MobileNav({ open, onClose }: Props) {
         </ul>
       </nav>
       <div className="drawer__cta">
-        <Link href={DOWNLOAD_ANCHOR} className="btn btn--primary" onClick={onClose}>
-          Download App
+        <Link href={PRIMARY_CTA.href} className="btn btn--primary" onClick={onClose}>
+          {PRIMARY_CTA.label}
         </Link>
         {LINKS.signIn ? (
           <a href={LINKS.signIn} className="btn btn--ghost">

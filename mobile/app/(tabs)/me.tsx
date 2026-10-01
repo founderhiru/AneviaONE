@@ -113,9 +113,22 @@ export default function MeScreen() {
 
       <RowList
         rows={[
-          { label: 'Privacy & Security', onPress: () => router.push('/privacy') },
           { label: 'Data Sharing', onPress: () => router.push('/privacy/data-sharing') },
           { label: `${PRODUCT_TERMS.doctorBrief} (preview)`, onPress: () => router.push('/doctor-brief') },
+        ]}
+      />
+
+      {/* Help & legal. No Contact/Support row: there is no support channel yet
+          (the FAQ says so) — add one here when a real one exists. */}
+      <RowList
+        rows={[
+          { label: 'Help & FAQ', onPress: () => router.push('/help') },
+          { label: 'Privacy & Security', onPress: () => router.push('/privacy') },
+          {
+            label: 'Data & Security',
+            onPress: () => router.push({ pathname: '/help', params: { topic: 'data-security' } }),
+          },
+          { label: 'Terms of Service', onPress: () => router.push('/help/terms') },
         ]}
       />
 
@@ -123,7 +136,6 @@ export default function MeScreen() {
         rows={[
           { label: 'Notifications', onPress: () => {} },
           { label: 'Language', onPress: () => {} },
-          { label: 'Help', onPress: () => {} },
           { label: 'About', onPress: () => {} },
         ]}
       />

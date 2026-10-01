@@ -14,7 +14,7 @@ const clean = (value: string | undefined) => {
 };
 
 // The product name is defined once; every other string derives from it.
-const NAME = 'AneviaOne';
+const NAME = 'AneviaONE';
 const CATEGORY = 'Personal Health Intelligence';
 
 export const BRAND = {
@@ -56,5 +56,21 @@ export const WORDMARK = (() => {
   return m ? { lead: m[1], accent: m[2] } : { lead: BRAND.name, accent: '' };
 })();
 
-/** Anchor on the home page where the download buttons live. */
-export const DOWNLOAD_ANCHOR = '/#download';
+/** Anchor on the home page where the store buttons live (final CTA). */
+export const DOWNLOAD_ANCHOR = '/#get-started';
+
+/** True once at least one store listing URL is configured. */
+export const STORES_LIVE = Boolean(LINKS.appStore || LINKS.googlePlay);
+
+/**
+ * Primary call to action. While the store buttons still read "Soon" it is
+ * "Get Started"; it becomes "Download App" automatically once a store URL is
+ * set (NEXT_PUBLIC_APP_STORE_URL / NEXT_PUBLIC_GOOGLE_PLAY_URL).
+ */
+export const PRIMARY_CTA = {
+  label: STORES_LIVE ? 'Download App' : 'Get Started',
+  href: DOWNLOAD_ANCHOR,
+} as const;
+
+/** Secondary call to action, used alongside the primary one in the hero. */
+export const SECONDARY_CTA = { label: 'See how it works', href: '/#how' } as const;

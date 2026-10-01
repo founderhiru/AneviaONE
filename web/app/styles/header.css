@@ -171,159 +171,74 @@ a.store:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(4, 24,
   .header__signin { padding: 0 6px; font-size: 0.97rem; }
 }
 
-/* ---------- Mega menu (desktop) ----------
-   Opens on hover/click with no hover-intent delay. The panel fades in over
-   120ms and closes in 90ms; switching between panels is a straight swap. */
-.mega { position: absolute; left: 0; right: 0; top: 100%; pointer-events: none; display: none; }
-@media (min-width: 1100px) { .mega { display: block; } }
-.mega__frame { position: relative; }
-.mega__panel {
-  position: absolute;
-  top: 8px;
-  left: 0;
-  right: 0;
-  padding: 22px;
-  background: #fff;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-xl);
-  box-shadow: 0 30px 70px rgba(8, 43, 87, 0.16), 0 6px 18px rgba(8, 43, 87, 0.06);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  transition: opacity 90ms linear, transform 90ms var(--ease), visibility 0s linear 90ms;
+/* ---------- Dropdowns (desktop) ----------
+   Compact and anchored under their trigger: a small caps label, four
+   entries and one "Explore" link. No hover-intent delay: fades in over 120ms,
+   out over 90ms. A transparent bridge covers the gap below the trigger so the
+   pointer never "leaves" on the way down. */
+.header__item { position: relative; }
+.dropdown { display: none; }
+@media (min-width: 1100px) {
+  .dropdown {
+    display: block;
+    position: absolute;
+    top: calc(100% + 12px);
+    left: -8px;
+    z-index: 10;
+    width: 380px;
+    padding: 14px 10px 10px;
+    background: #fff;
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    box-shadow: 0 18px 44px rgba(8, 43, 87, 0.12), 0 2px 6px rgba(8, 43, 87, 0.04);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-3px);
+    transition: opacity 90ms linear, transform 90ms var(--ease), visibility 0s linear 90ms;
+  }
+  .dropdown.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition: opacity 120ms linear, transform 120ms var(--ease), visibility 0s;
+  }
+  .dropdown.is-open::before { content: ''; position: absolute; left: 0; right: 0; top: -16px; height: 16px; }
 }
-.mega__panel.is-open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: none;
-  transition: opacity 120ms linear, transform 120ms var(--ease), visibility 0s;
-}
-/* Invisible bridge over the gap between header and panel, so the pointer never
-   "leaves" the menu while travelling down to it. */
-.mega__panel.is-open::before { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 14px; }
-
-/* Grid panels: a titled lead column + items. */
-.mega-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; }
-.mega-lead {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 22px;
-  border-radius: var(--r-lg);
-  background: linear-gradient(160deg, var(--ivory) 0%, var(--ivory-2) 100%);
-  border: 1px solid var(--line-soft);
-}
-.mega-lead__kicker { font-size: 0.72rem; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-700); }
-.mega-lead__title { margin-top: 8px; font-size: 1.6rem; font-weight: 760; letter-spacing: -0.035em; line-height: 1.1; color: var(--navy-800); }
-
-.mega__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 14px 8px 2px;
-  border-top: 1px solid var(--line-soft);
-}
-.mega__note { font-size: 0.94rem; color: var(--ink-500); }
-
-.mega-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.mega-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  height: 100%;
-  padding: 16px 44px 16px 16px;
-  border-radius: var(--r-md);
-  transition: background-color var(--t-fast);
-}
-.mega-item:hover,
-.mega-item:focus-visible { background: var(--ivory); }
-.mega-item .icon-tile { width: 48px; height: 48px; border-radius: 14px; }
-.mega-item__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.mega-item__title { font-weight: 700; letter-spacing: -0.018em; color: var(--navy-800); font-size: 1.08rem; line-height: 1.25; }
-.mega-item__desc { font-size: 0.94rem; line-height: 1.4; color: var(--ink-500); }
-.mega-item__go {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  translate: -4px -50%;
-  color: var(--teal-600);
-  opacity: 0;
-  transition: opacity var(--t-fast), translate var(--t-fast) var(--ease);
-}
-.mega-item:hover .mega-item__go,
-.mega-item:focus-visible .mega-item__go { opacity: 1; translate: 0 -50%; }
-
-/* Five-step progression */
-.mega-steps { display: grid; grid-template-columns: repeat(5, 1fr); position: relative; }
-.mega-steps__li { position: relative; display: flex; }
-.mega-step {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px 20px 20px;
-  border-radius: var(--r-md);
-  transition: background-color var(--t-fast);
-}
-.mega-step:hover,
-.mega-step:focus-visible { background: var(--ivory); }
-.mega-step__num {
-  font-size: 0.76rem;
+.dropdown__label {
+  padding: 0 12px 8px;
+  font-size: 0.7rem;
   font-weight: 750;
-  letter-spacing: 0.14em;
-  color: var(--t-fg);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--teal-700);
 }
-.mega-step .icon-tile { width: 48px; height: 48px; border-radius: 14px; margin: 4px 0 6px; }
-.mega-step__title { font-weight: 720; font-size: 1.14rem; letter-spacing: -0.022em; color: var(--navy-800); }
-.mega-step__desc { font-size: 0.93rem; line-height: 1.42; color: var(--ink-500); }
-.mega-steps__arrow {
-  position: absolute;
-  right: -11px;
-  top: 50px;
-  z-index: 2;
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #fff;
-  border: 1px solid var(--line);
-  color: var(--teal-600);
-}
-
-/* AI Intelligence panel */
-.mega-intel { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; }
-.mega-intel__aside {
+.dropdown__item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 24px;
-  border-radius: var(--r-lg);
-  background: linear-gradient(160deg, var(--navy-800), var(--navy-950));
-  color: #fff;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background-color var(--t-fast);
 }
-.mega-intel__label {
-  align-self: flex-start;
-  padding: 3px 10px;
-  border-radius: var(--r-pill);
-  background: rgba(95, 208, 232, 0.16);
-  color: var(--teal-300);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.dropdown__item:hover,
+.dropdown__item:focus-visible { background: var(--ivory); }
+.dropdown__title { font-size: 1rem; font-weight: 680; letter-spacing: -0.015em; color: var(--navy-800); }
+.dropdown__desc { font-size: 0.9rem; line-height: 1.4; color: var(--ink-500); }
+.dropdown__explore {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 2px 0;
+  padding: 12px 10px 4px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 0.94rem;
+  font-weight: 650;
+  color: var(--teal-700);
+  transition: gap var(--t-fast) var(--ease), color var(--t-fast);
 }
-.mega-intel__metric { margin-top: 8px; font-size: 0.9rem; color: #b9c9e0; }
-.mega-intel__chart { width: 100%; height: auto; margin: 6px 0 2px; }
-.mega-intel__line { font-size: 1.2rem; color: #fff; }
-.mega-intel__line b { font-weight: 750; letter-spacing: -0.02em; }
-.mega-intel__sub { font-size: 0.82rem; color: #9fb2cf; line-height: 1.4; }
+.dropdown__explore:hover { gap: 12px; color: var(--navy-800); }
 
 /* ---------- Mobile drawer ---------- */
 .drawer {
@@ -373,27 +288,15 @@ a.store:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(4, 24,
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 58px;
-  padding: 8px 6px;
+  min-height: 56px;
+  padding: 8px 0;
   border-radius: var(--r-md);
   transition: background-color var(--t-fast);
 }
 .drawer__link:active { background: var(--ivory-2); }
-.drawer__num {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border-radius: 13px;
-  background: var(--t-bg);
-  color: var(--t-fg);
-  font-size: 0.86rem;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-}
 .drawer__text { display: flex; flex-direction: column; }
 .drawer__title { font-size: 1.04rem; font-weight: 680; color: var(--navy-800); }
 .drawer__desc { font-size: 0.92rem; color: var(--ink-500); line-height: 1.35; }
+.drawer__explore { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 650; color: var(--teal-700); }
 .drawer__cta { margin-top: auto; padding-top: 28px; display: grid; gap: 12px; }
 .drawer__cta .btn { width: 100%; }
