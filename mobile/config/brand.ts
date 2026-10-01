@@ -19,6 +19,8 @@
 
 const PRODUCT_NAME = 'AneviaOne';
 const PRODUCT_SHORT_NAME = 'AneviaOne';
+/** Display form of the name for the brand wordmark (launch sequence). */
+const PRODUCT_WORDMARK = 'AneviaONE';
 
 export const BRAND = {
   /** Working product name, shown on splash/welcome/marketing-style moments. */
@@ -29,8 +31,10 @@ export const BRAND = {
   category: 'Personal Health Intelligence',
   /** Core product promise, used on Welcome and the launch sequence. */
   tagline: 'Every record. Every change. One intelligent health history.',
+  /** The name as set in the brand wordmark (launch sequence only). */
+  wordmark: PRODUCT_WORDMARK,
   /** Short line shown only under the wordmark in the launch sequence. */
-  launchTagline: 'Understand your health. Over time.',
+  launchTagline: 'Healthier generations. Brighter lives.',
   /** Aliases kept so existing screens don't need to change. */
   name: PRODUCT_NAME,
   shortName: PRODUCT_SHORT_NAME,
@@ -51,12 +55,12 @@ export function taglineLines(tagline: string = BRAND.tagline): [string, string] 
 }
 
 /**
- * The product name as a two-part wordmark: everything before its final
- * capitalised word, then that word ("Anevia" / "One"), so the second part can
- * take an accent colour. Falls back to the whole name with no accent.
+ * The wordmark in two parts: everything before its final capitalised word,
+ * then that word ("Anevia" / "ONE"), so the second part can take an accent
+ * colour. Falls back to the whole name with no accent.
  */
-export function wordmarkParts(name: string = BRAND.productName): [string, string] {
-  const match = /^(.*[a-z])([A-Z][a-z]*)$/.exec(name);
+export function wordmarkParts(name: string = BRAND.wordmark): [string, string] {
+  const match = /^(.*[a-z])([A-Z][A-Za-z]*)$/.exec(name);
   return match ? [match[1], match[2]] : [name, ''];
 }
 
