@@ -190,6 +190,34 @@
 }
 
 
+/* ---------- App bar: get the app ---------- */
+.appbar { padding-bottom: clamp(8px, 2vw, 24px); }
+.appbar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 40px;
+  padding: clamp(20px, 2.4vw, 28px) clamp(20px, 3vw, 36px);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--sh-sm);
+}
+.appbar__copy .eyebrow { margin-bottom: 8px; }
+.appbar__title { font-size: clamp(1.3rem, 2.2vw, 1.7rem); font-weight: 720; letter-spacing: -0.03em; line-height: 1.2; color: var(--navy-800); }
+.appbar__stores { gap: 10px; }
+.appbar__stores .store { min-height: 46px; padding: 6px 14px 6px 12px; gap: 9px; border-radius: 12px; }
+.appbar__stores .store__big { font-size: 1rem; }
+.appbar__stores .store__small { font-size: 0.6rem; }
+@media (max-width: 560px) {
+  .appbar__stores { width: 100%; }
+  .appbar__stores .store { flex: 1 1 0; min-width: 0; padding: 6px 10px; }
+  .appbar__stores .store__big { font-size: 0.94rem; white-space: nowrap; }
+  .appbar__stores .store__small { font-size: 0.56rem; white-space: nowrap; }
+  .appbar__stores .store__soon { position: absolute; top: -9px; right: 8px; margin: 0; padding: 2px 7px; font-size: 0.56rem; }
+}
+
 /* ---------- Problem ---------- */
 .converge { max-width: 1120px; margin-inline: auto; }
 .converge__chips { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 12px; align-items: start; }
