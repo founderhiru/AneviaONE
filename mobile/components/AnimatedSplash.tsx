@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import Svg, { Defs, Ellipse, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { BRAND, taglineLines, wordmarkParts } from '../config/brand';
-import { typography } from '../design/typography';
 
 export type AnimatedSplashProps = {
   /** True once real app initialization (auth/session check) has resolved.
@@ -20,22 +19,24 @@ export type AnimatedSplashProps = {
 
 /**
  * Full-screen launch sequence, shown once per cold start above the app. It
- * starts on the same deep emerald as the native launch screen (app.json), so
- * launch reads as one continuous screen:
+ * starts on the same forest green as the native launch screen (app.json), so
+ * launch reads as one continuous screen. Four moments, as in the storyboard:
  *
- *   initiate (0–0.7 s)   a wide ribbon of overlapping translucent strands
- *                         sweeps up from below in an S-curve
- *   form     (0.7–1.5 s)  it curves into the orbit — its tail is drawn in
- *                         after it, so the light itself becomes the circle
- *   Λ        (1.2–2.0 s)  the mark emerges from a soft haze, then sharpens
- *   wordmark (2.0–2.5 s) → tagline (2.35–2.7 s)
- *   settle   (2.7–3.2 s)  a faint lower horizon glow and one shimmer along
- *                         the orbit; hold until the app is ready → fade out.
+ *   initiate (0–0.7 s)   a tall S of silky, overlapping light sweeps up the
+ *                         screen, gold at its heart, with fine sparkles
+ *   form     (0.7–1.5 s)  the strands curl round the centre in swirling arcs
+ *                         while the ring draws; the Λ emerges (1.2–2.0 s) and
+ *                         the swirls dissolve into one clean ring
+ *   reveal   (2.0–2.7 s)  wordmark, then tagline; a gold horizon line glows
+ *                         low on the screen
+ *   settle   (2.7–3.2 s)  the horizon rises slightly and warms; one shimmer
+ *                         on the ring — hold until the app is ready → fade.
  *
- * Two clocks over the same timeline: one on the native driver (opacity and
- * transforms), one on the JS driver for the SVG stroke-dash offsets that draw
- * the ribbon, orbit and mark. No animation library. Honours reduce-motion:
- * the finished composition simply fades in.
+ * Everything is laid out on a 390 × 844 stage scaled to cover the screen, so
+ * the ribbon, ring and text keep their relationship on every phone. Two
+ * clocks: native driver for opacity/transforms, JS driver for the SVG
+ * stroke-dash offsets that draw the light. No animation library. Honours
+ * reduce-motion: the finished composition simply fades in.
  */
 
 const TIMELINE_MS = 3200;
@@ -46,48 +47,39 @@ const EXIT_MS = 280;
 const FALLBACK_MS = 1000;
 const EASE_SAMPLES = 8;
 
-// Launch-only palette. The field matches the native launch screen in app.json.
-const FIELD = '#062019';
-const EMERALD = '#2FBF8F';
-const TEAL = '#4FD1C5';
-const SOFT_WHITE = '#EAF7F1';
-const MINT = '#9FE6CF';
-const CHAMPAGNE = '#E6D3A3';
+// Launch-only palette. FIELD matches the native launch screen in app.json.
+const FIELD = '#0E2A1B';
+const GOLD = '#F2D58A';
+const SOFT_WHITE = '#F6F9EF';
+const SAGE = '#BFE0B5';
+const GREEN_LIGHT = '#8FCF9A';
+const LIME_GOLD = '#C9DC86';
+const RING_GREEN = '#A9CF86';
 
-// Canvas for the light: the orbit is centred at (CX, CY); the ribbon rises
-// from below it, inside the same box.
-const CW = 320;
-const CH = 480;
-const CX = 160;
-const CY = 150;
-const R = 70;
-const CIRCUMFERENCE = 2 * Math.PI * R;
+// Stage: every coordinate below is in this box.
+const SW = 390;
+const SH = 844;
+const CX = 195;
+const CY = 315;
+const R = 84;
 
 type Point = { x: number; y: number };
 type Cubic = [Point, Point, Point, Point];
 
-// The ribbon's centre line: an S-curve from the lower centre that bows right,
-// sweeps left, then rises into the left side of the orbit travelling upward —
-// the orbit continues it clockwise without a kink. Each strand of the ribbon
-// is this curve displaced by an offset that tapers to zero at the orbit, so
-// the strands spread apart low down and gather as they enter the circle.
+// The ribbon's centre line: a tall S from below the screen — bowing right,
+// crossing the centre, bowing left — that arrives at the top of the ring
+// travelling right, so it carries on round the ring without a kink.
 const SPINE: Point[] = [
-  { x: CX + 0.4 * R, y: CY + 4.4 * R }, // start
-  { x: CX + 1.35 * R, y: CY + 3.4 * R },
-  { x: CX + 0.6 * R, y: CY + 2.3 * R },
-  { x: CX - 0.4 * R, y: CY + 2.0 * R }, // inflection
-  { x: CX - 1.4 * R, y: CY + 1.7 * R },
-  { x: CX - R, y: CY + 0.9 * R },
-  { x: CX - R, y: CY }, // enters the orbit
+  { x: 70, y: 900 },
+  { x: 400, y: 760 },
+  { x: 380, y: 520 },
+  { x: 205, y: 470 }, // heart of the S
+  { x: 30, y: 420 },
+  { x: 80, y: CY - R },
+  { x: CX, y: CY - R }, // top of the ring
 ];
 const TAPER = [1, 1, 0.8, 0.6, 0.35, 0, 0];
 
-function strandPoints(dx: number, dy: number): Point[] {
-  return SPINE.map((p, i) => ({ x: p.x + dx * TAPER[i], y: p.y + dy * TAPER[i] }));
-}
-function strandPath(p: Point[]): string {
-  return `M ${p[0].x} ${p[0].y} C ${p[1].x} ${p[1].y} ${p[2].x} ${p[2].y} ${p[3].x} ${p[3].y} C ${p[4].x} ${p[4].y} ${p[5].x} ${p[5].y} ${p[6].x} ${p[6].y}`;
-}
 function bezier([p0, p1, p2, p3]: Cubic, t: number): Point {
   const u = 1 - t;
   return {
@@ -109,86 +101,88 @@ const segments = (p: Point[]): [Cubic, Cubic] => [
   [p[0], p[1], p[2], p[3]],
   [p[3], p[4], p[5], p[6]],
 ];
-function strandLength(p: Point[]): number {
-  const [a, b] = segments(p);
-  return cubicLength(a) + cubicLength(b);
-}
 /** A point along the spine, u in [0, 1] (by curve parameter). */
 function spineAt(u: number): Point {
   const [a, b] = segments(SPINE);
   return u < 0.5 ? bezier(a, u * 2) : bezier(b, (u - 0.5) * 2);
 }
+const ringPoint = (deg: number, r = R): Point => ({
+  x: CX + r * Math.cos((deg * Math.PI) / 180),
+  y: CY + r * Math.sin((deg * Math.PI) / 180),
+});
 
-// Strands, back to front: wide translucent teal and emerald veils, a mint
-// band, the champagne core and a fine white highlight — together they read
-// as one band of flowing silk-like light.
-type Strand = { dx: number; dy: number; width: number; color: string; opacity: number };
+// Strands of the ribbon, back to front: broad translucent veils, then fine
+// gold and white threads, then the bright core. Each follows the spine
+// displaced by (dx, dy) — wide apart low down — and then circles twice round
+// its own ring (radius R + dr, centre nudged by ox/oy), so as the light flows
+// in, the strands swirl round the centre at slightly different radii.
+type Strand = { dx: number; dy: number; dr: number; ox: number; oy: number; width: number; color: string; opacity: number };
 const STRANDS: Strand[] = [
-  { dx: 30, dy: 10, width: 42, color: TEAL, opacity: 0.035 },
-  { dx: 14, dy: 5, width: 28, color: EMERALD, opacity: 0.06 },
-  { dx: -14, dy: -4, width: 17, color: EMERALD, opacity: 0.1 },
-  { dx: 9, dy: 4, width: 6, color: MINT, opacity: 0.22 },
-  { dx: -24, dy: -8, width: 1.4, color: CHAMPAGNE, opacity: 0.6 },
-  { dx: 18, dy: 6, width: 1, color: SOFT_WHITE, opacity: 0.35 },
-  { dx: 0, dy: 0, width: 3, color: 'url(#splashCore)', opacity: 0.95 },
-  { dx: 0, dy: 0, width: 1, color: SOFT_WHITE, opacity: 0.8 },
+  { dx: 48, dy: 14, dr: 18, ox: 4, oy: 3, width: 84, color: SAGE, opacity: 0.07 },
+  { dx: -38, dy: -10, dr: -12, ox: -3, oy: 2, width: 52, color: GREEN_LIGHT, opacity: 0.1 },
+  { dx: 22, dy: 7, dr: 9, ox: -2, oy: -3, width: 28, color: SOFT_WHITE, opacity: 0.12 },
+  { dx: -18, dy: -5, dr: 24, ox: 3, oy: -2, width: 2.4, color: GOLD, opacity: 0.75 },
+  { dx: 12, dy: 4, dr: -18, ox: -2, oy: 2, width: 1.4, color: SOFT_WHITE, opacity: 0.6 },
+  { dx: 32, dy: 10, dr: 5, ox: 2, oy: 4, width: 1, color: GOLD, opacity: 0.5 },
+  { dx: 0, dy: 0, dr: 0, ox: 0, oy: 0, width: 3.2, color: 'url(#splashCore)', opacity: 0.95 },
+  { dx: 0, dy: 0, dr: 0, ox: 0, oy: 0, width: 1.2, color: SOFT_WHITE, opacity: 0.9 },
 ];
 const STRAND_GEOMETRY = STRANDS.map((s) => {
-  const points = strandPoints(s.dx, s.dy);
-  return { d: strandPath(points), length: strandLength(points) };
+  const r = R + s.dr;
+  const cx = CX + s.ox;
+  const cy = CY + s.oy;
+  const shift = { x: s.ox, y: s.oy - s.dr };
+  const pts = SPINE.map((p, i) => ({
+    x: p.x + s.dx * TAPER[i] + shift.x * (1 - TAPER[i]),
+    y: p.y + s.dy * TAPER[i] + shift.y * (1 - TAPER[i]),
+  }));
+  const [a, b] = segments(pts);
+  const sLength = cubicLength(a) + cubicLength(b);
+  const loop = `A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r}`;
+  const d = `M ${pts[0].x} ${pts[0].y} C ${pts[1].x} ${pts[1].y} ${pts[2].x} ${pts[2].y} ${pts[3].x} ${pts[3].y} C ${pts[4].x} ${pts[4].y} ${pts[5].x} ${pts[5].y} ${pts[6].x} ${pts[6].y} ${loop} ${loop}`;
+  return { d, sLength, total: sLength + 2 * 2 * Math.PI * r };
 });
-const SPINE_D = strandPath(SPINE);
-const SPINE_LENGTH = strandLength(SPINE);
-const TRAVEL = SPINE_LENGTH + CIRCUMFERENCE;
-
-// Full circle from the left, clockwise on screen (upwards first).
-const ORBIT_D = `M ${CX - R} ${CY} A ${R} ${R} 0 1 1 ${CX + R} ${CY} A ${R} ${R} 0 1 1 ${CX - R} ${CY}`;
-const HEAD = 16; // bright head of the moving light
-const TRAIL = 70; // softer champagne light trailing the head
-const SWEEP = CIRCUMFERENCE * 0.2; // final shimmer along the orbit
-const GAP = CIRCUMFERENCE * 6; // keeps repeated dashes off the path
+const CORE = STRAND_GEOMETRY[STRAND_GEOMETRY.length - 1];
+const CIRCUMFERENCE = 2 * Math.PI * R;
+// Clean ring, from the top, clockwise — drawn by the core as it passes.
+const RING_D = `M ${CX} ${CY - R} A ${R} ${R} 0 1 1 ${CX} ${CY + R} A ${R} ${R} 0 1 1 ${CX} ${CY - R}`;
+const HEAD = 18; // bright head of the moving light
+const SWEEP = CIRCUMFERENCE * 0.18; // final shimmer on the ring
+const GAP = 4000; // keeps repeated dashes off the paths
+const FLARE = ringPoint(-52); // gold highlight on the ring, top right
 
 // The existing chevron mark (same proportions as the app icon), centred in
-// the orbit.
+// the ring.
 const APEX = { x: CX, y: CY - 0.5 * R };
 const FOOT_L = { x: CX - 0.57 * R, y: CY + 0.48 * R };
 const FOOT_R = { x: CX + 0.57 * R, y: CY + 0.48 * R };
 const MARK_D = `M ${FOOT_L.x} ${FOOT_L.y} L ${APEX.x} ${APEX.y} L ${FOOT_R.x} ${FOOT_R.y}`;
 const MARK_LENGTH = Math.hypot(APEX.x - FOOT_L.x, APEX.y - FOOT_L.y) * 2;
-const MARK_STROKE = 12;
+const MARK_STROKE = 14;
 // [stroke width, opacity] layers of the soft glow the mark emerges from.
 const HAZE: [number, number][] = [
-  [MARK_STROKE * 3.4, 0.04],
-  [MARK_STROKE * 2.4, 0.07],
-  [MARK_STROKE * 1.6, 0.11],
+  [MARK_STROKE * 3.4, 0.05],
+  [MARK_STROKE * 2.4, 0.08],
+  [MARK_STROKE * 1.6, 0.12],
 ];
 
-// Fine motes shed by the brightest part of the flow, appearing as the head
-// passes them. [position along the spine, sideways offset, colour].
-const MOTE_SPECS: [number, number, string][] = [
-  [0.1, 12, CHAMPAGNE],
-  [0.18, -10, SOFT_WHITE],
-  [0.26, 16, MINT],
-  [0.34, -14, CHAMPAGNE],
-  [0.42, 9, SOFT_WHITE],
-  [0.5, -18, MINT],
-  [0.58, 13, CHAMPAGNE],
-  [0.66, -9, SOFT_WHITE],
-  [0.76, 15, CHAMPAGNE],
-  [0.86, -12, MINT],
+// Fine sparkles: along the S as the light passes, then round the ring while
+// it forms. { x, y, colour, appear-at ms, size }.
+const SPARKS = [
+  ...[0.12, 0.2, 0.28, 0.36, 0.42, 0.47, 0.52, 0.58, 0.64, 0.72, 0.8, 0.88].map((u, i) => {
+    const p = spineAt(u);
+    const side = (i % 2 ? -1 : 1) * (10 + ((i * 7) % 22));
+    return { x: p.x + side, y: p.y - side * 0.4, color: i % 3 ? GOLD : SOFT_WHITE, at: 60 + u * 650, size: i % 4 === 0 ? 2.6 : 1.8 };
+  }),
+  ...[200, 235, 260, 300, 340, 20, 60, 110, 150].map((deg, i) => {
+    const p = ringPoint(deg, R + 14 + ((i * 9) % 20));
+    return { x: p.x, y: p.y, color: i % 2 ? GOLD : SOFT_WHITE, at: 850 + i * 60, size: i % 3 === 0 ? 2.4 : 1.6 };
+  }),
 ];
-const MOTES = MOTE_SPECS.map(([u, side, color], i) => {
-  const p = spineAt(u);
-  const q = spineAt(Math.min(1, u + 0.01));
-  const len = Math.hypot(q.x - p.x, q.y - p.y) || 1;
-  // Sideways = perpendicular to the direction of travel.
-  const nx = -(q.y - p.y) / len;
-  const ny = (q.x - p.x) / len;
-  return { x: p.x + nx * side, y: p.y + ny * side, color, at: 80 + u * 700, size: i % 3 === 0 ? 2.5 : 2 };
-});
 
-// Faint horizon glow beneath the tagline in the settled frame.
-const GLOW_Y = CY + R + 128;
+// Copy and the horizon glow, in stage coordinates.
+const COPY_TOP = CY + R + 34;
+const HORIZON_Y = 690;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -215,6 +209,7 @@ function sampled(clock: Animated.Value): At {
 }
 
 export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
+  const { width, height } = useWindowDimensions();
   const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
   const [settled, setSettled] = useState(false);
   const [clock] = useState(() => new Animated.Value(0)); // native driver
@@ -285,7 +280,10 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
         reduced: true,
         all: at([0, TIMELINE_MS], [0, 1], out),
         field: 1,
-        bloom: 1,
+        heart: 0,
+        swirlGlow: 0,
+        strandsOut: 0,
+        flare: 1,
         markHaze: 0.5,
         markIn: 1,
         markScale: 1,
@@ -294,43 +292,51 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
         nameY: 0,
         tagIn: 1,
         horizon: 1,
+        horizonY: 0,
       } as const;
     }
     return {
       reduced: false,
       all: 1,
       field: at([0, 450], [0, 1]),
-      // The light around the orbit swells as the ribbon closes into it.
-      bloom: at([300, 1500, 2300], [0.35, 1, 0.85]),
-      // The Λ emerges from the same light: a soft haze first, then the sharp
-      // mark draws through it and settles.
+      // Gold heart of the S while the ribbon is whole.
+      heart: at([300, 700, 1150], [0, 0.9, 0]),
+      // Gold glows on the swirling arcs as the ring forms.
+      swirlGlow: at([850, 1200, 1700], [0, 0.7, 0]),
+      // The swirling strands dissolve, leaving one clean ring.
+      strandsOut: at([1350, 1850], [1, 0]),
+      flare: at([1500, 1850, 2800, 3000, 3200], [0, 1, 1, 1.35, 1]),
+      // The Λ emerges from the same light: a soft haze, then the sharp mark
+      // draws through it and settles.
       markHaze: at([1200, 1500, 2000, 2250, 2500], [0, 1, 0.5, 0.7, 0.5]),
       markIn: at([1300, 1600], [0, 1], out),
       markScale: at([1300, 2000], [0.94, 1], out),
       breath: at([2000, 2250, 2500], [1, 1.01, 1]),
       nameIn: at([2000, 2500], [0, 1], out),
-      nameY: at([2000, 2500], [6, 0], out),
+      nameY: at([2000, 2500], [8, 0], out),
       tagIn: at([2350, 2700], [0, 1], out),
-      horizon: at([2600, 3150], [0, 1], out),
+      horizon: at([2300, 2800, 3200], [0, 0.75, 1], out),
+      horizonY: at([2700, 3200], [0, -30], out),
     } as const;
   }, [at, reduceMotion]);
 
   const strokes = useMemo(() => {
-    // One travelling distance drives the light along the spine and on round
-    // the orbit; each strand moves in proportion so they all arrive together.
-    const travel = svgAt([60, 1500], [0, TRAVEL], Easing.inOut(Easing.cubic));
+    // One progress value drives every strand from the bottom of its S to the
+    // end of its second loop, so they move together.
+    const q = svgAt([60, 1550], [0, 1], Easing.inOut(Easing.cubic));
     const lin = Easing.linear;
-    const along = (inRange: number[], outRange: number[]) =>
-      travel.interpolate({ inputRange: inRange, outputRange: outRange, extrapolate: 'clamp' });
+    const byQ = (inRange: number[], outRange: number[]) =>
+      q.interpolate({ inputRange: inRange, outputRange: outRange, extrapolate: 'clamp' });
+    const coreEntry = CORE.sLength / CORE.total;
+    const coreRingDone = (CORE.sLength + CIRCUMFERENCE) / CORE.total;
     return {
-      // A fixed-length dash slides along each strand, so its tail follows the
-      // head into the orbit and the ribbon is absorbed into the circle.
-      strands: STRAND_GEOMETRY.map(({ length }) => along([0, TRAVEL], [length, length - (TRAVEL * length) / SPINE_LENGTH])),
-      leadHead: along([0, TRAVEL], [HEAD, HEAD - TRAVEL]),
-      orbit: along([0, SPINE_LENGTH, TRAVEL], [CIRCUMFERENCE, CIRCUMFERENCE, 0]),
-      orbitHead: along([0, TRAVEL], [HEAD + SPINE_LENGTH, HEAD - CIRCUMFERENCE]),
-      orbitTrail: along([0, TRAVEL], [TRAIL + SPINE_LENGTH, TRAIL - CIRCUMFERENCE]),
-      headOpacity: svgAt([0, 80, 1400, 1700], [0, 1, 1, 0], lin),
+      // Each strand shows a dash as long as its S, sliding along: the whole S
+      // is lit when the light reaches the ring, then its tail follows the
+      // head round, leaving swirling arcs.
+      strands: STRAND_GEOMETRY.map(({ sLength, total }) => byQ([0, 1], [sLength, sLength - total])),
+      head: byQ([0, 1], [HEAD, HEAD - CORE.total]),
+      ring: byQ([0, coreEntry, coreRingDone], [CIRCUMFERENCE, CIRCUMFERENCE, 0]),
+      headOpacity: svgAt([0, 60, 1350, 1600], [0, 1, 1, 0], lin),
       haze: svgAt([1200, 1600], [MARK_LENGTH, 0], Easing.inOut(Easing.cubic)),
       mark: svgAt([1300, 1850], [MARK_LENGTH, 0], Easing.inOut(Easing.cubic)),
       sweep: svgAt([2750, 3150], [SWEEP - CIRCUMFERENCE * 0.02, SWEEP - CIRCUMFERENCE * 0.55], Easing.inOut(Easing.quad)),
@@ -339,68 +345,93 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
   }, [svgAt]);
 
   const reduced = view.reduced;
+  // Scale the stage to cover the screen, centred.
+  const scale = Math.max(width / SW, height / SH);
 
   return (
     <Animated.View
-      style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: FIELD, opacity: exitOpacity }]}
+      style={[StyleSheet.absoluteFill, { backgroundColor: FIELD, opacity: exitOpacity }]}
       accessible
       accessibilityRole="progressbar"
       accessibilityLabel={`Loading ${BRAND.wordmark}`}
     >
       <StatusBar style="light" />
 
-      {/* Atmosphere: emerald body with darker forest edges, a soft champagne
-          warmth low down, and a vignette. Many stops keep it free of banding. */}
+      {/* Atmosphere: forest green, lit softly from above, darker at the edges,
+          with a few faint out-of-focus highlights. */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.field }]} pointerEvents="none">
         <Svg width="100%" height="100%">
           <Defs>
-            <RadialGradient id="splashField" cx="50%" cy="40%" rx="80%" ry="62%">
-              <Stop offset="0" stopColor="#0F4436" />
-              <Stop offset="0.2" stopColor="#0D3D31" />
-              <Stop offset="0.4" stopColor="#0A332A" />
-              <Stop offset="0.6" stopColor="#082A22" />
-              <Stop offset="0.8" stopColor="#06211B" />
-              <Stop offset="1" stopColor="#041813" />
+            <RadialGradient id="splashField" cx="50%" cy="32%" rx="85%" ry="70%">
+              <Stop offset="0" stopColor="#2C5A36" />
+              <Stop offset="0.25" stopColor="#22492C" />
+              <Stop offset="0.5" stopColor="#183A23" />
+              <Stop offset="0.75" stopColor="#11301D" />
+              <Stop offset="1" stopColor="#0A2215" />
             </RadialGradient>
-            <RadialGradient id="splashWarm" cx="50%" cy="80%" rx="60%" ry="26%">
-              <Stop offset="0" stopColor={CHAMPAGNE} stopOpacity={0.07} />
-              <Stop offset="0.5" stopColor={CHAMPAGNE} stopOpacity={0.03} />
-              <Stop offset="1" stopColor={CHAMPAGNE} stopOpacity={0} />
+            <RadialGradient id="splashSky" cx="50%" cy="0%" rx="62%" ry="42%">
+              <Stop offset="0" stopColor={LIME_GOLD} stopOpacity={0.18} />
+              <Stop offset="0.5" stopColor={LIME_GOLD} stopOpacity={0.06} />
+              <Stop offset="1" stopColor={LIME_GOLD} stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="splashVignette" cx="50%" cy="45%" rx="75%" ry="70%">
-              <Stop offset="0.55" stopColor="#020D0A" stopOpacity={0} />
-              <Stop offset="0.8" stopColor="#020D0A" stopOpacity={0.25} />
-              <Stop offset="1" stopColor="#020D0A" stopOpacity={0.55} />
+            <RadialGradient id="splashVignette" cx="50%" cy="42%" rx="75%" ry="70%">
+              <Stop offset="0.55" stopColor="#04110A" stopOpacity={0} />
+              <Stop offset="0.8" stopColor="#04110A" stopOpacity={0.25} />
+              <Stop offset="1" stopColor="#04110A" stopOpacity={0.55} />
+            </RadialGradient>
+            <RadialGradient id="splashBokeh">
+              <Stop offset="0" stopColor="#E6EFC0" stopOpacity={0.07} />
+              <Stop offset="1" stopColor="#E6EFC0" stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashField)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashWarm)" />
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashSky)" />
+          <Circle cx="28%" cy="10%" r="16%" fill="url(#splashBokeh)" />
+          <Circle cx="74%" cy="7%" r="12%" fill="url(#splashBokeh)" />
+          <Circle cx="60%" cy="19%" r="8%" fill="url(#splashBokeh)" />
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashVignette)" />
         </Svg>
       </Animated.View>
 
-      <Animated.View style={[styles.canvas, { opacity: view.all }]}>
-        {/* Soft green bloom around the orbit. */}
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.bloom }]} pointerEvents="none">
-          <Svg width={CW} height={CH} viewBox={`0 0 ${CW} ${CH}`}>
+      <Animated.View
+        style={[
+          styles.stage,
+          { left: (width - SW) / 2, top: (height - SH) / 2, opacity: view.all, transform: [{ scale }] },
+        ]}
+        pointerEvents="none"
+      >
+        {/* Gold heart of the S, and gold glows on the swirls. */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.heart }]}>
+          <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
             <Defs>
-              <RadialGradient id="splashBloom" cx={CX} cy={CY} r={R * 2.3} gradientUnits="userSpaceOnUse">
-                <Stop offset="0" stopColor={EMERALD} stopOpacity={0.16} />
-                <Stop offset="0.35" stopColor={EMERALD} stopOpacity={0.09} />
-                <Stop offset="0.7" stopColor={TEAL} stopOpacity={0.03} />
-                <Stop offset="1" stopColor={TEAL} stopOpacity={0} />
+              <RadialGradient id="splashGold">
+                <Stop offset="0" stopColor={GOLD} stopOpacity={0.55} />
+                <Stop offset="0.4" stopColor={GOLD} stopOpacity={0.18} />
+                <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
               </RadialGradient>
             </Defs>
-            <Rect x="0" y="0" width={CW} height={CH} fill="url(#splashBloom)" />
+            <Ellipse cx={SPINE[3].x} cy={SPINE[3].y} rx={120} ry={90} fill="url(#splashGold)" />
+          </Svg>
+        </Animated.View>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.swirlGlow }]}>
+          <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
+            <Defs>
+              <RadialGradient id="splashSwirlGold">
+                <Stop offset="0" stopColor={GOLD} stopOpacity={0.5} />
+                <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={ringPoint(205, R + 10).x} cy={ringPoint(205, R + 10).y} r={60} fill="url(#splashSwirlGold)" />
+            <Circle cx={ringPoint(25, R + 10).x} cy={ringPoint(25, R + 10).y} r={50} fill="url(#splashSwirlGold)" />
           </Svg>
         </Animated.View>
 
-        {/* Fine motes shed by the flow. */}
-        {MOTES.map((m) => (
+        {/* Fine sparkles. */}
+        {SPARKS.map((m) => (
           <Animated.View
             key={`${m.x}-${m.y}`}
             style={[
-              styles.mote,
+              styles.spark,
               {
                 left: m.x - m.size / 2,
                 top: m.y - m.size / 2,
@@ -408,75 +439,83 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
                 height: m.size,
                 borderRadius: m.size / 2,
                 backgroundColor: m.color,
-                opacity: reduced ? 0 : at([m.at, m.at + 150, m.at + 650], [0, 0.85, 0]),
-                transform: [{ translateY: reduced ? 0 : at([m.at, m.at + 650], [0, -8]) }],
+                opacity: reduced ? 0 : at([m.at, m.at + 150, m.at + 700], [0, 0.9, 0]),
+                transform: [{ translateY: reduced ? 0 : at([m.at, m.at + 700], [0, -10]) }],
               },
             ]}
           />
         ))}
 
-        {/* The light: ribbon strands, orbit, moving head, final shimmer. */}
+        {/* The ribbon: silky strands that swirl into the ring. */}
+        {!reduced ? (
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.strandsOut }]}>
+            <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
+              <Defs>
+                <LinearGradient id="splashCore" gradientUnits="userSpaceOnUse" x1={SPINE[0].x} y1={SPINE[0].y} x2={CX} y2={CY - R}>
+                  <Stop offset="0" stopColor={SAGE} />
+                  <Stop offset="0.5" stopColor={GOLD} />
+                  <Stop offset="1" stopColor={SOFT_WHITE} />
+                </LinearGradient>
+              </Defs>
+              {STRANDS.map((s, i) => (
+                <AnimatedPath
+                  key={`strand-${i}`}
+                  d={STRAND_GEOMETRY[i].d}
+                  stroke={s.color}
+                  strokeOpacity={s.opacity}
+                  strokeWidth={s.width}
+                  strokeLinecap="round"
+                  fill="none"
+                  strokeDasharray={[STRAND_GEOMETRY[i].sLength, GAP]}
+                  strokeDashoffset={strokes.strands[i]}
+                />
+              ))}
+              <AnimatedPath d={CORE.d} stroke={SOFT_WHITE} strokeWidth={3.6} strokeLinecap="round" fill="none" opacity={strokes.headOpacity} strokeDasharray={[HEAD, GAP]} strokeDashoffset={strokes.head} />
+            </Svg>
+          </Animated.View>
+        ) : null}
+
+        {/* The clean ring, drawn by the core light; flare and final shimmer. */}
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: view.breath }] }]}>
-          <Svg width={CW} height={CH} viewBox={`0 0 ${CW} ${CH}`}>
+          <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
             <Defs>
-              <LinearGradient id="splashCore" gradientUnits="userSpaceOnUse" x1={SPINE[0].x} y1={SPINE[0].y} x2={CX} y2={CY - R}>
-                <Stop offset="0" stopColor={MINT} />
-                <Stop offset="0.45" stopColor={CHAMPAGNE} />
-                <Stop offset="1" stopColor={SOFT_WHITE} />
-              </LinearGradient>
-              <LinearGradient id="splashOrbit" gradientUnits="userSpaceOnUse" x1={CX - R} y1={CY + R} x2={CX + R} y2={CY - R}>
-                <Stop offset="0" stopColor={MINT} />
-                <Stop offset="0.5" stopColor={CHAMPAGNE} />
-                <Stop offset="1" stopColor={SOFT_WHITE} />
+              <LinearGradient id="splashRing" gradientUnits="userSpaceOnUse" x1={CX + R} y1={CY - R} x2={CX - R} y2={CY + R}>
+                <Stop offset="0" stopColor={GOLD} />
+                <Stop offset="1" stopColor={RING_GREEN} />
               </LinearGradient>
             </Defs>
-
-            {/* Ribbon: overlapping translucent strands. */}
-            {!reduced
-              ? STRANDS.map((s, i) => (
-                  <AnimatedPath
-                    key={`strand-${i}`}
-                    d={STRAND_GEOMETRY[i].d}
-                    stroke={s.color}
-                    strokeOpacity={s.opacity}
-                    strokeWidth={s.width}
-                    strokeLinecap="round"
-                    fill="none"
-                    strokeDasharray={[STRAND_GEOMETRY[i].length, GAP]}
-                    strokeDashoffset={strokes.strands[i]}
-                  />
-                ))
-              : null}
-
-            {/* Orbit, drawn by the same light, with the same layering. */}
-            <AnimatedPath d={ORBIT_D} stroke={EMERALD} strokeOpacity={0.18} strokeWidth={11} strokeLinecap="round" fill="none" strokeDasharray={[CIRCUMFERENCE, GAP]} strokeDashoffset={reduced ? 0 : strokes.orbit} />
-            <AnimatedPath d={ORBIT_D} stroke={MINT} strokeOpacity={0.32} strokeWidth={3.6} strokeLinecap="round" fill="none" strokeDasharray={[CIRCUMFERENCE, GAP]} strokeDashoffset={reduced ? 0 : strokes.orbit} />
-            <AnimatedPath d={ORBIT_D} stroke="url(#splashOrbit)" strokeWidth={1.8} strokeLinecap="round" fill="none" strokeDasharray={[CIRCUMFERENCE, GAP]} strokeDashoffset={reduced ? 0 : strokes.orbit} />
-
+            <AnimatedPath d={RING_D} stroke={LIME_GOLD} strokeOpacity={0.16} strokeWidth={9} strokeLinecap="round" fill="none" strokeDasharray={[CIRCUMFERENCE, GAP]} strokeDashoffset={reduced ? 0 : strokes.ring} />
+            <AnimatedPath d={RING_D} stroke="url(#splashRing)" strokeWidth={2.4} strokeLinecap="round" fill="none" strokeDasharray={[CIRCUMFERENCE, GAP]} strokeDashoffset={reduced ? 0 : strokes.ring} />
             {!reduced ? (
-              <>
-                {/* Bright head of the moving light, with a champagne trail. */}
-                <AnimatedPath d={SPINE_D} stroke={SOFT_WHITE} strokeWidth={3.4} strokeLinecap="round" fill="none" opacity={strokes.headOpacity} strokeDasharray={[HEAD, GAP]} strokeDashoffset={strokes.leadHead} />
-                <AnimatedPath d={ORBIT_D} stroke={CHAMPAGNE} strokeOpacity={0.5} strokeWidth={2.6} strokeLinecap="round" fill="none" opacity={strokes.headOpacity} strokeDasharray={[TRAIL, GAP]} strokeDashoffset={strokes.orbitTrail} />
-                <AnimatedPath d={ORBIT_D} stroke={SOFT_WHITE} strokeWidth={3.4} strokeLinecap="round" fill="none" opacity={strokes.headOpacity} strokeDasharray={[HEAD, GAP]} strokeDashoffset={strokes.orbitHead} />
-                <AnimatedPath d={ORBIT_D} stroke={CHAMPAGNE} strokeWidth={2.2} strokeLinecap="round" fill="none" opacity={strokes.sweepOpacity} strokeDasharray={[SWEEP, GAP]} strokeDashoffset={strokes.sweep} />
-              </>
+              <AnimatedPath d={RING_D} stroke={GOLD} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={strokes.sweepOpacity} strokeDasharray={[SWEEP, GAP]} strokeDashoffset={strokes.sweep} />
             ) : null}
           </Svg>
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.flare }]}>
+            <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
+              <Defs>
+                <RadialGradient id="splashFlare">
+                  <Stop offset="0" stopColor={SOFT_WHITE} stopOpacity={0.95} />
+                  <Stop offset="0.2" stopColor={GOLD} stopOpacity={0.6} />
+                  <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={FLARE.x} cy={FLARE.y} r={22} fill="url(#splashFlare)" />
+            </Svg>
+          </Animated.View>
         </Animated.View>
 
-        {/* The Λ: haze → sharp, drawn inside the orbit. */}
+        {/* The Λ: haze → sharp, drawn inside the ring. */}
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: view.breath }] }]}>
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.markHaze }]}>
-            <Svg width={CW} height={CH} viewBox={`0 0 ${CW} ${CH}`}>
+            <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
               {/* Stacked soft strokes stand in for a blur; they draw just ahead of the sharp mark. */}
-              {HAZE.map(([width, opacity]) => (
+              {HAZE.map(([w, o]) => (
                 <AnimatedPath
-                  key={width}
+                  key={w}
                   d={MARK_D}
-                  stroke={MINT}
-                  strokeOpacity={opacity}
-                  strokeWidth={width}
+                  stroke={GOLD}
+                  strokeOpacity={o}
+                  strokeWidth={w}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
@@ -487,11 +526,11 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
             </Svg>
           </Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.markIn, transform: [{ scale: view.markScale }] }]}>
-            <Svg width={CW} height={CH} viewBox={`0 0 ${CW} ${CH}`}>
+            <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
               <Defs>
                 <LinearGradient id="splashMark" gradientUnits="userSpaceOnUse" x1={0} y1={APEX.y} x2={0} y2={FOOT_L.y}>
-                  <Stop offset="0" stopColor={SOFT_WHITE} />
-                  <Stop offset="1" stopColor={MINT} />
+                  <Stop offset="0" stopColor="#FFFFFF" />
+                  <Stop offset="1" stopColor="#D5E4CC" />
                 </LinearGradient>
               </Defs>
               <AnimatedPath
@@ -508,29 +547,34 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
           </Animated.View>
         </Animated.View>
 
-        {/* Settled frame: a faint horizon of light beneath the tagline. */}
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.horizon }]} pointerEvents="none">
-          <Svg width={CW} height={CH} viewBox={`0 0 ${CW} ${CH}`}>
+        {/* Gold horizon line low on the screen. */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.horizon, transform: [{ translateY: view.horizonY }] }]}>
+          <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
             <Defs>
-              <RadialGradient id="splashHorizonGlow" cx={CX} cy={GLOW_Y} rx={130} ry={16} gradientUnits="userSpaceOnUse">
-                <Stop offset="0" stopColor={CHAMPAGNE} stopOpacity={0.22} />
-                <Stop offset="0.5" stopColor={MINT} stopOpacity={0.07} />
-                <Stop offset="1" stopColor={MINT} stopOpacity={0} />
+              <RadialGradient id="splashHorizonGlow" cx={CX} cy={HORIZON_Y} rx={160} ry={22} gradientUnits="userSpaceOnUse">
+                <Stop offset="0" stopColor={GOLD} stopOpacity={0.3} />
+                <Stop offset="0.5" stopColor={GOLD} stopOpacity={0.08} />
+                <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
               </RadialGradient>
               <LinearGradient id="splashHorizonLine" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor={CHAMPAGNE} stopOpacity={0} />
-                <Stop offset="0.5" stopColor={CHAMPAGNE} stopOpacity={0.55} />
-                <Stop offset="1" stopColor={CHAMPAGNE} stopOpacity={0} />
+                <Stop offset="0" stopColor={GOLD} stopOpacity={0} />
+                <Stop offset="0.5" stopColor={GOLD} stopOpacity={0.85} />
+                <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
               </LinearGradient>
+              <RadialGradient id="splashHorizonCore">
+                <Stop offset="0" stopColor={SOFT_WHITE} stopOpacity={0.9} />
+                <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
+              </RadialGradient>
             </Defs>
-            <Ellipse cx={CX} cy={GLOW_Y} rx={130} ry={16} fill="url(#splashHorizonGlow)" />
-            <Rect x={CX - 90} y={GLOW_Y - 0.5} width={180} height={1} fill="url(#splashHorizonLine)" />
+            <Ellipse cx={CX} cy={HORIZON_Y} rx={160} ry={22} fill="url(#splashHorizonGlow)" />
+            <Rect x={CX - 120} y={HORIZON_Y - 0.75} width={240} height={1.5} fill="url(#splashHorizonLine)" />
+            <Ellipse cx={CX} cy={HORIZON_Y} rx={30} ry={5} fill="url(#splashHorizonCore)" />
           </Svg>
         </Animated.View>
 
         <View style={styles.copy}>
           <Animated.View style={{ opacity: view.nameIn, transform: [{ translateY: view.nameY }] }}>
-            <Text style={[typography.headingMedium, styles.name]} accessibilityRole="header">
+            <Text style={styles.name} accessibilityRole="header">
               {nameLead}
               {nameAccent ? <Text style={styles.nameAccent}>{nameAccent}</Text> : null}
             </Text>
@@ -549,18 +593,17 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center' },
-  canvas: { width: CW, height: CH },
-  mote: { position: 'absolute' },
-  copy: { position: 'absolute', left: 0, right: 0, top: CY + R + 34, alignItems: 'center' },
-  name: { color: SOFT_WHITE, textAlign: 'center', marginBottom: 10 },
-  nameAccent: { color: MINT },
+  stage: { position: 'absolute', width: SW, height: SH },
+  spark: { position: 'absolute' },
+  copy: { position: 'absolute', left: 0, right: 0, top: COPY_TOP, alignItems: 'center' },
+  name: { color: SOFT_WHITE, fontSize: 34, lineHeight: 42, fontWeight: '500', letterSpacing: 0.2, textAlign: 'center', marginBottom: 10 },
+  nameAccent: { color: LIME_GOLD, fontWeight: '600' },
   tagline: {
-    color: 'rgba(234, 247, 241, 0.62)',
-    fontSize: 11,
-    lineHeight: 17,
+    color: 'rgba(246, 249, 239, 0.8)',
+    fontSize: 12.5,
+    lineHeight: 19,
     fontWeight: '600',
-    letterSpacing: 2.4,
+    letterSpacing: 2.8,
     textAlign: 'center',
     textTransform: 'uppercase',
   },
