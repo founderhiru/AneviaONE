@@ -15,10 +15,23 @@ method that works before an SMS provider is configured.
 
 ## Screens
 
-- `(auth)/welcome` — two entry points: "Continue with mobile number" (→
-  `/login?method=mobile`) and "Continue with Google" (→
-  `/login?method=google`). Mobile is listed first and is the default
-  (`method` unset falls through to the mobile flow).
+- `(auth)/welcome` — two sign-in entry points (`components/AuthOptions.tsx`):
+  "Continue with Mobile" (→ `/login?method=mobile`, primary) and "Continue
+  with Google" (→ `/login?method=google`), then "Explore <wordmark>" (→
+  `/explore`, a static sample history that needs no sign-in). Mobile is the
+  default (`method` unset falls through to the mobile flow). The same
+  `AuthOptions` end every Explore screen under "Make it yours".
+  Email is no longer offered on Welcome; the `?method=email` branch of
+  `login` still exists but nothing links to it.
+  **Sign in with Apple is not implemented** and has no button. It needs
+  `expo-apple-authentication` (+ its config plugin and
+  `ios.usesAppleSignIn` in app.json), the Sign in with Apple capability on the
+  App ID, the Apple provider enabled in Supabase Auth (Services ID, key,
+  team ID), an `AuthService.signInWithApple()` using
+  `signInWithIdToken({ provider: 'apple' })`, and linking into the same
+  account model as Mobile/Google. Check App Store guideline 4.8 (Login
+  Services) before an iOS release: with Google sign-in offered, Apple can
+  require an equivalent privacy-focused option such as Sign in with Apple.
 - `(auth)/login` — branches on `?method`:
   - **mobile** (default): phone number input, validated to 10 digits
     before "Send OTP" is enabled, then pushes to `/otp` with the number.

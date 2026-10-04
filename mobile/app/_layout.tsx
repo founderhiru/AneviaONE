@@ -31,9 +31,11 @@ function RootNavigator() {
 
     const segmentList = segments as unknown as string[];
     const inAuthGroup = segmentList[0] === '(auth)';
+    // Explore is the sample health history, open to anyone before sign-in.
+    const inExplore = segmentList[0] === 'explore';
     const atEntry = segmentList.length === 0; // the placeholder `index` route
 
-    if (!user && !inAuthGroup) {
+    if (!user && !inAuthGroup && !inExplore) {
       router.replace('/(auth)/welcome');
       return;
     }
@@ -43,7 +45,9 @@ function RootNavigator() {
       return;
     }
 
-    if (user && user.onboardingComplete && (inAuthGroup || atEntry)) {
+    // Once signed in (e.g. via "Make it yours"), the sample gives way to the
+    // person's own Health Memory.
+    if (user && user.onboardingComplete && (inAuthGroup || inExplore || atEntry)) {
       router.replace('/(tabs)/home');
     }
   }, [user, isLoading, segments, router]);
@@ -53,6 +57,7 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="explore" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>
       {showSplash ? <AnimatedSplash ready={!isLoading} onFinished={() => setSplashRevealDone(true)} /> : null}

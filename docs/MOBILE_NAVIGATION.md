@@ -9,10 +9,19 @@ Route map and navigation rules for the Expo Router app, per spec section
 /                          index.tsx — loading placeholder; root layout redirects from here
 
 (auth)                     Unauthenticated / pre-onboarding
-  /welcome                  Brand name + tagline, "Continue with mobile number" / "Continue with Google"
+  /welcome                  Brand mark + name + tagline, "Continue with Mobile" / "Continue with Google",
+                            then "Explore <wordmark>" (→ /explore, no sign-in)
   /login?method=mobile|google   Mobile OTP entry (default) or Google sign-in UI
   /otp                       6-digit OTP entry, auto-verifies at 6 digits
   /onboarding                4-step intro, ends in "Take a photo" / "Upload a document" / "Skip"
+
+explore                    Public sample health history (static data, content/exploreSample.ts)
+  /                          Demo Home: summary (records / areas / years) + 4 destinations
+  /memory                    Health Memory — connected sample records ("Demo health history")
+  /changes                   What Changed — illustrative sample changes + no-advice note
+  /timeline                  Sample records by year ("Your health has a history.")
+  /ask                       Ask My Health preview — example questions only, no answers
+  Every screen ends with "Make it yours" → /(auth)/login?method=mobile|google
 
 (tabs)                     5 bottom tabs — exactly these 5, no more
   /home                      Home: What Changed preview, Health Story, Trends preview, Ask entry
@@ -41,10 +50,12 @@ Pushed on top of the tabs (own back button via ScreenHeader)
 stack the person sees, based on `useAuth()`'s `user` and the current
 `useSegments()`:
 
-1. No `user` → redirect to `/(auth)/welcome`.
+1. No `user` → redirect to `/(auth)/welcome`, unless already in `(auth)` or
+   `explore` (the sample is open to signed-out people).
 2. `user` present but `user.onboardingComplete` is `false` → redirect to
    `/(auth)/onboarding`.
-3. Otherwise → redirect to `/(tabs)/home`.
+3. Otherwise, from `(auth)`, `explore` or the entry route → redirect to
+   `/(tabs)/home` (so signing in from "Make it yours" leaves the sample).
 
 Screens under `(auth)` never need to check auth state themselves to decide
 where to go next — after a successful OTP verify or Google sign-in, they

@@ -30,6 +30,7 @@ describe('Welcome screen', () => {
     expect(screen.getByText(BRAND.wordmark)).toBeTruthy();
     expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
     expect(screen.getByTestId('continue-with-google')).toBeTruthy();
+    expect(screen.queryByTestId('continue-with-email')).toBeNull();
   });
 
   it('navigates to the mobile login screen', async () => {
