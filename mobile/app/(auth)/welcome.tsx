@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
+import { AuthOptions } from '../../components/AuthOptions';
 import { BrandMark } from '../../components/BrandMark';
 import { BRAND, taglineLines, wordmarkParts } from '../../config/brand';
 import { SESSION_EXPIRED_MESSAGE, useAuth } from '../../hooks/useAuth';
@@ -13,44 +14,11 @@ import { SESSION_EXPIRED_MESSAGE, useAuth } from '../../hooks/useAuth';
 // Welcome continues the emerald launch splash; these colours are local to it.
 const FIELD = '#07291F';
 const WHITE = '#F6F9F4';
-const WARM_WHITE = '#FBF8EF';
-const DEEP_EMERALD = '#0B3D2C';
 const MINT = '#7FE3C0';
 const GOLD = '#F1E3B0';
 
 const [nameLead, nameAccent] = wordmarkParts();
 const supportLines = taglineLines(BRAND.welcomeTagline).filter(Boolean);
-
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
-
-function AuthButton({
-  label,
-  icon,
-  onPress,
-  primary = false,
-  testID,
-}: {
-  label: string;
-  icon: IconName;
-  onPress: () => void;
-  primary?: boolean;
-  testID: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      testID={testID}
-      style={({ pressed }) => [styles.button, primary ? styles.primary : styles.secondary, { opacity: pressed ? 0.85 : 1 }]}
-    >
-      <Ionicons name={icon} size={20} color={primary ? DEEP_EMERALD : WHITE} style={styles.buttonIcon} />
-      <Text style={[styles.buttonLabel, { color: primary ? DEEP_EMERALD : WHITE }]} maxFontSizeMultiplier={1.6}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
 
 /** Soft emerald atmosphere with two faint sweeps of light at the edges. */
 function Atmosphere() {
@@ -129,25 +97,20 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={styles.actions}>
-          <AuthButton
-            primary
-            label="Continue with Mobile"
-            icon="phone-portrait-outline"
-            onPress={() => router.push('/(auth)/login?method=mobile')}
-            testID="continue-with-mobile"
-          />
-          <AuthButton
-            label="Continue with Email"
-            icon="mail-outline"
-            onPress={() => router.push('/(auth)/login?method=email')}
-            testID="continue-with-email"
-          />
-          <AuthButton
-            label="Continue with Google"
-            icon="logo-google"
-            onPress={() => router.push('/(auth)/login?method=google')}
-            testID="continue-with-google"
-          />
+          <AuthOptions />
+          <Pressable
+            onPress={() => router.push('/explore')}
+            accessibilityRole="button"
+            accessibilityLabel={`Explore ${BRAND.wordmark}`}
+            accessibilityHint="Opens a sample health history. No sign-in needed."
+            testID="explore-cta"
+            style={({ pressed }) => [styles.explore, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Text style={styles.exploreLabel} maxFontSizeMultiplier={1.6}>
+              {`Explore ${BRAND.wordmark}`}
+            </Text>
+            <Ionicons name="arrow-forward" size={16} color={MINT} />
+          </Pressable>
           <Text style={styles.fine}>By continuing, you agree that your health information belongs to you.</Text>
         </View>
       </SafeAreaView>
@@ -172,17 +135,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   actions: { gap: 12, paddingBottom: 8 },
-  button: {
-    minHeight: 56,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  primary: { backgroundColor: WARM_WHITE },
-  secondary: { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderWidth: 1, borderColor: 'rgba(246, 249, 244, 0.38)' },
-  buttonIcon: { marginRight: 12 },
-  buttonLabel: { fontSize: 17, fontWeight: '600', letterSpacing: 0.1 },
-  fine: { color: 'rgba(246, 249, 244, 0.7)', fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 10 },
+  explore: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 },
+  exploreLabel: { color: MINT, fontSize: 16, fontWeight: '600', letterSpacing: 0.3 },
+  fine: { color: 'rgba(246, 249, 244, 0.7)', fontSize: 13, lineHeight: 19, textAlign: 'center' },
 });

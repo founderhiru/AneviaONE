@@ -63,4 +63,41 @@ describe('launch routing', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(router.replace).not.toHaveBeenCalled();
   });
+
+  it('lets a signed-out person stay in Explore (no sign-in wall)', async () => {
+    (useSegments as jest.Mock).mockReturnValue(['explore', 'memory']);
+    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(null);
+    await render(<RootLayout />);
+    await waitFor(() => expect(authService.getCurrentUser).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('a signed-out person outside Welcome/Explore is still sent to Welcome', async () => {
+    (useSegments as jest.Mock).mockReturnValue(['(tabs)', 'home']);
+    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(null);
+    await render(<RootLayout />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/(auth)/welcome'));
+  });
+
+  it('once signed in from Explore ("Make it yours"), the person lands in their own app', async () => {
+    (useSegments as jest.Mock).mockReturnValue(['explore']);
+    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(baseUser);
+    await render(<RootLayout />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/(tabs)/home'));
+  });
+
+  it('plays the launch sequence once, and not again when navigating', async () => {
+    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(null);
+    const view = await render(<RootLayout />);
+    const splash = `Loading ${BRAND.wordmark}`;
+    expect(screen.getByLabelText(splash)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByLabelText(splash)).toBeNull());
+
+    for (const segments of [['(auth)', 'welcome'], ['explore'], ['explore', 'memory'], ['(auth)', 'login']]) {
+      (useSegments as jest.Mock).mockReturnValue(segments);
+      await view.rerender(<RootLayout />);
+      expect(screen.queryByLabelText(splash)).toBeNull();
+    }
+  });
 });

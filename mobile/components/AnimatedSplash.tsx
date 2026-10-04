@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { BRAND, taglineLines, wordmarkParts } from '../config/brand';
+import { BrandMarkDefs, BrandMarkGlyph, LEAF_ORIGIN, MARK_BOX, MARK_CENTER, MARK_RING_R } from './BrandMarkArt';
 
 export type AnimatedSplashProps = {
   /** True once real app initialization (auth/session check) has resolved.
@@ -25,8 +26,9 @@ export type AnimatedSplashProps = {
  *   initiate (0–0.7 s)   a tall S of silky, overlapping light sweeps up the
  *                         screen, gold at its heart, with fine sparkles
  *   form     (0.7–1.5 s)  the strands curl round the centre in swirling arcs
- *                         while the ring draws; the Λ emerges (1.2–2.0 s) and
- *                         the swirls dissolve into one clean ring
+ *                         while the ring draws; the A emerges from a soft glow
+ *                         (1.2–2.0 s), its leaf growing up from the left foot,
+ *                         and the swirls dissolve into one clean ring
  *   reveal   (2.0–2.7 s)  wordmark, then tagline; a gold horizon line glows
  *                         low on the screen
  *   settle   (2.7–3.2 s)  the horizon rises slightly and warms; one shimmer
@@ -151,20 +153,13 @@ const SWEEP = CIRCUMFERENCE * 0.18; // final shimmer on the ring
 const GAP = 4000; // keeps repeated dashes off the paths
 const FLARE = ringPoint(-52); // gold highlight on the ring, top right
 
-// The existing chevron mark (same proportions as the app icon), centred in
-// the ring.
-const APEX = { x: CX, y: CY - 0.5 * R };
-const FOOT_L = { x: CX - 0.57 * R, y: CY + 0.48 * R };
-const FOOT_R = { x: CX + 0.57 * R, y: CY + 0.48 * R };
-const MARK_D = `M ${FOOT_L.x} ${FOOT_L.y} L ${APEX.x} ${APEX.y} L ${FOOT_R.x} ${FOOT_R.y}`;
-const MARK_LENGTH = Math.hypot(APEX.x - FOOT_L.x, APEX.y - FOOT_L.y) * 2;
-const MARK_STROKE = 14;
-// [stroke width, opacity] layers of the soft glow the mark emerges from.
-const HAZE: [number, number][] = [
-  [MARK_STROKE * 3.4, 0.05],
-  [MARK_STROKE * 2.4, 0.08],
-  [MARK_STROKE * 1.6, 0.12],
-];
+// The A itself (BrandMarkArt), placed so its ring coincides with the drawn
+// ring: the art's 100-unit box scaled so its ring radius equals R.
+const MARK_SCALE = R / MARK_RING_R;
+const MARK_SIZE = MARK_BOX * MARK_SCALE;
+const MARK_LEFT = CX - MARK_CENTER * MARK_SCALE;
+const MARK_TOP = CY - MARK_CENTER * MARK_SCALE;
+const LEAF_TRANSFORM_ORIGIN = `${LEAF_ORIGIN.x * 100}% ${LEAF_ORIGIN.y * 100}%`;
 
 // Fine sparkles: along the S as the light passes, then round the ring while
 // it forms. { x, y, colour, appear-at ms, size }.
@@ -287,6 +282,8 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
         markHaze: 0.5,
         markIn: 1,
         markScale: 1,
+        leafIn: 1,
+        leafScale: 1,
         breath: 1,
         nameIn: 1,
         nameY: 0,
@@ -306,11 +303,13 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
       // The swirling strands dissolve, leaving one clean ring.
       strandsOut: at([1350, 1850], [1, 0]),
       flare: at([1500, 1850, 2800, 3000, 3200], [0, 1, 1, 1.35, 1]),
-      // The Λ emerges from the same light: a soft haze, then the sharp mark
-      // draws through it and settles.
+      // The A emerges from the same light: a soft glow, then the letter
+      // resolves through it and the leaf grows from its left foot.
       markHaze: at([1200, 1500, 2000, 2250, 2500], [0, 1, 0.5, 0.7, 0.5]),
-      markIn: at([1300, 1600], [0, 1], out),
+      markIn: at([1300, 1750], [0, 1], out),
       markScale: at([1300, 2000], [0.94, 1], out),
+      leafIn: at([1550, 1850], [0, 1], out),
+      leafScale: at([1550, 2100], [0.2, 1], out),
       breath: at([2000, 2250, 2500], [1, 1.01, 1]),
       nameIn: at([2000, 2500], [0, 1], out),
       nameY: at([2000, 2500], [8, 0], out),
@@ -337,8 +336,6 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
       head: byQ([0, 1], [HEAD, HEAD - CORE.total]),
       ring: byQ([0, coreEntry, coreRingDone], [CIRCUMFERENCE, CIRCUMFERENCE, 0]),
       headOpacity: svgAt([0, 60, 1350, 1600], [0, 1, 1, 0], lin),
-      haze: svgAt([1200, 1600], [MARK_LENGTH, 0], Easing.inOut(Easing.cubic)),
-      mark: svgAt([1300, 1850], [MARK_LENGTH, 0], Easing.inOut(Easing.cubic)),
       sweep: svgAt([2750, 3150], [SWEEP - CIRCUMFERENCE * 0.02, SWEEP - CIRCUMFERENCE * 0.55], Easing.inOut(Easing.quad)),
       sweepOpacity: svgAt([2750, 2900, 3150], [0, 0.7, 0], lin),
     };
@@ -481,7 +478,9 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
             <Defs>
               <LinearGradient id="splashRing" gradientUnits="userSpaceOnUse" x1={CX + R} y1={CY - R} x2={CX - R} y2={CY + R}>
                 <Stop offset="0" stopColor={GOLD} />
-                <Stop offset="1" stopColor={RING_GREEN} />
+                <Stop offset="0.45" stopColor={RING_GREEN} />
+                <Stop offset="0.8" stopColor={RING_GREEN} />
+                <Stop offset="1" stopColor={GOLD} />
               </LinearGradient>
             </Defs>
             <AnimatedPath d={RING_D} stroke={LIME_GOLD} strokeOpacity={0.16} strokeWidth={9} strokeLinecap="round" fill="none" strokeDasharray={[CIRCUMFERENCE, GAP]} strokeDashoffset={reduced ? 0 : strokes.ring} />
@@ -504,45 +503,35 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
           </Animated.View>
         </Animated.View>
 
-        {/* The Λ: haze → sharp, drawn inside the ring. */}
+        {/* The A: a soft glow, the letter resolving through it, then the leaf. */}
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: view.breath }] }]}>
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.markHaze }]}>
             <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
-              {/* Stacked soft strokes stand in for a blur; they draw just ahead of the sharp mark. */}
-              {HAZE.map(([w, o]) => (
-                <AnimatedPath
-                  key={w}
-                  d={MARK_D}
-                  stroke={GOLD}
-                  strokeOpacity={o}
-                  strokeWidth={w}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                  strokeDasharray={[MARK_LENGTH, MARK_LENGTH]}
-                  strokeDashoffset={reduced ? 0 : strokes.haze}
-                />
-              ))}
+              <Defs>
+                <RadialGradient id="splashMarkHaze">
+                  <Stop offset="0" stopColor={GOLD} stopOpacity={0.32} />
+                  <Stop offset="0.5" stopColor={GOLD} stopOpacity={0.1} />
+                  <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Ellipse cx={CX} cy={CY + R * 0.05} rx={R * 0.85} ry={R * 0.8} fill="url(#splashMarkHaze)" />
             </Svg>
           </Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.markIn, transform: [{ scale: view.markScale }] }]}>
-            <Svg width={SW} height={SH} viewBox={`0 0 ${SW} ${SH}`}>
-              <Defs>
-                <LinearGradient id="splashMark" gradientUnits="userSpaceOnUse" x1={0} y1={APEX.y} x2={0} y2={FOOT_L.y}>
-                  <Stop offset="0" stopColor="#FFFFFF" />
-                  <Stop offset="1" stopColor="#D5E4CC" />
-                </LinearGradient>
-              </Defs>
-              <AnimatedPath
-                d={MARK_D}
-                stroke="url(#splashMark)"
-                strokeWidth={MARK_STROKE}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                strokeDasharray={[MARK_LENGTH, MARK_LENGTH]}
-                strokeDashoffset={reduced ? 0 : strokes.mark}
-              />
+          <Animated.View style={[styles.mark, { opacity: view.markIn, transform: [{ scale: view.markScale }] }]}>
+            <Svg width={MARK_SIZE} height={MARK_SIZE} viewBox={`0 0 ${MARK_BOX} ${MARK_BOX}`}>
+              <BrandMarkDefs id="splashLetter" />
+              <BrandMarkGlyph id="splashLetter" part="letter" />
+            </Svg>
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.mark,
+              { opacity: view.leafIn, transform: [{ scale: view.leafScale }], transformOrigin: LEAF_TRANSFORM_ORIGIN },
+            ]}
+          >
+            <Svg width={MARK_SIZE} height={MARK_SIZE} viewBox={`0 0 ${MARK_BOX} ${MARK_BOX}`}>
+              <BrandMarkDefs id="splashLeaf" />
+              <BrandMarkGlyph id="splashLeaf" part="leaf" />
             </Svg>
           </Animated.View>
         </Animated.View>
@@ -595,6 +584,7 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
 const styles = StyleSheet.create({
   stage: { position: 'absolute', width: SW, height: SH },
   spark: { position: 'absolute' },
+  mark: { position: 'absolute', left: MARK_LEFT, top: MARK_TOP, width: MARK_SIZE, height: MARK_SIZE },
   copy: { position: 'absolute', left: 0, right: 0, top: COPY_TOP, alignItems: 'center' },
   name: { color: SOFT_WHITE, fontSize: 34, lineHeight: 42, fontWeight: '500', letterSpacing: 0.2, textAlign: 'center', marginBottom: 10 },
   nameAccent: { color: LIME_GOLD, fontWeight: '600' },
