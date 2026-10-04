@@ -11,7 +11,7 @@ Route map and navigation rules for the Expo Router app, per spec section
 (auth)                     Unauthenticated / pre-onboarding
   /welcome                  Brand mark + name + tagline, "Continue with Mobile" / "Continue with Google",
                             then "Explore <wordmark>" (→ /explore, no sign-in)
-  /login?method=mobile|google   Mobile OTP entry (default) or Google sign-in UI
+  /login?method=mobile|google|apple   Mobile OTP entry (default), Google or Apple sign-in UI
   /otp                       6-digit OTP entry, auto-verifies at 6 digits
   /onboarding                4-step intro, ends in "Take a photo" / "Upload a document" / "Skip"
 
@@ -21,7 +21,9 @@ explore                    Public sample health history (static data, content/ex
   /changes                   What Changed — illustrative sample changes + no-advice note
   /timeline                  Sample records by year ("Your health has a history.")
   /ask                       Ask My Health preview — example questions only, no answers
-  Every screen ends with "Make it yours" → /(auth)/login?method=mobile|google
+  /make-it-yours             Final screen: "Your health has a history." + Mobile / Google / Apple
+  Home links to /make-it-yours ("Make it yours →"); the other four screens
+  end with a "Make it yours" panel → /(auth)/login?method=mobile|google|apple
 
 (tabs)                     5 bottom tabs — exactly these 5, no more
   /home                      Home: What Changed preview, Health Story, Trends preview, Ask entry

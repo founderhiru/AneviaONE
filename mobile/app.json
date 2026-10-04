@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.healthintelligence.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Your camera is used to capture photos of health reports and prescriptions so they can be added to your Health Memory.",
         "NSPhotoLibraryUsageDescription": "Access to your photos lets you upload existing health documents."
@@ -35,6 +36,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {

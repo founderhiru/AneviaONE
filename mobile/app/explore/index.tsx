@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { EmeraldField, EXPLORE, ExploreScreen, exploreStyles, MakeItYours, SampleNotice } from '../../components/explore/ExploreUI';
+import { EmeraldField, EXPLORE, ExploreScreen, exploreStyles, SampleNotice } from '../../components/explore/ExploreUI';
 import { BRAND, PRODUCT_TERMS } from '../../config/brand';
 import { sampleSummary } from '../../content/exploreSample';
 import { radius } from '../../design/radius';
@@ -105,7 +105,17 @@ export default function ExploreHomeScreen() {
         ))}
       </View>
 
-      <MakeItYours id="exploreHomeCta" />
+      <Pressable
+        onPress={() => router.push('/explore/make-it-yours')}
+        accessibilityRole="button"
+        accessibilityLabel="Make it yours"
+        accessibilityHint="Sign in to bring your own health history"
+        testID="explore-make-it-yours"
+        style={({ pressed }) => [styles.makeItYours, { opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Text style={styles.makeItYoursText}>Make it yours</Text>
+        <Ionicons name="arrow-forward" size={16} color={EXPLORE.emerald} />
+      </Pressable>
       <SampleNotice />
     </ExploreScreen>
   );
@@ -129,4 +139,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E6F2EC',
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  makeItYours: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48 },
+  makeItYoursText: { ...typography.labelLarge, color: EXPLORE.emerald },
 });

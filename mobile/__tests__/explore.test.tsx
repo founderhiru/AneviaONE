@@ -14,6 +14,7 @@ import WelcomeScreen from '../app/(auth)/welcome';
 import ExploreAskScreen from '../app/explore/ask';
 import ExploreChangesScreen from '../app/explore/changes';
 import ExploreHomeScreen from '../app/explore/index';
+import MakeItYoursScreen from '../app/explore/make-it-yours';
 import ExploreMemoryScreen from '../app/explore/memory';
 import ExploreTimelineScreen from '../app/explore/timeline';
 import { BRAND, PRODUCT_TERMS } from '../config/brand';
@@ -26,6 +27,7 @@ import {
   sampleTimeline,
 } from '../content/exploreSample';
 import { aiService } from '../services/ai/aiService';
+import { resetAppleAvailabilityForTests } from '../services/auth/appleAuth';
 import { authService } from '../services/auth/authService';
 import { documentsService } from '../services/documents/documentsService';
 import { healthService } from '../services/health/healthService';
@@ -40,6 +42,8 @@ const EXPLORE_SCREENS: [string, React.ComponentType][] = [
   ['ask', ExploreAskScreen],
 ];
 
+const { __setAppleAvailableForTests } = require('expo-apple-authentication');
+
 /** Spies on every method of each backend-facing service. */
 function spyOnBackends() {
   const spies: jest.SpyInstance[] = [jest.spyOn(supabaseClient, 'getSupabaseClient')];
@@ -51,16 +55,42 @@ function spyOnBackends() {
   return spies;
 }
 
+beforeEach(() => {
+  __setAppleAvailableForTests(true);
+  resetAppleAvailabilityForTests();
+});
+
 afterEach(() => jest.restoreAllMocks());
 
+/** Mobile, Google and — once availability resolves — Apple; never Email. */
+async function expectSignInOptions({ apple }: { apple: boolean }) {
+  expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
+  expect(screen.getByText('Continue with Mobile')).toBeTruthy();
+  expect(screen.getByTestId('continue-with-google')).toBeTruthy();
+  if (apple) expect(await screen.findByTestId('continue-with-apple')).toBeTruthy();
+  else expect(screen.queryByTestId('continue-with-apple')).toBeNull();
+  expect(screen.queryByTestId('continue-with-email')).toBeNull();
+  expect(screen.queryByText(/email/i)).toBeNull();
+}
+
 describe('Welcome entry points', () => {
-  it('offers Mobile (primary) and Google, no Email, and no Apple until it is implemented', async () => {
+  it('offers Mobile, Google and Apple (where supported), and no Email', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
-    expect(screen.getByTestId('continue-with-google')).toBeTruthy();
-    expect(screen.queryByTestId('continue-with-email')).toBeNull();
-    expect(screen.queryByText(/email/i)).toBeNull();
+    await expectSignInOptions({ apple: true });
+  });
+
+  it('hides Apple where Sign in with Apple is not available', async () => {
+    __setAppleAvailableForTests(false);
+    await renderWithAuth(<WelcomeScreen />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await expectSignInOptions({ apple: false });
     expect(screen.queryByText(/apple/i)).toBeNull();
+  });
+
+  it('Apple leads into the Apple sign-in step of the existing login flow', async () => {
+    await renderWithAuth(<WelcomeScreen />);
+    await fireEvent.press(await screen.findByTestId('continue-with-apple'));
+    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=apple');
   });
 
   it('offers Explore as an intentional entry, never as a "skip" or "guest" login', async () => {
@@ -156,29 +186,61 @@ describe('Explore screens', () => {
 });
 
 describe('Make it yours', () => {
-  it.each(EXPLORE_SCREENS)('%s ends with Make it yours', async (_name, Screen) => {
+  it('Explore Home has a subtle "Make it yours" link to the dedicated screen', async () => {
+    await renderWithProviders(<ExploreHomeScreen />);
+    expect(screen.getByText('Make it yours')).toBeTruthy();
+    // A link, not the full sign-in panel: no sign-in buttons on Home.
+    expect(screen.queryByTestId('make-it-yours')).toBeNull();
+    expect(screen.queryByTestId('continue-with-mobile')).toBeNull();
+    await fireEvent.press(screen.getByTestId('explore-make-it-yours'));
+    expect(router.push).toHaveBeenCalledWith('/explore/make-it-yours');
+  });
+
+  it.each(EXPLORE_SCREENS.filter(([name]) => name !== 'home'))('%s ends with Make it yours', async (_name, Screen) => {
     await renderWithProviders(<Screen />);
     expect(screen.getByTestId('make-it-yours')).toBeTruthy();
     expect(screen.getByText('Make it yours')).toBeTruthy();
     expect(screen.getByText(`Bring your own health history into ${BRAND.wordmark}.`)).toBeTruthy();
+    await expectSignInOptions({ apple: true });
   });
 
-  it('leads into the existing Mobile and Google sign-in, with no Email or Apple option', async () => {
-    await renderWithProviders(<ExploreMemoryScreen />);
+  it('the Make It Yours screen opens without a session and shows its content', async () => {
+    await renderWithProviders(<MakeItYoursScreen />); // no AuthProvider
+    expect(screen.getByTestId('make-it-yours-screen')).toBeTruthy();
+    expect(screen.getByText('MAKE IT YOURS')).toBeTruthy();
+    expect(screen.getByText('Your health has a history.')).toBeTruthy();
+    expect(
+      screen.getByText(`Bring your own health records into ${BRAND.wordmark} and keep your health history connected over time.`)
+    ).toBeTruthy();
+    expect(screen.getByText('Your health information belongs to you.')).toBeTruthy();
+    expect(screen.queryByText(/price|subscribe|trial|premium/i)).toBeNull();
+  });
+
+  it('the Make It Yours screen offers Mobile, Google and Apple — no Email — into the existing sign-in', async () => {
+    await renderWithProviders(<MakeItYoursScreen />);
+    await expectSignInOptions({ apple: true });
     await fireEvent.press(screen.getByTestId('continue-with-mobile'));
     expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=mobile');
     await fireEvent.press(screen.getByTestId('continue-with-google'));
     expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=google');
-    expect(screen.queryByText(/apple/i)).toBeNull();
-    expect(screen.queryByTestId('continue-with-email')).toBeNull();
+    await fireEvent.press(screen.getByTestId('continue-with-apple'));
+    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=apple');
+  });
+
+  it('the Make It Yours screen hides Apple where it is not supported', async () => {
+    __setAppleAvailableForTests(false);
+    await renderWithProviders(<MakeItYoursScreen />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await expectSignInOptions({ apple: false });
   });
 });
 
 describe('Sample data stays on the device', () => {
   it('rendering and navigating every Explore screen never touches Supabase or any service', async () => {
     const spies = spyOnBackends();
-    for (const [, Screen] of EXPLORE_SCREENS) {
+    for (const [, Screen] of [...EXPLORE_SCREENS, ['make-it-yours', MakeItYoursScreen] as const]) {
       const view = await renderWithProviders(<Screen />);
+      await screen.findAllByTestId(/continue-with-apple|explore-make-it-yours/);
       for (const button of screen.getAllByRole('button')) await fireEvent.press(button);
       await view.unmount();
     }

@@ -15,12 +15,17 @@ import OnboardingScreen from '../app/(auth)/onboarding';
 import OtpScreen from '../app/(auth)/otp';
 import WelcomeScreen from '../app/(auth)/welcome';
 import { BRAND, taglineLines } from '../config/brand';
+import { resetAppleAvailabilityForTests } from '../services/auth/appleAuth';
+import { authService } from '../services/auth/authService';
 import { renderWithAuth } from './testUtils';
 
 const { __clearSecureStoreForTests } = require('expo-secure-store');
+const { __setAppleAvailableForTests } = require('expo-apple-authentication');
 
 beforeEach(() => {
   __clearSecureStoreForTests();
+  __setAppleAvailableForTests(true);
+  resetAppleAvailabilityForTests();
   (useLocalSearchParams as jest.Mock).mockReturnValue({});
 });
 
@@ -92,6 +97,52 @@ describe('Login screen — Google (secondary path)', () => {
 
     // Mock Google sign-in resolves without throwing; no error surfaced.
     await waitFor(() => expect(screen.queryByText(/errorMessage/)).toBeNull());
+  });
+});
+
+describe('Login screen — Apple (secondary path)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows the system Apple button and signs in through the auth service', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ method: 'apple' });
+    const signIn = jest.spyOn(authService, 'signInWithApple');
+    await renderWithAuth(<LoginScreen />);
+    expect(screen.getByRole('header', { name: 'Continue with Apple' })).toBeTruthy();
+    expect(screen.getByText(/Hide My Email/)).toBeTruthy();
+    await act(async () => {
+      await fireEvent.press(await screen.findByTestId('apple-signin-continue'));
+    });
+    await waitFor(() => expect(signIn).toHaveBeenCalledTimes(1));
+  });
+
+  it('says a cancelled Apple sheet is fine — no error', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ method: 'apple' });
+    jest.spyOn(authService, 'signInWithApple').mockResolvedValue({ success: false, cancelled: true });
+    await renderWithAuth(<LoginScreen />);
+    await act(async () => {
+      await fireEvent.press(await screen.findByTestId('apple-signin-continue'));
+    });
+    expect(screen.queryByText(/couldn|could not|try again/i)).toBeNull();
+  });
+
+  it('shows a safe error when Apple sign-in fails', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ method: 'apple' });
+    jest
+      .spyOn(authService, 'signInWithApple')
+      .mockResolvedValue({ success: false, errorMessage: 'Could not complete sign-in. Please try again.' });
+    await renderWithAuth(<LoginScreen />);
+    await act(async () => {
+      await fireEvent.press(await screen.findByTestId('apple-signin-continue'));
+    });
+    expect(screen.getByText('Could not complete sign-in. Please try again.')).toBeTruthy();
+  });
+
+  it('offers no Apple button where Sign in with Apple is unavailable', async () => {
+    __setAppleAvailableForTests(false);
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ method: 'apple' });
+    await renderWithAuth(<LoginScreen />);
+    await waitFor(() => expect(screen.getByText(/isn’t available on this device/)).toBeTruthy());
+    expect(screen.queryByTestId('apple-signin-continue')).toBeNull();
   });
 });
 

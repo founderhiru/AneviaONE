@@ -11,6 +11,9 @@ export type GoogleSignInResult =
   | { success: false; errorMessage: string }
   | { success: false; cancelled: true };
 
+/** Native Sign in with Apple; same outcomes as Google. */
+export type AppleSignInResult = GoogleSignInResult;
+
 export type LinkIdentityResult = { success: true; user: User } | { success: false; errorMessage: string };
 
 /**
@@ -33,7 +36,11 @@ export interface AuthService {
   verifyEmailOtp(email: string, otp: string): Promise<VerifyOtpResult>;
   /** Starts Google OAuth via Supabase Auth + `expo-auth-session`. */
   signInWithGoogle(): Promise<GoogleSignInResult>;
-  /** Links a second identity (e.g. Google) to the currently signed-in
+  /** Native Sign in with Apple (iOS): the system sheet's identity token is
+   * exchanged for a Supabase session — the same account model as the other
+   * methods. Fails safely where Apple sign-in isn't available. */
+  signInWithApple(): Promise<AppleSignInResult>;
+  /** Links a second identity (Google or Apple) to the currently signed-in
    * account rather than creating a duplicate Health Memory. */
   linkIdentity(provider: AuthProvider): Promise<LinkIdentityResult>;
   /** The signed-in user restored from the persisted session, or null. */
