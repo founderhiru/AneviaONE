@@ -37,6 +37,8 @@ export const BRAND = {
   wordmark: PRODUCT_WORDMARK,
   /** Short line shown only under the wordmark in the launch sequence. */
   launchTagline: 'Healthier generations. Brighter lives.',
+  /** Supporting line under the wordmark on the Welcome screen. */
+  welcomeTagline: 'Your health. Connected over time.',
   /** No logo asset yet — render a text wordmark using the product name. */
   logo: null as null,
   /** Core product loop, used in a few explanatory/empty-state contexts. */

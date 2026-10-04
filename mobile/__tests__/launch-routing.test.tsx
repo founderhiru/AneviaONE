@@ -28,7 +28,10 @@ afterEach(() => jest.restoreAllMocks());
 
 describe('launch routing', () => {
   it('shows the branded launch sequence on cold start', async () => {
-    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(null);
+    // Keep the session check pending so the splash holds (as it does while
+    // the app starts) — animations finish instantly under Jest, so a resolved
+    // check would let the splash exit before these assertions run.
+    jest.spyOn(authService, 'getCurrentUser').mockImplementation(() => new Promise(() => {}));
     await render(<RootLayout />);
     expect(screen.getByLabelText(`Loading ${BRAND.wordmark}`)).toBeTruthy();
     expect(screen.getByText(BRAND.wordmark)).toBeTruthy();

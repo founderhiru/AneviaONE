@@ -27,7 +27,7 @@ beforeEach(() => {
 describe('Welcome screen', () => {
   it('shows the brand-neutral name/tagline and both entry points', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByText(BRAND.productName)).toBeTruthy();
+    expect(screen.getByText(BRAND.wordmark)).toBeTruthy();
     expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
     expect(screen.getByTestId('continue-with-google')).toBeTruthy();
   });
