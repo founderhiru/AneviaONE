@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { Button, ScreenContainer, TextInput } from '../../components';
 import { useTheme } from '../../design/theme';
+import { useAppleSignInAvailable } from '../../hooks/useAppleSignInAvailable';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/auth/authService';
 import { isValidEmail } from '../../services/auth/authInput';
 
 /**
  * Handles the auth entry points. Mobile OTP is the primary/default path
- * (India-first); email one-time code (no password) and Google are
- * secondary options. All three end in the same Supabase account model.
+ * (India-first); Google and Apple are secondary options. Welcome no longer
+ * offers email, but the email one-time-code branch remains for existing
+ * links. All of them end in the same Supabase account model.
  */
 export default function LoginScreen() {
   const theme = useTheme();
@@ -19,12 +22,15 @@ export default function LoginScreen() {
   const { method } = useLocalSearchParams<{ method?: string }>();
   const isGoogle = method === 'google';
   const isEmail = method === 'email';
+  const isApple = method === 'apple';
+  const appleAvailable = useAppleSignInAvailable();
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
   const [errorText, setErrorText] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   async function handleSendOtp() {
     setErrorText(undefined);
@@ -59,6 +65,55 @@ export default function LoginScreen() {
       return;
     }
     await refreshUser();
+  }
+
+  async function handleAppleContinue() {
+    if (appleLoading) return;
+    setErrorText(undefined);
+    setAppleLoading(true);
+    const result = await authService.signInWithApple();
+    setAppleLoading(false);
+    if (!result.success) {
+      if (!('cancelled' in result)) setErrorText(result.errorMessage);
+      return;
+    }
+    await refreshUser();
+  }
+
+  if (isApple) {
+    return (
+      <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'space-between' }}>
+        <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.sm }}>
+          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
+            Continue with Apple
+          </Text>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
+            {appleAvailable
+              ? 'Sign in with your Apple ID. If you choose Hide My Email, Apple gives us a private address that forwards to you.'
+              : 'Sign in with Apple isn’t available on this device. Please continue with your mobile number or Google.'}
+          </Text>
+          {errorText ? (
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite">
+              {errorText}
+            </Text>
+          ) : null}
+        </View>
+        {appleAvailable ? (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={
+              theme.scheme === 'dark'
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={theme.radius.md}
+            style={{ height: 52, width: '100%', opacity: appleLoading ? 0.6 : 1 }}
+            onPress={handleAppleContinue}
+            testID="apple-signin-continue"
+          />
+        ) : null}
+      </ScreenContainer>
+    );
   }
 
   if (isGoogle) {

@@ -2,6 +2,7 @@ import type { AuthProvider, User } from '../../types';
 import { isValidEmail, maskEmail, normalizeEmail } from './authInput';
 import { secureSession } from './secureSession';
 import type {
+  AppleSignInResult,
   AuthService,
   GoogleSignInResult,
   LinkIdentityResult,
@@ -95,6 +96,19 @@ export const mockAuthService: AuthService = {
     return { success: true, user, isNewUser: !existing };
   },
 
+  async signInWithApple(): Promise<AppleSignInResult> {
+    await delay(700);
+    // Like Google above: simulates the flow only. No Apple sheet is shown and
+    // no identity token is fabricated; the placeholder identity mirrors a
+    // "Hide My Email" sign-in.
+    const existing = await secureSession.load();
+    const user = existing?.linkedIdentities.some((i) => i.provider === 'apple')
+      ? existing
+      : buildUser({ provider: 'apple', displayValue: 'Email hidden by Apple' });
+    await secureSession.save(user);
+    return { success: true, user, isNewUser: !existing };
+  },
+
   async linkIdentity(provider: AuthProvider): Promise<LinkIdentityResult> {
     await delay(500);
     const existing = await secureSession.load();
@@ -102,10 +116,13 @@ export const mockAuthService: AuthService = {
     if (existing.linkedIdentities.some((i) => i.provider === provider)) {
       return { success: true, user: existing };
     }
-    const newIdentity =
+    const displayValue =
       provider === 'google'
-        ? { provider, displayValue: 'demo.reviewer@gmail.com', linkedAt: new Date().toISOString() }
-        : { provider, displayValue: maskMobileNumber(existing.mobileNumber ?? ''), linkedAt: new Date().toISOString() };
+        ? 'demo.reviewer@gmail.com'
+        : provider === 'apple'
+          ? 'Email hidden by Apple'
+          : maskMobileNumber(existing.mobileNumber ?? '');
+    const newIdentity = { provider, displayValue, linkedAt: new Date().toISOString() };
     const updated: User = { ...existing, linkedIdentities: [...existing.linkedIdentities, newIdentity] };
     await secureSession.save(updated);
     return { success: true, user: updated };

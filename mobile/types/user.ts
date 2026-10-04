@@ -1,8 +1,9 @@
-export type AuthProvider = 'mobile_otp' | 'email' | 'google';
+export type AuthProvider = 'mobile_otp' | 'email' | 'google' | 'apple';
 
 export type LinkedIdentity = {
   provider: AuthProvider;
-  /** Masked mobile number ("+91 9xxxxx210") or email address, never raw secrets. */
+  /** Masked mobile number ("+91 9xxxxx210") or email address (Apple private
+   * relay addresses are shown as "Hidden by Apple"), never raw secrets. */
   displayValue: string;
   linkedAt: string; // ISO date
 };

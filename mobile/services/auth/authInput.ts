@@ -36,3 +36,18 @@ export function maskEmail(email: string): string {
   const visible = local.slice(0, Math.min(2, local.length));
   return `${visible}${'•'.repeat(Math.max(local.length - visible.length, 1))}@${domain}`;
 }
+
+/**
+ * True for an Apple "Hide My Email" address (…@privaterelay.appleid.com).
+ * It is a real, deliverable address that Apple forwards to the person, but
+ * it says nothing about who they are, so it is never shown as an identity.
+ */
+export function isApplePrivateRelayEmail(email: string | null | undefined): boolean {
+  return Boolean(email && normalizeEmail(email).endsWith('@privaterelay.appleid.com'));
+}
+
+/** "Priya Sharma" from Apple's name parts (only sent on first authorisation). */
+export function appleFullName(name: { givenName?: string | null; familyName?: string | null } | null | undefined): string | null {
+  const full = [name?.givenName, name?.familyName].map((part) => part?.trim()).filter(Boolean).join(' ');
+  return full ? full.slice(0, 120) : null;
+}

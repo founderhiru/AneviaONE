@@ -5,8 +5,10 @@ import type { AuthError, SupabaseClient, User as SupabaseUser } from '@supabase/
 import type { AuthProvider, LinkedIdentity, User } from '../../types';
 import { isNetworkError, ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
-import { isValidEmail, maskEmail, normalizeEmail, normalizeMobileNumber } from './authInput';
+import { appleFullName, isApplePrivateRelayEmail, isValidEmail, maskEmail, normalizeEmail, normalizeMobileNumber } from './authInput';
+import { isAppleSignInAvailable, requestAppleCredential } from './appleAuth';
 import type {
+  AppleSignInResult,
   AuthService,
   GoogleSignInResult,
   LinkIdentityResult,
@@ -24,12 +26,14 @@ WebBrowser.maybeCompleteAuthSession();
  */
 
 const NOT_CONFIGURED = 'Sign-in is not available right now. Please try again later.';
+const APPLE_UNAVAILABLE = 'Sign in with Apple isn’t available on this device.';
 const OAUTH_REDIRECT = () => AuthSession.makeRedirectUri({ scheme: 'healthintelligence' });
 
 type ProfileRow = { onboarding_completed_at: string | null; display_name: string | null };
 
 function mapProvider(provider: string): AuthProvider {
   if (provider === 'google') return 'google';
+  if (provider === 'apple') return 'apple';
   if (provider === 'email') return 'email';
   return 'mobile_otp';
 }
@@ -37,6 +41,7 @@ function mapProvider(provider: string): AuthProvider {
 function identityDisplay(provider: AuthProvider, user: SupabaseUser, identityEmail?: unknown): string {
   if (provider === 'mobile_otp') return user.phone ? `+${user.phone.replace(/^\+/, '')}` : '';
   const email = typeof identityEmail === 'string' && identityEmail ? identityEmail : user.email ?? '';
+  if (isApplePrivateRelayEmail(email)) return 'Email hidden by Apple';
   return email ? maskEmail(email) : '';
 }
 
@@ -92,7 +97,7 @@ function authErrorMessage(error: AuthError | Error | null | undefined, context: 
   if (context === 'verify') return 'That code is incorrect or has expired. Please try again or request a new code.';
   if (context === 'oauth') return 'Could not complete sign-in. Please try again.';
   if (code === 'phone_provider_disabled' || code === 'sms_send_failed') {
-    return 'Sign-in by SMS isn’t available yet. Please continue with email.';
+    return 'Sign-in by SMS isn’t available yet. Please continue with Google or Apple.';
   }
   return 'We couldn’t send a code right now. Please try again.';
 }
@@ -170,13 +175,65 @@ export const supabaseAuthService: AuthService = {
     return { success: true, ...(await signedInResult(client, sessionData.session.user)) };
   },
 
+  async signInWithApple(): Promise<AppleSignInResult> {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, errorMessage: NOT_CONFIGURED };
+    if (!(await isAppleSignInAvailable())) return { success: false, errorMessage: APPLE_UNAVAILABLE };
+
+    const credential = await requestAppleCredential();
+    if (credential.kind === 'cancelled') return { success: false, cancelled: true };
+    if (credential.kind === 'error') return { success: false, errorMessage: authErrorMessage(credential.error, 'oauth') };
+
+    // Supabase verifies the token (audience = the app's bundle ID, set as a
+    // Client ID on the Apple provider) and the nonce, then signs in — or
+    // creates the auth user, whose `profiles` row the database trigger adds,
+    // exactly as for Mobile and Google. A "Hide My Email" relay address is
+    // stored as the account email like any other; it reaches the person.
+    const { data, error } = await client.auth.signInWithIdToken({
+      provider: 'apple',
+      token: credential.identityToken,
+      nonce: credential.rawNonce,
+    });
+    if (error || !data.user) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
+
+    // Apple shares the person's name only on the very first authorisation,
+    // so keep it now (never overwriting a name already set).
+    const fullName = appleFullName(credential.fullName);
+    if (fullName && !data.user.user_metadata?.full_name) {
+      await client.auth
+        .updateUser({
+          data: {
+            full_name: fullName,
+            given_name: credential.fullName?.givenName ?? undefined,
+            family_name: credential.fullName?.familyName ?? undefined,
+          },
+        })
+        .catch(() => undefined);
+      await client.from('profiles').update({ display_name: fullName }).eq('id', data.user.id).is('display_name', null);
+    }
+    return { success: true, ...(await signedInResult(client, data.user)) };
+  },
+
   async linkIdentity(provider): Promise<LinkIdentityResult> {
     const client = getSupabaseClient();
     if (!client) return { success: false, errorMessage: NOT_CONFIGURED };
-    if (provider !== 'google') {
-      return { success: false, errorMessage: 'Only linking a Google account is supported from here.' };
+    // Both require "Manual linking" to be enabled in Supabase Auth settings.
+    if (provider === 'apple') {
+      if (!(await isAppleSignInAvailable())) return { success: false, errorMessage: APPLE_UNAVAILABLE };
+      const credential = await requestAppleCredential();
+      if (credential.kind === 'cancelled') return { success: false, errorMessage: 'Linking was cancelled.' };
+      if (credential.kind === 'error') return { success: false, errorMessage: authErrorMessage(credential.error, 'oauth') };
+      const { data, error } = await client.auth.linkIdentity({
+        provider: 'apple',
+        token: credential.identityToken,
+        nonce: credential.rawNonce,
+      });
+      if (error || !data.user) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
+      return { success: true, user: (await signedInResult(client, data.user)).user };
     }
-    // Requires "Manual linking" to be enabled in Supabase Auth settings.
+    if (provider !== 'google') {
+      return { success: false, errorMessage: 'Only linking a Google or Apple account is supported from here.' };
+    }
     const redirectTo = OAUTH_REDIRECT();
     const { data, error } = await client.auth.linkIdentity({
       provider: 'google',

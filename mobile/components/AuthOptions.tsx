@@ -2,6 +2,9 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
+
+import { useAppleSignInAvailable } from '../hooks/useAppleSignInAvailable';
 
 // Colours for dark emerald surfaces (Welcome, Make it yours).
 const WHITE = '#F6F9F4';
@@ -50,15 +53,16 @@ function AuthButton({
 }
 
 /**
- * The sign-in entry points, for dark emerald surfaces: Mobile (primary) and
- * Google (secondary). Used on Welcome and "Make it yours" so both lead into
- * the same existing login flow.
+ * The sign-in entry points, for dark emerald surfaces: Mobile (primary), then
+ * Google and Apple (secondary). Used on Welcome and "Make it yours" so all of
+ * them lead into the same existing login flow.
  *
- * Sign in with Apple is deliberately absent: it is not implemented (no
- * `expo-apple-authentication`, no `AuthService` method, no Supabase Apple
- * provider). Add its button here only once that exists end to end.
+ * Apple uses Apple's own system button (white, as Apple asks for on dark
+ * backgrounds) and appears only where Sign in with Apple is available — iOS,
+ * never Android or web.
  */
 export function AuthOptions() {
+  const appleAvailable = useAppleSignInAvailable();
   return (
     <View style={styles.list}>
       <AuthButton
@@ -74,6 +78,16 @@ export function AuthOptions() {
         onPress={() => router.push('/(auth)/login?method=google')}
         testID="continue-with-google"
       />
+      {appleAvailable ? (
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+          cornerRadius={16}
+          style={styles.apple}
+          onPress={() => router.push('/(auth)/login?method=apple')}
+          testID="continue-with-apple"
+        />
+      ) : null}
     </View>
   );
 }
@@ -92,5 +106,6 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderWidth: 1, borderColor: 'rgba(246, 249, 244, 0.38)' },
   buttonIcon: { marginRight: 12 },
   buttonLogo: { width: 20, height: 20 },
+  apple: { height: 56, width: '100%' },
   buttonLabel: { fontSize: 17, fontWeight: '600', letterSpacing: 0.1 },
 });
