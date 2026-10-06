@@ -13,7 +13,7 @@ export function FinalCTA() {
       <span id="download" aria-hidden="true" />
       <div className="container cta__inner">
         <h2 id="cta-title" className="h2 cta__title">
-          <span>Your health has a history.</span> <span className="accent">Start making sense of it.</span>
+          <span>Your health has a history.</span> <span className="accent">Start keeping it together.</span>
         </h2>
         <p className="cta__label">{PRIMARY_CTA.label}</p>
         <StoreButtons tone="light" className="cta__stores" />

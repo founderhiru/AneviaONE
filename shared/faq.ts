@@ -105,7 +105,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'about',
     question: 'Does {product} diagnose or treat medical conditions?',
     answer: [
-      'No. {product} is a consumer health-information product. It helps you organize and understand your own records. It does not diagnose conditions, prescribe medication, make treatment decisions or replace your doctor.',
+      'No. {product} is a consumer health-information product. It helps you keep your own records together, and is being built to help you understand them. It does not diagnose conditions, prescribe medication, make treatment decisions or replace your doctor.',
       'Always talk to a qualified healthcare professional about symptoms, results or treatment.',
     ],
     webVisible: true,
@@ -130,8 +130,8 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'how-it-works',
     question: 'What can I do with {product}?',
     answer: [
-      '{product} is built around five steps: Capture, Remember, Understand, Compare and Ask.',
-      'Today you can sign in, add PDF health reports and keep them together in private storage, where you can open the originals at any time.',
+      '{product} is built around five steps: Capture, Understand, Remember, Compare and Ask.',
+      'Today you can sign in, add health reports — as a PDF, or as photos and scans saved as a PDF — and keep them together in private storage, where you can open the originals at any time.',
       'Reading your reports, building your health timeline, showing what changed and answering questions from your records are being built next. Until they are ready, the app tells you so instead of showing made-up results.',
     ],
     status: 'partial',
@@ -149,6 +149,20 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     webVisible: true,
     mobileVisible: false,
     sortOrder: 25,
+  },
+
+  {
+    id: 'connect-history',
+    category: 'how-it-works',
+    question: 'How does {product} connect information across my health history?',
+    answer: [
+      '{product} is designed to keep each record’s dates, results and documents connected, so a result sits next to the ones that came before it and links back to its source document.',
+      'That depends on your reports being read, which is not available in the current version. Today your reports are kept together in private storage.',
+    ],
+    status: 'planned',
+    webVisible: true,
+    mobileVisible: false,
+    sortOrder: 22,
   },
 
   // ── Health records ───────────────────────────────────────────────────────
@@ -169,7 +183,8 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'health-records',
     question: 'What kinds of files can I add?',
     answer: [
-      'Currently, PDF reports up to 20 MB. Scanning paper documents with your camera and adding photos are planned, but not available yet.',
+      'Today: PDF reports, photos of paper reports (taken with your camera or chosen from your photos) and multi-page scans, up to 20 MB each. Photos and scans are saved as a PDF of the pages, exactly as captured — nothing is read from them yet.',
+      'Adding records by WhatsApp or typing them in by hand is not available yet.',
     ],
     status: 'partial',
     webVisible: true,
@@ -282,7 +297,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'privacy-security',
     question: 'Who can see my records?',
     answer: [
-      'Only your account. Database rules deny access by default and allow it only for the account that owns the data. Background work on the server uses separate credentials that are never included in the app.',
+      'Each account’s records can be read only by that account: database rules deny access by default and allow it only for the account that owns the data. The app never holds server credentials.',
     ],
     webVisible: true,
     mobileVisible: false,
@@ -318,7 +333,8 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     id: 'need-whatsapp',
     category: 'whatsapp',
     question: 'Do I need WhatsApp to use {product}?',
-    answer: ['No. You can add reports directly in the app. WhatsApp is an optional convenience.'],
+    answer: ['No. You add reports directly in the app. WhatsApp is planned as an optional convenience; it is not available yet.'],
+    status: 'planned',
     webVisible: true,
     mobileVisible: false,
     sortOrder: 105,
@@ -362,6 +378,19 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     webVisible: true,
     mobileVisible: true,
     sortOrder: 130,
+  },
+  {
+    id: 'get-started',
+    category: 'getting-started',
+    question: 'How do I get started?',
+    answer: [
+      '{product} is not in the App Store or Google Play yet — store links will appear on this website at launch.',
+      'Once you have the app: sign in, tap Add, and upload a PDF or photograph a paper report. Your originals are kept together in private storage.',
+    ],
+    status: 'planned',
+    webVisible: true,
+    mobileVisible: false,
+    sortOrder: 128,
   },
   {
     id: 'cost',

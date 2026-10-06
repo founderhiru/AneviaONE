@@ -154,6 +154,7 @@ function BlockView({ block }: { block: Block }) {
                   ) : null}
                 </div>
                 <Reveal className="chapter__visual">
+                  <span className="status status--sample">Sample data</span>
                   <ChapterVisual kind={c.visual} />
                 </Reveal>
               </div>
@@ -246,7 +247,7 @@ export function ClosingCta({ kind }: { kind: 'download' | 'contact' | 'none' }) 
           {kind === 'download' ? (
             <>
               <h2 className="h2">
-                Your health has a history. <span className="accent">Start making sense of it.</span>
+                Your health has a history. <span className="accent">Start keeping it together.</span>
               </h2>
               <p className="page-cta__label">{PRIMARY_CTA.label}</p>
               <StoreButtons tone="light" className="page-cta__stores" />

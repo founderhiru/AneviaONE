@@ -6,6 +6,9 @@ import { BRAND } from '@/lib/config';
 /** The five-stage concept only. The explanation lives on /how-it-works. */
 export const STAGES = ['Capture', 'Understand', 'Remember', 'Compare', 'Ask'] as const;
 
+/** Only Capture exists in the app today; the page says so rather than implying all five. */
+const AVAILABLE_TODAY = new Set<string>(['Capture']);
+
 export function HowPreview() {
   return (
     <section id="how" className="section howp" aria-labelledby="how-title">
@@ -16,7 +19,7 @@ export function HowPreview() {
             From records to understanding.
           </h2>
           <p className="lede howp__lede">
-            From your first report to years of health history, {BRAND.name} builds context over time.
+            {BRAND.name} is being built to turn a first report into years of connected health history.
           </p>
         </div>
         <ol className="howp__flow">
@@ -24,6 +27,11 @@ export function HowPreview() {
             <li key={stage} className="howp__stage">
               <span className="howp__num">{String(i + 1).padStart(2, '0')}</span>
               <span className="howp__name">{stage}</span>
+              {AVAILABLE_TODAY.has(stage) ? (
+                <span className="status status--now">Available today</span>
+              ) : (
+                <span className="status status--soon">Being built</span>
+              )}
             </li>
           ))}
         </ol>

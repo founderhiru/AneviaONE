@@ -1,4 +1,5 @@
 import { Icon, type IconName } from '../Icon';
+import { BrandMark } from '../BrandMark';
 import { Reveal } from '../Reveal';
 import { WORDMARK } from '@/lib/config';
 
@@ -70,19 +71,13 @@ export function ProblemSection() {
 
           <Reveal className="converge__core">
             <div className="core card">
-              <svg width="46" height="46" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
-                <rect width="34" height="34" rx="11" fill="#082b57" />
-                <path d="M7.5 22.5l5.2-6.2 4.6 3.6 8.2-9.4" fill="none" stroke="#5fd0e8" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="7.5" cy="22.5" r="2.1" fill="#fff" />
-                <circle cx="12.7" cy="16.3" r="1.7" fill="#fff" />
-                <circle cx="25.5" cy="10.5" r="2.5" fill="#5fd0e8" />
-              </svg>
+              <BrandMark size={52} />
               <div>
                 <p className="core__name">
                   {WORDMARK.lead}
                   <span className="accent">{WORDMARK.accent}</span>
                 </p>
-                <p className="core__line">One connected health history.</p>
+                <p className="core__line">One connected health history — what we are building.</p>
               </div>
             </div>
           </Reveal>

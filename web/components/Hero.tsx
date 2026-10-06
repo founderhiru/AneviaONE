@@ -48,6 +48,10 @@ export function Hero() {
               </Link>
             )}
           </div>
+          <p className="fine hero__status">
+            Today: add health reports and keep them together in private storage. Reading and comparing them, and
+            answering questions, are being built.
+          </p>
         </div>
 
         <div className="hero__visual">

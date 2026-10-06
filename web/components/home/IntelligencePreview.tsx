@@ -15,12 +15,13 @@ export function IntelligencePreview() {
       <div className="container">
         <p className="eyebrow">Intelligence</p>
         <h2 id="intel-title" className="h2 intelp__title">
-          Intelligence that grows <span className="accent">with your history.</span>
+          Intelligence that will grow <span className="accent">with your history.</span>
         </h2>
         <ul className="intelp__list">
           {CONCEPTS.map((c) => (
             <li key={c.name} className="intelp__item">
               <span className="intelp__name">{c.name}</span>
+              <span className="status status--soon">Being built</span>
               <span className="intelp__line">{c.line}</span>
             </li>
           ))}

@@ -96,7 +96,7 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
         <div className="cv-ask" aria-label="Asking a question in plain language (sample)">
           <p className="cv-ask__q">When was my last HbA1c test, and how did it compare?</p>
           <p className="cv-ask__a">
-            <span className="badge badge--brand">From your records</span>
+            <span className="badge badge--brand">Sample answer</span>
             Your most recent HbA1c was in 2026 — 0.6% lower than in 2025.
           </p>
         </div>

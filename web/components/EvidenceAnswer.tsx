@@ -11,7 +11,7 @@ export function EvidenceAnswer() {
       </div>
       <div className="chat__msg chat__msg--ai">
         <span className="chat__who">
-          <span className="badge badge--brand">From your records</span>
+          <span className="badge badge--brand">Sample answer</span>
         </span>
         <p>
           Your LDL cholesterol has increased from <b>118 mg/dL in 2022</b> to <b>146 mg/dL in 2026</b>. The largest
