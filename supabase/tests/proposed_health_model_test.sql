@@ -1,9 +1,9 @@
 -- =============================================================================
 -- Integrity + isolation test for the PROPOSED health data model
--- (supabase/migrations_proposed). Runs entirely inside a transaction that is
+-- (supabase/migrations). Runs entirely inside a transaction that is
 -- ROLLED BACK. Success ends with "ALL HEALTH MODEL CHECKS PASSED".
 --
--- Local: supabase/tests/local/run-local.sh --with-proposed
+-- Local: supabase/tests/local/run-local.sh
 -- =============================================================================
 
 begin;
@@ -92,15 +92,15 @@ begin
   insert into public.document_pages (user_id, document_id, page_number, text_content, text_source, extraction_run_id)
   values (a, doc, 1, 'HbA1c 6.5 %', 'pdf_text_layer', run) returning id into page;
 
-  evidence := format('%L, %L, %L, %L, %L, 0.93', 'extracted', doc, page, run, 'HbA1c 6.5 %');
-  execute format('insert into public.encounters (user_id, encounter_type, encounter_date, origin, document_id, document_page_id, extraction_run_id, source_text, confidence)
+  evidence := format('%L, %L, %L, %L, %L, 0.93, %L', 'extracted', doc, page, run, 'HbA1c 6.5 %', encode(sha256('test-fingerprint'::bytea), 'hex'));
+  execute format('insert into public.encounters (user_id, encounter_type, encounter_date, origin, document_id, document_page_id, extraction_run_id, source_text, confidence, fingerprint)
                   values (%L, ''lab_test'', ''2026-08-12'', %s) returning id', a, evidence) into enc;
-  execute format('insert into public.observations (user_id, encounter_id, name_as_written, value_as_written, unit_as_written, effective_date, origin, document_id, document_page_id, extraction_run_id, source_text, confidence)
+  execute format('insert into public.observations (user_id, encounter_id, name_as_written, value_as_written, unit_as_written, effective_date, origin, document_id, document_page_id, extraction_run_id, source_text, confidence, fingerprint)
                   values (%L, %L, ''HbA1c'', ''6.5'', ''%%'', ''2026-08-12'', %s) returning id', a, enc, evidence) into obs;
-  execute format('insert into public.conditions (user_id, name_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence) values (%L, ''Prediabetes'', %s)', a, evidence);
-  execute format('insert into public.medications (user_id, name_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence) values (%L, ''Metformin 500 mg'', %s)', a, evidence);
-  execute format('insert into public.procedures (user_id, name_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence) values (%L, ''Venepuncture'', %s)', a, evidence);
-  execute format('insert into public.allergies (user_id, substance_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence) values (%L, ''Penicillin'', %s)', a, evidence);
+  execute format('insert into public.conditions (user_id, name_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence, fingerprint) values (%L, ''Prediabetes'', %s)', a, evidence);
+  execute format('insert into public.medications (user_id, name_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence, fingerprint) values (%L, ''Metformin 500 mg'', %s)', a, evidence);
+  execute format('insert into public.procedures (user_id, name_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence, fingerprint) values (%L, ''Venepuncture'', %s)', a, evidence);
+  execute format('insert into public.allergies (user_id, substance_as_written, origin, document_id, document_page_id, extraction_run_id, source_text, confidence, fingerprint) values (%L, ''Penicillin'', %s)', a, evidence);
 
   insert into public.health_events (user_id, event_type, event_date, title, document_id, encounter_id, derivation_version)
   values (a, 'blood_test', '2026-08-12', 'Blood test', doc, enc, 'd1');

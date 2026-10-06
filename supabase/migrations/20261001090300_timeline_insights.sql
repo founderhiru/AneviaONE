@@ -1,5 +1,5 @@
 -- =============================================================================
--- PROPOSED (not applied) · Health data model 4/4
+-- Approved for Gate 1 (reviewed 2026-10-06) · Health data model 4/4
 -- health_events (Timeline) · insights + insight_sources (What Changed, trend
 -- summaries) · get_health_summary() (Me screen counts)
 --

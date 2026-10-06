@@ -1,5 +1,5 @@
 -- =============================================================================
--- PROPOSED (not applied) · Health data model 3/4
+-- Approved for Gate 1 (reviewed 2026-10-06) · Health data model 3/4
 -- encounters · observations · conditions · medications · procedures · allergies
 --
 -- MEDICAL-DATA INTEGRITY RULES (enforced by the database for every fact table):

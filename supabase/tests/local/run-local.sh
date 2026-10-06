@@ -3,12 +3,14 @@
 # local PostgreSQL (needs `initdb`/`pg_ctl`/`psql` on PATH, e.g.
 # `brew install postgresql@16`). Nothing touches your Supabase project.
 #
-#   supabase/tests/local/run-local.sh                 # applied migrations only
-#   supabase/tests/local/run-local.sh --with-proposed # + supabase/migrations_proposed
+#   supabase/tests/local/run-local.sh
+#
+# Applies every file in supabase/migrations in order, then runs:
+#   security_isolation_test.sql      documents / storage isolation (Phase 1)
+#   proposed_health_model_test.sql   health data model integrity + isolation
+#   gate1_extraction_test.sql        Gate 1: claim/commit/fail, confidence gate,
+#                                    idempotency, assertion, server-only RPCs
 set -euo pipefail
-
-WITH_PROPOSED=false
-[[ "${1:-}" == "--with-proposed" ]] && WITH_PROPOSED=true
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUPABASE_DIR="$(cd "$HERE/../.." && pwd)"
@@ -35,13 +37,6 @@ for migration in "$SUPABASE_DIR"/migrations/*.sql; do
   "${PSQL[@]}" -f "$migration"
 done
 
-if $WITH_PROPOSED; then
-  for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
-    echo "▸ Applying PROPOSED $(basename "$migration")"
-    "${PSQL[@]}" -f "$migration"
-  done
-fi
-
 echo "▸ Running security isolation test (with Storage writes)"
 PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/security_isolation_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
@@ -50,8 +45,10 @@ echo "▸ Re-running in hosted mode (no direct Storage writes — as the Supabas
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/security_isolation_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /' | grep -E "FAIL|ERROR|ALL SECURITY"
 
-if $WITH_PROPOSED; then
-  echo "▸ Running health data model integrity & isolation test (proposed schema)"
-  PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \
-    | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
-fi
+echo "▸ Running health data model integrity & isolation test"
+PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
+echo "▸ Running Gate 1 extraction test"
+PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/gate1_extraction_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
