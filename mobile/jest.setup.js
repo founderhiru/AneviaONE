@@ -18,6 +18,11 @@
  */
 process.env.EXPO_PUBLIC_APP_MODE = 'demo';
 
+/** Web Crypto (SHA-256 fingerprints) for the shared Edge Function modules under test. */
+if (!globalThis.crypto || !globalThis.crypto.subtle) {
+  globalThis.crypto = require('crypto').webcrypto;
+}
+
 /**
  * `SafeAreaProvider`'s real implementation measures native layout via
  * `onLayout`, which never fires in the jest test-renderer environment — so

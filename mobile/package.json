@@ -72,12 +72,16 @@
     "clearMocks": true,
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/__tests__/testUtils\\.tsx$"
+      "/__tests__/testUtils\\.tsx$",
+      "/__tests__/functions/fixtures\\.ts$"
     ],
     "collectCoverageFrom": [
       "components/**/*.{ts,tsx}",
       "services/**/*.{ts,tsx}",
       "!**/node_modules/**"
+    ],
+    "modulePaths": [
+      "<rootDir>/node_modules"
     ]
   }
 }
