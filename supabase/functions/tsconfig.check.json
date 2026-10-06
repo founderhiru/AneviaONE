@@ -1,1 +1,7 @@
-{"compilerOptions":{"strict":true,"target":"ES2022","module":"ESNext","moduleResolution":"bundler","allowImportingTsExtensions":true,"noEmit":true,"skipLibCheck":true,"lib":["ES2022","DOM"],"types":[]},"include":["./_shared/*.ts"]}
+{
+  "compilerOptions": {
+    "strict": true, "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true, "noEmit": true, "skipLibCheck": true, "lib": ["ES2022", "DOM"], "types": []
+  },
+  "include": ["./_shared/**/*.ts", "./process-document/handler.ts", "./process-document/supabaseDb.ts"]
+}

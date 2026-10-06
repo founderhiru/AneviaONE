@@ -1,3 +1,9 @@
 # Supabase CLI project config (used by `npx supabase link` / `npx supabase db push`).
 # Only the technical project id lives here — it is NOT the consumer brand name.
 project_id = "health-intelligence-app"
+
+# Gate 1 — document understanding. verify_jwt stays ON (the gateway rejects
+# requests without a valid Supabase JWT); the function ALSO verifies the user
+# with auth.getUser and takes the identity from that token only.
+[functions.process-document]
+verify_jwt = true

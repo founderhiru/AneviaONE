@@ -48,7 +48,8 @@
     "jest-expo": "^57.0.5",
     "react-test-renderer": "19.2.3",
     "test-renderer": "^1.3.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "unpdf": "^1.8.1"
   },
   "scripts": {
     "start": "expo start",
@@ -57,8 +58,10 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "jest && npm run test:pdf",
+    "test:watch": "jest --watch",
+    "test:unit": "jest",
+    "test:pdf": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js --config jest.pdf.config.js --silent"
   },
   "private": true,
   "overrides": {
@@ -73,7 +76,8 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/__tests__/testUtils\\.tsx$",
-      "/__tests__/functions/fixtures\\.ts$"
+      "\\.pdf\\.test\\.ts$",
+      "/__tests__/functions/(fixtures|handlerHarness)\\.ts$"
     ],
     "collectCoverageFrom": [
       "components/**/*.{ts,tsx}",
