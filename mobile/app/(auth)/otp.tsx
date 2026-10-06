@@ -1,79 +1,111 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Button, OtpInput, ScreenContainer } from '../../components';
-import { useTheme } from '../../design/theme';
+import { AuthButton } from '../../components/AuthButton';
+import { AuthError, AuthScreen, AuthTextButton, leaveAuthStep, SIGN_IN_FALLBACK_ERROR } from '../../components/AuthScreen';
+import { OtpInput } from '../../components/OtpInput';
 import { useAuth } from '../../hooks/useAuth';
+import { useSingleFlight } from '../../hooks/useSingleFlight';
 import { authService } from '../../services/auth/authService';
 
+/**
+ * Code entry for Mobile (SMS) or email sign-in. Back returns to the number
+ * entry so it can be corrected; a wrong or expired code clears for a retry,
+ * and a new code can be requested — the person is never stuck here.
+ */
 export default function OtpScreen() {
-  const theme = useTheme();
   const { refreshUser } = useAuth();
   // Either an SMS code (mobileNumber) or an emailed code (email).
   const { mobileNumber, email } = useLocalSearchParams<{ mobileNumber?: string; email?: string }>();
   const isEmail = Boolean(email);
   const destination = (isEmail ? email : mobileNumber) ?? '';
+  const verifyOnce = useSingleFlight();
+  const resendOnce = useSingleFlight();
 
   const [otp, setOtp] = useState('');
   const [errorText, setErrorText] = useState<string | undefined>();
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
-  async function handleVerify(code: string) {
-    setErrorText(undefined);
-    setVerifying(true);
-    const result = isEmail
-      ? await authService.verifyEmailOtp(destination, code)
-      : await authService.verifyMobileOtp(destination, code);
-    setVerifying(false);
-    if (!result.success) {
-      setErrorText(result.errorMessage);
-      return;
-    }
-    await refreshUser();
-    // Root layout's redirect effect takes it from here (onboarding vs home).
+  function handleVerify(code: string) {
+    return verifyOnce(async () => {
+      setErrorText(undefined);
+      setVerifying(true);
+      try {
+        const result = isEmail
+          ? await authService.verifyEmailOtp(destination, code)
+          : await authService.verifyMobileOtp(destination, code);
+        if (!result.success) {
+          setErrorText(result.errorMessage);
+          setOtp('');
+          return;
+        }
+        // Root layout's redirect effect takes it from here (onboarding vs home).
+        await refreshUser();
+      } catch {
+        setErrorText(SIGN_IN_FALLBACK_ERROR);
+      } finally {
+        setVerifying(false);
+      }
+    });
   }
 
-  async function handleResend() {
-    setResending(true);
-    if (isEmail) await authService.sendEmailOtp(destination);
-    else await authService.sendMobileOtp(destination);
-    setResending(false);
+  function handleResend() {
+    return resendOnce(async () => {
+      setErrorText(undefined);
+      setResending(true);
+      try {
+        const result = isEmail ? await authService.sendEmailOtp(destination) : await authService.sendMobileOtp(destination);
+        if (!result.success) setErrorText(result.errorMessage);
+        else {
+          setOtp('');
+          setResent(true);
+        }
+      } catch {
+        setErrorText(SIGN_IN_FALLBACK_ERROR);
+      } finally {
+        setResending(false);
+      }
+    });
   }
 
   return (
-    <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'space-between' }}>
-      <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.md }}>
-        <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
-          Enter the code
-        </Text>
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
-          We sent a 6-digit code to {destination}.
-        </Text>
-        <OtpInput
-          value={otp}
-          onChange={(value) => {
-            setOtp(value);
-            setErrorText(undefined);
-            if (value.length === 6) handleVerify(value);
-          }}
-          errorText={errorText}
-        />
-        {errorText ? (
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite">
-            {errorText}
-          </Text>
-        ) : null}
-        <Button label="Resend code" variant="ghost" onPress={handleResend} loading={resending} fullWidth={false} />
-      </View>
-      <Button
-        label="Verify"
-        onPress={() => handleVerify(otp)}
-        loading={verifying}
-        disabled={otp.length < 6}
-        testID="verify-otp"
+    <AuthScreen
+      title="Enter the code"
+      subtitle={`We sent a 6-digit code to ${destination}.`}
+      footer={
+        <>
+          <AuthButton
+            variant="primary"
+            label="Verify"
+            onPress={() => handleVerify(otp)}
+            loading={verifying}
+            disabled={otp.length < 6}
+            testID="verify-otp"
+          />
+          <AuthTextButton label={isEmail ? 'Change email' : 'Change number'} onPress={leaveAuthStep} testID="otp-change-destination" />
+        </>
+      }
+      testID="otp-screen"
+    >
+      <OtpInput
+        appearance="onBrand"
+        value={otp}
+        onChange={(value) => {
+          setOtp(value);
+          setErrorText(undefined);
+          if (value.length === 6) handleVerify(value);
+        }}
+        errorText={errorText}
       />
-    </ScreenContainer>
+      <AuthError message={errorText} />
+      <AuthTextButton
+        label={resending ? 'Sending…' : resent ? 'Code sent — resend again' : 'Resend code'}
+        onPress={handleResend}
+        disabled={resending}
+        testID="otp-resend"
+      />
+    </AuthScreen>
   );
 }

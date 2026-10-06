@@ -1,21 +1,13 @@
 import React, { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 
-import { Card, EmptyState, ErrorState, LoadingState, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { EmptyState, ErrorState, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
+import { StoredDocumentCard } from '../../components/StoredDocumentCard';
 import { useTheme } from '../../design/theme';
-import {
-  DOCUMENT_STATUS_PRESENTATION,
-  documentsService,
-  formatFileSize,
-} from '../../services/documents/documentsService';
+import { documentsService } from '../../services/documents/documentsService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
 import type { StoredDocument } from '../../types';
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-}
 
 /** The signed-in user's real stored originals (reloaded whenever shown). */
 export default function MyDocumentsScreen() {
@@ -49,36 +41,15 @@ export default function MyDocumentsScreen() {
       ) : documents.length === 0 ? (
         <EmptyState
           title="No documents yet"
-          description="Upload a PDF of a report and it will be stored privately here."
-          actionLabel="Upload a report"
+          description="Add a report, scan or photo and it will be stored privately here."
+          actionLabel="Add Health Record"
           onActionPress={() => router.push('/add')}
         />
       ) : (
         <View style={{ gap: theme.spacing.sm }}>
-          {documents.map((doc) => {
-            const presentation = DOCUMENT_STATUS_PRESENTATION[doc.status];
-            return (
-              <Card
-                key={doc.id}
-                onPress={() => router.push(`/documents/${doc.id}`)}
-                accessibilityLabel={`${doc.originalFilename}, ${presentation.label}`}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                  <Ionicons name="document-text-outline" size={24} color={theme.colors.brandPrimary} />
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]} numberOfLines={1}>
-                      {doc.originalFilename}
-                    </Text>
-                    <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-                      {formatDate(doc.uploadedAt ?? doc.createdAt)} · {formatFileSize(doc.fileSizeBytes)}
-                    </Text>
-                    <StatusBadge label={presentation.label} tone={presentation.tone} />
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
-                </View>
-              </Card>
-            );
-          })}
+          {documents.map((doc) => (
+            <StoredDocumentCard key={doc.id} document={doc} onPress={() => router.push(`/documents/${doc.id}`)} />
+          ))}
         </View>
       )}
     </ScreenContainer>

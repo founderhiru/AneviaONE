@@ -56,7 +56,8 @@ function RootNavigator() {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        {/* Home is the root of the signed-in app: no swipe back into sign-in. */}
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="explore" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>

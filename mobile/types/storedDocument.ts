@@ -47,6 +47,8 @@ export type PickedFile = {
   /** As reported by the picker — may be missing or wrong; verified again. */
   mimeType?: string | null;
   size?: number | null;
+  /** How it was captured; recorded on the document. Defaults to 'upload'. */
+  source?: StoredDocumentSource;
 };
 
 /** Progress of an upload, for the Add Record screen. */

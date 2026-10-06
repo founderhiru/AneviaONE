@@ -1,5 +1,3 @@
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
 import type { AuthError, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 
 import type { AuthProvider, LinkedIdentity, User } from '../../types';
@@ -7,6 +5,7 @@ import { isNetworkError, ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { appleFullName, isApplePrivateRelayEmail, isValidEmail, maskEmail, normalizeEmail, normalizeMobileNumber } from './authInput';
 import { isAppleSignInAvailable, requestAppleCredential } from './appleAuth';
+import { requestGoogleIdToken, signOutOfGoogle } from './googleAuth';
 import type {
   AppleSignInResult,
   AuthService,
@@ -15,8 +14,6 @@ import type {
   SendOtpResult,
   VerifyOtpResult,
 } from './authTypes';
-
-WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Real Supabase-backed implementation (production mode). Supabase Auth owns
@@ -27,7 +24,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const NOT_CONFIGURED = 'Sign-in is not available right now. Please try again later.';
 const APPLE_UNAVAILABLE = 'Sign in with Apple isn’t available on this device.';
-const OAUTH_REDIRECT = () => AuthSession.makeRedirectUri({ scheme: 'healthintelligence' });
+const GOOGLE_UNAVAILABLE = 'Sign in with Google isn’t available in this version of the app.';
 
 type ProfileRow = { onboarding_completed_at: string | null; display_name: string | null };
 
@@ -102,15 +99,143 @@ function authErrorMessage(error: AuthError | Error | null | undefined, context: 
   return 'We couldn’t send a code right now. Please try again.';
 }
 
-/** Finishes an OAuth browser round-trip (PKCE: exchange ?code= for a session). */
-async function completeOAuthRedirect(client: SupabaseClient, url: string): Promise<AuthError | Error | null> {
-  const parsed = new URL(url);
-  const code = parsed.searchParams.get('code');
-  const errorDescription = parsed.searchParams.get('error_description');
-  if (errorDescription) return new Error(errorDescription);
-  if (!code) return new Error('Missing authorization code.');
-  const { error } = await client.auth.exchangeCodeForSession(code);
-  return error;
+/** A failed OAuth step with a known, non-secret diagnostic code. */
+class OAuthStepError extends Error {
+  constructor(
+    readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'OAuthStepError';
+  }
+}
+
+const SAFE_CODE = /^[a-z0-9_]{1,64}$/;
+
+/**
+ * A short, non-secret identifier for why an OAuth sign-in failed — the
+ * Supabase Auth error code (e.g. `bad_code_verifier`,
+ * `flow_state_not_found`, `pkce_code_verifier_not_found`) or one of ours.
+ * Only ever a fixed lower-case token: never a message, URL, code, token,
+ * verifier or email, so it is safe to show and to report.
+ */
+export function oauthDiagnosticCode(error: unknown): string {
+  if (error instanceof OAuthStepError) return error.code;
+  if (isNetworkError(error)) return 'network_error';
+  const code = (error as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && SAFE_CODE.test(code)) return code;
+  // supabase-js's own client-side errors (e.g. AuthSessionMissingError →
+  // auth_session_missing) carry no server code; name them by their type.
+  const name = (error as { name?: unknown } | null)?.name;
+  if (typeof name === 'string' && /^Auth[A-Za-z]+Error$/.test(name) && name !== 'AuthApiError' && name !== 'AuthUnknownError') {
+    return name.replace(/Error$/, '').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  }
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status === 'number') return `auth_http_${status}`;
+  return 'unexpected_error';
+}
+
+/**
+ * Development-only diagnostics for a failed sign-in step. Logs what
+ * identifies the failure (stage, error name/code/status) — never a token,
+ * authorization code or PKCE verifier. Production stays silent; people only
+ * ever see the friendly message.
+ */
+function diagnose(stage: string, error: unknown) {
+  if (!__DEV__) return;
+  const e = (error ?? {}) as { name?: string; code?: string; status?: number; message?: string };
+  console.warn(`[auth] ${stage} failed`, { diagnosticCode: oauthDiagnosticCode(error), name: e.name, code: e.code, status: e.status, message: e.message });
+}
+
+/** The friendly OAuth failure, plus a safe code for diagnosing it. */
+function oauthFailure(error: unknown): { success: false; errorMessage: string; diagnosticCode: string } {
+  return { success: false, errorMessage: authErrorMessage(error as Error, 'oauth'), diagnosticCode: oauthDiagnosticCode(error) };
+}
+
+/** One Google round-trip at a time: a second tap joins the attempt in flight. */
+let googleInFlight: Promise<GoogleSignInResult> | null = null;
+/** Likewise for the Apple sheet. */
+let appleInFlight: Promise<AppleSignInResult> | null = null;
+
+/**
+ * Native Google Sign-In: Google's iOS SDK returns a Google ID token, which
+ * Supabase verifies (signature, issuer, audience = the configured client
+ * IDs) and exchanges for a session in one call — the same pattern as Sign
+ * in with Apple. There is no browser redirect, callback, PKCE code or
+ * stored flow state to redeem (the browser flow's code redemption failed
+ * for returning accounts with `flow_state_not_found`).
+ */
+async function runGoogleSignIn(client: SupabaseClient): Promise<GoogleSignInResult> {
+  // The Google entry point is only offered while signed out. A session still
+  // in storage here is left over from an incomplete sign-out; clear it so the
+  // new sign-in starts from a clean slate.
+  const { data: existing } = await client.auth.getSession();
+  if (existing.session) await client.auth.signOut({ scope: 'local' });
+
+  const google = await requestGoogleIdToken();
+  if (google.kind === 'cancelled') return { success: false, cancelled: true };
+  if (google.kind === 'unavailable') {
+    return { success: false, errorMessage: GOOGLE_UNAVAILABLE, diagnosticCode: 'google_signin_unavailable' };
+  }
+  if (google.kind === 'no_id_token') {
+    const error = new OAuthStepError('google_no_id_token', 'Google returned no ID token.');
+    diagnose('google:token', error);
+    return oauthFailure(error);
+  }
+  if (google.kind === 'error') {
+    diagnose('google:native', google.error);
+    return oauthFailure(google.error.code ? new OAuthStepError(googleErrorCode(google.error.code), google.error.message) : google.error);
+  }
+
+  const { data, error } = await client.auth.signInWithIdToken({ provider: 'google', token: google.idToken });
+  if (error || !data.user) {
+    diagnose('google:supabase', error);
+    return oauthFailure(error ?? new OAuthStepError('no_session', 'No session from Google ID token.'));
+  }
+  return { success: true, ...(await signedInResult(client, data.user)) };
+}
+
+/** Google SDK error codes as safe diagnostics (`google_<code>`). */
+function googleErrorCode(code: string): string {
+  const safe = code.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 48);
+  return `google_${safe || 'error'}`;
+}
+
+async function runAppleSignIn(client: SupabaseClient): Promise<AppleSignInResult> {
+  if (!(await isAppleSignInAvailable())) return { success: false, errorMessage: APPLE_UNAVAILABLE };
+
+  const credential = await requestAppleCredential();
+  if (credential.kind === 'cancelled') return { success: false, cancelled: true };
+  if (credential.kind === 'error') return { success: false, errorMessage: authErrorMessage(credential.error, 'oauth') };
+
+  // Supabase verifies the token (audience = the app's bundle ID, set as a
+  // Client ID on the Apple provider) and the nonce, then signs in — or
+  // creates the auth user, whose `profiles` row the database trigger adds,
+  // exactly as for Mobile and Google. A "Hide My Email" relay address is
+  // stored as the account email like any other; it reaches the person.
+  const { data, error } = await client.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce: credential.rawNonce,
+  });
+  if (error || !data.user) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
+
+  // Apple shares the person's name only on the very first authorisation,
+  // so keep it now (never overwriting a name already set).
+  const fullName = appleFullName(credential.fullName);
+  if (fullName && !data.user.user_metadata?.full_name) {
+    await client.auth
+      .updateUser({
+        data: {
+          full_name: fullName,
+          given_name: credential.fullName?.givenName ?? undefined,
+          family_name: credential.fullName?.familyName ?? undefined,
+        },
+      })
+      .catch(() => undefined);
+    await client.from('profiles').update({ display_name: fullName }).eq('id', data.user.id).is('display_name', null);
+  }
+  return { success: true, ...(await signedInResult(client, data.user)) };
 }
 
 export const supabaseAuthService: AuthService = {
@@ -157,61 +282,33 @@ export const supabaseAuthService: AuthService = {
   async signInWithGoogle(): Promise<GoogleSignInResult> {
     const client = getSupabaseClient();
     if (!client) return { success: false, errorMessage: NOT_CONFIGURED };
-    const redirectTo = OAUTH_REDIRECT();
-    const { data, error } = await client.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
-    if (error || !data.url) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
-
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (result.type !== 'success') return { success: false, cancelled: true };
-
-    const exchangeError = await completeOAuthRedirect(client, result.url);
-    if (exchangeError) return { success: false, errorMessage: authErrorMessage(exchangeError, 'oauth') };
-
-    const { data: sessionData } = await client.auth.getSession();
-    if (!sessionData.session) return { success: false, errorMessage: authErrorMessage(null, 'oauth') };
-    return { success: true, ...(await signedInResult(client, sessionData.session.user)) };
+    if (googleInFlight) return googleInFlight;
+    googleInFlight = runGoogleSignIn(client)
+      .catch((error: unknown): GoogleSignInResult => {
+        // Never let a thrown error (browser failed to open, network) escape
+        // and leave the sign-in screen waiting forever.
+        diagnose('google', error);
+        return oauthFailure(error);
+      })
+      .finally(() => {
+        googleInFlight = null;
+      });
+    return googleInFlight;
   },
 
   async signInWithApple(): Promise<AppleSignInResult> {
     const client = getSupabaseClient();
     if (!client) return { success: false, errorMessage: NOT_CONFIGURED };
-    if (!(await isAppleSignInAvailable())) return { success: false, errorMessage: APPLE_UNAVAILABLE };
-
-    const credential = await requestAppleCredential();
-    if (credential.kind === 'cancelled') return { success: false, cancelled: true };
-    if (credential.kind === 'error') return { success: false, errorMessage: authErrorMessage(credential.error, 'oauth') };
-
-    // Supabase verifies the token (audience = the app's bundle ID, set as a
-    // Client ID on the Apple provider) and the nonce, then signs in — or
-    // creates the auth user, whose `profiles` row the database trigger adds,
-    // exactly as for Mobile and Google. A "Hide My Email" relay address is
-    // stored as the account email like any other; it reaches the person.
-    const { data, error } = await client.auth.signInWithIdToken({
-      provider: 'apple',
-      token: credential.identityToken,
-      nonce: credential.rawNonce,
-    });
-    if (error || !data.user) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
-
-    // Apple shares the person's name only on the very first authorisation,
-    // so keep it now (never overwriting a name already set).
-    const fullName = appleFullName(credential.fullName);
-    if (fullName && !data.user.user_metadata?.full_name) {
-      await client.auth
-        .updateUser({
-          data: {
-            full_name: fullName,
-            given_name: credential.fullName?.givenName ?? undefined,
-            family_name: credential.fullName?.familyName ?? undefined,
-          },
-        })
-        .catch(() => undefined);
-      await client.from('profiles').update({ display_name: fullName }).eq('id', data.user.id).is('display_name', null);
-    }
-    return { success: true, ...(await signedInResult(client, data.user)) };
+    if (appleInFlight) return appleInFlight;
+    appleInFlight = runAppleSignIn(client)
+      .catch((error: unknown): AppleSignInResult => {
+        diagnose('apple', error);
+        return { success: false, errorMessage: authErrorMessage(error as Error, 'oauth') };
+      })
+      .finally(() => {
+        appleInFlight = null;
+      });
+    return appleInFlight;
   },
 
   async linkIdentity(provider): Promise<LinkIdentityResult> {
@@ -234,19 +331,20 @@ export const supabaseAuthService: AuthService = {
     if (provider !== 'google') {
       return { success: false, errorMessage: 'Only linking a Google or Apple account is supported from here.' };
     }
-    const redirectTo = OAUTH_REDIRECT();
-    const { data, error } = await client.auth.linkIdentity({
-      provider: 'google',
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
-    if (error || !data?.url) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (result.type !== 'success') return { success: false, errorMessage: 'Linking was cancelled.' };
-    const exchangeError = await completeOAuthRedirect(client, result.url);
-    if (exchangeError) return { success: false, errorMessage: authErrorMessage(exchangeError, 'oauth') };
-    const { data: userData, error: userError } = await client.auth.getUser();
-    if (userError || !userData.user) return { success: false, errorMessage: authErrorMessage(userError, 'oauth') };
-    return { success: true, user: (await signedInResult(client, userData.user)).user };
+    // Google: link with a native Google ID token, like Apple above.
+    const google = await requestGoogleIdToken();
+    if (google.kind === 'cancelled') return { success: false, errorMessage: 'Linking was cancelled.' };
+    if (google.kind === 'unavailable') return { success: false, errorMessage: GOOGLE_UNAVAILABLE };
+    if (google.kind !== 'success') {
+      diagnose('google:link', google.kind === 'error' ? google.error : new OAuthStepError('google_no_id_token', 'No ID token.'));
+      return { success: false, errorMessage: authErrorMessage(null, 'oauth') };
+    }
+    const { data, error } = await client.auth.linkIdentity({ provider: 'google', token: google.idToken });
+    if (error || !data.user) {
+      diagnose('google:link', error);
+      return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
+    }
+    return { success: true, user: (await signedInResult(client, data.user)).user };
   },
 
   async getCurrentUser() {
@@ -292,8 +390,17 @@ export const supabaseAuthService: AuthService = {
   async signOut() {
     const client = getSupabaseClient();
     if (!client) return;
-    const { error } = await client.auth.signOut();
-    // Even if the server can't be reached, always end the session on this device.
-    if (error) await client.auth.signOut({ scope: 'local' });
+    // Even if the server can't be reached (or the call throws), always end
+    // the session on this device so the next sign-in starts clean.
+    try {
+      const { error } = await client.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      diagnose('sign-out', error);
+      await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    }
+    // Also end Google's own sign-in on this device (best-effort), so the next
+    // Google sign-in can choose an account rather than silently reusing one.
+    await signOutOfGoogle();
   },
 };

@@ -1,4 +1,6 @@
 import 'react-native-url-polyfill/auto';
+// Secure randomness for the PKCE code verifier — must load before the client.
+import './auth/secureRandom';
 import { AppState, type AppStateStatus } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -36,8 +38,10 @@ export function getSupabaseClient(): SupabaseClient | null {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
-        // OAuth (Google) returns a one-time ?code= that is exchanged for a
-        // session on-device; tokens never travel in the redirect URL.
+        // PKCE for every flow that starts from this client (email codes,
+        // account linking). Google sign-in deliberately uses Supabase's
+        // implicit flow instead — see googleImplicitAuthorizeUrl in
+        // services/auth/supabaseAuthService.ts.
         flowType: 'pkce',
       },
     });

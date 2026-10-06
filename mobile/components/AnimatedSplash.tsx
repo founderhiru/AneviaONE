@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { BRAND, taglineLines, wordmarkParts } from '../config/brand';
+import { BRAND } from '../config/brand';
+import { FOREST } from '../design/brandSurface';
+import { BrandAtmosphere } from './BrandAtmosphere';
 import { BrandMarkDefs, BrandMarkGlyph, LEAF_ORIGIN, MARK_BOX, MARK_CENTER, MARK_RING_R } from './BrandMarkArt';
+import { BrandTagline, BrandWordmark } from './BrandWordmark';
 
 export type AnimatedSplashProps = {
   /** True once real app initialization (auth/session check) has resolved.
@@ -23,16 +26,21 @@ export type AnimatedSplashProps = {
  * starts on the same forest green as the native launch screen (app.json), so
  * launch reads as one continuous screen. Four moments, as in the storyboard:
  *
- *   initiate (0–0.7 s)   a tall S of silky, overlapping light sweeps up the
- *                         screen, gold at its heart, with fine sparkles
- *   form     (0.7–1.5 s)  the strands curl round the centre in swirling arcs
- *                         while the ring draws; the A emerges from a soft glow
- *                         (1.2–2.0 s), its leaf growing up from the left foot,
- *                         and the swirls dissolve into one clean ring
- *   reveal   (2.0–2.7 s)  wordmark, then tagline; a gold horizon line glows
- *                         low on the screen
- *   settle   (2.7–3.2 s)  the horizon rises slightly and warms; one shimmer
- *                         on the ring — hold until the app is ready → fade.
+ *   initiate (0–0.7 s)   a tall S of silky, overlapping ribbons of light
+ *                         sweeps up the screen, gold at its heart
+ *   form     (0.7–1.5 s)  the ribbons curl round the centre while the ring
+ *                         draws and the gold intensifies; the A begins to
+ *                         emerge from a soft glow
+ *   reveal   (1.5–2.5 s)  the A resolves fully, its leaf growing up from the
+ *                         left foot; the swirls dissolve into one clean ring;
+ *                         the wordmark, then HEALTHIER GENERATIONS / BRIGHTER
+ *                         LIVES, appear beneath
+ *   settle   (2.5–3.2 s)  the glow settles; one shimmer on the ring — hold
+ *                         until the app is ready → fade into Welcome.
+ *
+ * The final frame — ring, A, wordmark, tagline on the forest field — is the
+ * Welcome screen's hero: both render BrandMarkArt, BrandWordmark,
+ * BrandTagline and BrandAtmosphere.
  *
  * Everything is laid out on a 390 × 844 stage scaled to cover the screen, so
  * the ribbon, ring and text keep their relationship on every phone. Two
@@ -49,14 +57,15 @@ const EXIT_MS = 280;
 const FALLBACK_MS = 1000;
 const EASE_SAMPLES = 8;
 
-// Launch-only palette. FIELD matches the native launch screen in app.json.
-const FIELD = '#0E2A1B';
-const GOLD = '#F2D58A';
-const SOFT_WHITE = '#F6F9EF';
-const SAGE = '#BFE0B5';
+// Brand surface palette (design/brandSurface.ts). FIELD matches the native
+// launch screen in app.json.
+const FIELD = FOREST.field;
+const GOLD = FOREST.gold;
+const SOFT_WHITE = FOREST.ivory;
+const SAGE = FOREST.sage;
 const GREEN_LIGHT = '#8FCF9A';
-const LIME_GOLD = '#C9DC86';
-const RING_GREEN = '#A9CF86';
+const LIME_GOLD = FOREST.limeGold;
+const RING_GREEN = FOREST.ringGreen;
 
 // Stage: every coordinate below is in this box.
 const SW = 390;
@@ -103,11 +112,6 @@ const segments = (p: Point[]): [Cubic, Cubic] => [
   [p[0], p[1], p[2], p[3]],
   [p[3], p[4], p[5], p[6]],
 ];
-/** A point along the spine, u in [0, 1] (by curve parameter). */
-function spineAt(u: number): Point {
-  const [a, b] = segments(SPINE);
-  return u < 0.5 ? bezier(a, u * 2) : bezier(b, (u - 0.5) * 2);
-}
 const ringPoint = (deg: number, r = R): Point => ({
   x: CX + r * Math.cos((deg * Math.PI) / 180),
   y: CY + r * Math.sin((deg * Math.PI) / 180),
@@ -161,28 +165,12 @@ const MARK_LEFT = CX - MARK_CENTER * MARK_SCALE;
 const MARK_TOP = CY - MARK_CENTER * MARK_SCALE;
 const LEAF_TRANSFORM_ORIGIN = `${LEAF_ORIGIN.x * 100}% ${LEAF_ORIGIN.y * 100}%`;
 
-// Fine sparkles: along the S as the light passes, then round the ring while
-// it forms. { x, y, colour, appear-at ms, size }.
-const SPARKS = [
-  ...[0.12, 0.2, 0.28, 0.36, 0.42, 0.47, 0.52, 0.58, 0.64, 0.72, 0.8, 0.88].map((u, i) => {
-    const p = spineAt(u);
-    const side = (i % 2 ? -1 : 1) * (10 + ((i * 7) % 22));
-    return { x: p.x + side, y: p.y - side * 0.4, color: i % 3 ? GOLD : SOFT_WHITE, at: 60 + u * 650, size: i % 4 === 0 ? 2.6 : 1.8 };
-  }),
-  ...[200, 235, 260, 300, 340, 20, 60, 110, 150].map((deg, i) => {
-    const p = ringPoint(deg, R + 14 + ((i * 9) % 20));
-    return { x: p.x, y: p.y, color: i % 2 ? GOLD : SOFT_WHITE, at: 850 + i * 60, size: i % 3 === 0 ? 2.4 : 1.6 };
-  }),
-];
-
 // Copy and the horizon glow, in stage coordinates.
 const COPY_TOP = CY + R + 34;
 const HORIZON_Y = 690;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const [nameLead, nameAccent] = wordmarkParts();
-const taglineDisplay = taglineLines(BRAND.launchTagline).filter(Boolean).map((line) => line.replace(/\.$/, ''));
 
 type At = (input: number[], output: number[], ease?: (value: number) => number) => Animated.AnimatedInterpolation<number>;
 
@@ -305,15 +293,15 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
       flare: at([1500, 1850, 2800, 3000, 3200], [0, 1, 1, 1.35, 1]),
       // The A emerges from the same light: a soft glow, then the letter
       // resolves through it and the leaf grows from its left foot.
-      markHaze: at([1200, 1500, 2000, 2250, 2500], [0, 1, 0.5, 0.7, 0.5]),
-      markIn: at([1300, 1750], [0, 1], out),
-      markScale: at([1300, 2000], [0.94, 1], out),
-      leafIn: at([1550, 1850], [0, 1], out),
-      leafScale: at([1550, 2100], [0.2, 1], out),
-      breath: at([2000, 2250, 2500], [1, 1.01, 1]),
-      nameIn: at([2000, 2500], [0, 1], out),
-      nameY: at([2000, 2500], [8, 0], out),
-      tagIn: at([2350, 2700], [0, 1], out),
+      markHaze: at([1100, 1450, 2000, 2250, 2500], [0, 1, 0.5, 0.7, 0.5]),
+      markIn: at([1200, 1700], [0, 1], out),
+      markScale: at([1200, 1950], [0.94, 1], out),
+      leafIn: at([1500, 1800], [0, 1], out),
+      leafScale: at([1500, 2050], [0.2, 1], out),
+      breath: at([2500, 2800, 3100], [1, 1.01, 1]),
+      nameIn: at([1850, 2300], [0, 1], out),
+      nameY: at([1850, 2300], [8, 0], out),
+      tagIn: at([2150, 2500], [0, 1], out),
       horizon: at([2300, 2800, 3200], [0, 0.75, 1], out),
       horizonY: at([2700, 3200], [0, -30], out),
     } as const;
@@ -354,40 +342,9 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
     >
       <StatusBar style="light" />
 
-      {/* Atmosphere: forest green, lit softly from above, darker at the edges,
-          with a few faint out-of-focus highlights. */}
+      {/* Atmosphere: the brand's forest field (shared with Welcome). */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: view.field }]} pointerEvents="none">
-        <Svg width="100%" height="100%">
-          <Defs>
-            <RadialGradient id="splashField" cx="50%" cy="32%" rx="85%" ry="70%">
-              <Stop offset="0" stopColor="#2C5A36" />
-              <Stop offset="0.25" stopColor="#22492C" />
-              <Stop offset="0.5" stopColor="#183A23" />
-              <Stop offset="0.75" stopColor="#11301D" />
-              <Stop offset="1" stopColor="#0A2215" />
-            </RadialGradient>
-            <RadialGradient id="splashSky" cx="50%" cy="0%" rx="62%" ry="42%">
-              <Stop offset="0" stopColor={LIME_GOLD} stopOpacity={0.18} />
-              <Stop offset="0.5" stopColor={LIME_GOLD} stopOpacity={0.06} />
-              <Stop offset="1" stopColor={LIME_GOLD} stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="splashVignette" cx="50%" cy="42%" rx="75%" ry="70%">
-              <Stop offset="0.55" stopColor="#04110A" stopOpacity={0} />
-              <Stop offset="0.8" stopColor="#04110A" stopOpacity={0.25} />
-              <Stop offset="1" stopColor="#04110A" stopOpacity={0.55} />
-            </RadialGradient>
-            <RadialGradient id="splashBokeh">
-              <Stop offset="0" stopColor="#E6EFC0" stopOpacity={0.07} />
-              <Stop offset="1" stopColor="#E6EFC0" stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashField)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashSky)" />
-          <Circle cx="28%" cy="10%" r="16%" fill="url(#splashBokeh)" />
-          <Circle cx="74%" cy="7%" r="12%" fill="url(#splashBokeh)" />
-          <Circle cx="60%" cy="19%" r="8%" fill="url(#splashBokeh)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#splashVignette)" />
-        </Svg>
+        <BrandAtmosphere id="splashField" />
       </Animated.View>
 
       <Animated.View
@@ -422,26 +379,6 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
             <Circle cx={ringPoint(25, R + 10).x} cy={ringPoint(25, R + 10).y} r={50} fill="url(#splashSwirlGold)" />
           </Svg>
         </Animated.View>
-
-        {/* Fine sparkles. */}
-        {SPARKS.map((m) => (
-          <Animated.View
-            key={`${m.x}-${m.y}`}
-            style={[
-              styles.spark,
-              {
-                left: m.x - m.size / 2,
-                top: m.y - m.size / 2,
-                width: m.size,
-                height: m.size,
-                borderRadius: m.size / 2,
-                backgroundColor: m.color,
-                opacity: reduced ? 0 : at([m.at, m.at + 150, m.at + 700], [0, 0.9, 0]),
-                transform: [{ translateY: reduced ? 0 : at([m.at, m.at + 700], [0, -10]) }],
-              },
-            ]}
-          />
-        ))}
 
         {/* The ribbon: silky strands that swirl into the ring. */}
         {!reduced ? (
@@ -478,8 +415,8 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
             <Defs>
               <LinearGradient id="splashRing" gradientUnits="userSpaceOnUse" x1={CX + R} y1={CY - R} x2={CX - R} y2={CY + R}>
                 <Stop offset="0" stopColor={GOLD} />
-                <Stop offset="0.45" stopColor={RING_GREEN} />
-                <Stop offset="0.8" stopColor={RING_GREEN} />
+                <Stop offset="0.35" stopColor={FOREST.champagne} />
+                <Stop offset="0.7" stopColor={RING_GREEN} />
                 <Stop offset="1" stopColor={GOLD} />
               </LinearGradient>
             </Defs>
@@ -517,7 +454,7 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
               <Ellipse cx={CX} cy={CY + R * 0.05} rx={R * 0.85} ry={R * 0.8} fill="url(#splashMarkHaze)" />
             </Svg>
           </Animated.View>
-          <Animated.View style={[styles.mark, { opacity: view.markIn, transform: [{ scale: view.markScale }] }]}>
+          <Animated.View style={[styles.mark, { opacity: view.markIn, transform: [{ scale: view.markScale }] }]} testID="splash-brand-mark">
             <Svg width={MARK_SIZE} height={MARK_SIZE} viewBox={`0 0 ${MARK_BOX} ${MARK_BOX}`}>
               <BrandMarkDefs id="splashLetter" />
               <BrandMarkGlyph id="splashLetter" part="letter" />
@@ -563,17 +500,10 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
 
         <View style={styles.copy}>
           <Animated.View style={{ opacity: view.nameIn, transform: [{ translateY: view.nameY }] }}>
-            <Text style={styles.name} accessibilityRole="header">
-              {nameLead}
-              {nameAccent ? <Text style={styles.nameAccent}>{nameAccent}</Text> : null}
-            </Text>
+            <BrandWordmark />
           </Animated.View>
           <Animated.View style={{ opacity: view.tagIn }}>
-            {taglineDisplay.map((line) => (
-              <Text key={line} style={styles.tagline}>
-                {line}
-              </Text>
-            ))}
+            <BrandTagline />
           </Animated.View>
         </View>
       </Animated.View>
@@ -583,18 +513,6 @@ export function AnimatedSplash({ ready, onFinished }: AnimatedSplashProps) {
 
 const styles = StyleSheet.create({
   stage: { position: 'absolute', width: SW, height: SH },
-  spark: { position: 'absolute' },
   mark: { position: 'absolute', left: MARK_LEFT, top: MARK_TOP, width: MARK_SIZE, height: MARK_SIZE },
   copy: { position: 'absolute', left: 0, right: 0, top: COPY_TOP, alignItems: 'center' },
-  name: { color: SOFT_WHITE, fontSize: 34, lineHeight: 42, fontWeight: '500', letterSpacing: 0.2, textAlign: 'center', marginBottom: 10 },
-  nameAccent: { color: LIME_GOLD, fontWeight: '600' },
-  tagline: {
-    color: 'rgba(246, 249, 239, 0.8)',
-    fontSize: 12.5,
-    lineHeight: 19,
-    fontWeight: '600',
-    letterSpacing: 2.8,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
 });

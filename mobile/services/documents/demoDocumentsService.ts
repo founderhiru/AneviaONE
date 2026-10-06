@@ -66,7 +66,7 @@ export const demoDocumentsService: DocumentsService = {
     const document: StoredDocument = {
       id,
       userId: DEMO_USER_ID,
-      source: 'upload',
+      source: file.source ?? 'upload',
       documentType: 'unclassified',
       originalFilename: sanitizeFilename(file.name),
       mimeType: content.mimeType,

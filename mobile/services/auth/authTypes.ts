@@ -8,7 +8,9 @@ export type VerifyOtpResult =
 
 export type GoogleSignInResult =
   | { success: true; user: User; isNewUser: boolean }
-  | { success: false; errorMessage: string }
+  /** `diagnosticCode`: a short, non-secret reason (e.g. `bad_code_verifier`)
+   * for support and TestFlight diagnosis — never a token, code or email. */
+  | { success: false; errorMessage: string; diagnosticCode?: string }
   | { success: false; cancelled: true };
 
 /** Native Sign in with Apple; same outcomes as Google. */
@@ -34,7 +36,9 @@ export interface AuthService {
   sendEmailOtp(email: string): Promise<SendOtpResult>;
   /** Verifies the emailed code and returns/creates the linked user. */
   verifyEmailOtp(email: string, otp: string): Promise<VerifyOtpResult>;
-  /** Starts Google OAuth via Supabase Auth + `expo-auth-session`. */
+  /** Native Google Sign-In (Google's iOS SDK): the Google ID token is
+   * exchanged for a Supabase session via `signInWithIdToken` — the same
+   * account model as the other methods. */
   signInWithGoogle(): Promise<GoogleSignInResult>;
   /** Native Sign in with Apple (iOS): the system sheet's identity token is
    * exchanged for a Supabase session — the same account model as the other

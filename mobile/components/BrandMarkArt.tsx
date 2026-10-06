@@ -40,13 +40,15 @@ export const MARK_PATHS = {
   leafVein: `M ${LEFT_FOOT} C 28 66 42 58 62.5 52.6`,
 } as const;
 
-/** Mark palette (from the storyboard). */
+/** Mark palette (from the storyboard): ivory A, emerald leaf, a
+ * gold-to-champagne ring with a green turn. */
 export const MARK_COLORS = {
   gold: '#F2D58A',
+  champagne: '#F1E3B0',
   cream: '#FBF6E4',
   ringGreen: '#A9CF86',
-  leafLight: '#BFE39A',
-  leafDeep: '#5FAE5E',
+  leafLight: '#8FD6A2',
+  leafDeep: '#2E9A68',
 } as const;
 
 type Part = 'letter' | 'leaf';
@@ -56,7 +58,7 @@ type Part = 'letter' | 'leaf';
  * screen without their `url(#…)` references colliding.
  */
 export function BrandMarkDefs({ id }: { id: string }) {
-  const { gold, cream, ringGreen, leafLight, leafDeep } = MARK_COLORS;
+  const { gold, champagne, cream, ringGreen, leafLight, leafDeep } = MARK_COLORS;
   return (
     <Defs>
       <RadialGradient id={`${id}Halo`} cx={MARK_CENTER} cy={MARK_CENTER} r={MARK_RING_R * 1.2} gradientUnits="userSpaceOnUse">
@@ -66,8 +68,8 @@ export function BrandMarkDefs({ id }: { id: string }) {
       </RadialGradient>
       <LinearGradient id={`${id}Ring`} gradientUnits="userSpaceOnUse" x1={94} y1={6} x2={6} y2={94}>
         <Stop offset="0" stopColor={gold} />
-        <Stop offset="0.45" stopColor={ringGreen} />
-        <Stop offset="0.8" stopColor={ringGreen} />
+        <Stop offset="0.35" stopColor={champagne} />
+        <Stop offset="0.7" stopColor={ringGreen} />
         <Stop offset="1" stopColor={gold} />
       </LinearGradient>
       <RadialGradient id={`${id}Flare`}>
@@ -92,12 +94,12 @@ export function BrandMarkDefs({ id }: { id: string }) {
       <LinearGradient id={`${id}LeafUpper`} gradientUnits="userSpaceOnUse" x1={18} y1={77} x2={62} y2={53}>
         <Stop offset="0" stopColor={gold} />
         <Stop offset="0.45" stopColor={leafLight} />
-        <Stop offset="1" stopColor="#D9EFC0" />
+        <Stop offset="1" stopColor="#D3F0CC" />
       </LinearGradient>
       <LinearGradient id={`${id}LeafLower`} gradientUnits="userSpaceOnUse" x1={18} y1={77} x2={62} y2={53}>
-        <Stop offset="0" stopColor="#C9C46A" />
+        <Stop offset="0" stopColor="#B9B85E" />
         <Stop offset="0.5" stopColor={leafDeep} />
-        <Stop offset="1" stopColor="#8CCB78" />
+        <Stop offset="1" stopColor="#5FC08A" />
       </LinearGradient>
     </Defs>
   );

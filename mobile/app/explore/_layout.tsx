@@ -1,5 +1,11 @@
 import { Stack } from 'expo-router';
 
+/** The sample Home is the anchor, so any Explore screen — including Make it
+ * yours — always has a way back. */
+export const unstable_settings = {
+  anchor: 'index',
+};
+
 /**
  * Explore: a read-only sample health history anyone can open from Welcome
  * without signing in. Public alongside `(auth)` (see the redirect in

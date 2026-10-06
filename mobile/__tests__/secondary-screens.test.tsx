@@ -56,10 +56,10 @@ describe('Timeline event detail screen', () => {
 });
 
 describe('Add Record screen', () => {
-  it('offers camera, upload and WhatsApp entry points, and WhatsApp navigates directly', async () => {
+  it('offers PDF, photo, scan and WhatsApp entry points, and WhatsApp navigates directly', async () => {
     await renderWithAuth(<AddRecordScreen />);
-    expect(screen.getByLabelText('Scan document')).toBeTruthy();
-    expect(screen.getByLabelText('Upload document')).toBeTruthy();
+    expect(screen.getByLabelText('Scan Document')).toBeTruthy();
+    expect(screen.getByLabelText('Upload PDF')).toBeTruthy();
     expect(screen.getByLabelText('Add manually')).toBeTruthy();
 
     await act(async () => {

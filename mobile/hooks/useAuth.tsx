@@ -8,6 +8,10 @@ export type AuthNotice = 'session_expired';
 
 export const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again to continue.';
 
+/** Longest the launch waits on restoring a session before showing the app
+ * anyway (signed out); a late restore still signs the person in. */
+export const SESSION_RESTORE_TIMEOUT_MS = 8000;
+
 export type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
@@ -38,9 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Restore the persisted session on launch. Failures (e.g. offline with no
-  // usable session) resolve to signed-out rather than leaving the app stuck.
+  // usable session) resolve to signed-out rather than leaving the app stuck,
+  // and a restore that hangs stops holding up launch after a few seconds.
   useEffect(() => {
     let mounted = true;
+    const giveUp = setTimeout(() => mounted && setIsLoading(false), SESSION_RESTORE_TIMEOUT_MS);
     (async () => {
       let current: User | null = null;
       try {
@@ -48,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         if (__DEV__) console.warn('[auth] could not restore session', error);
       }
+      clearTimeout(giveUp);
       if (mounted) {
         setUser(current);
         setIsLoading(false);
@@ -55,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => {
       mounted = false;
+      clearTimeout(giveUp);
     };
   }, []);
 

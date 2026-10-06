@@ -14,19 +14,24 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Your camera is used to capture photos of health reports and prescriptions so they can be added to your Health Memory.",
-        "NSPhotoLibraryUsageDescription": "Access to your photos lets you upload existing health documents."
+        "NSPhotoLibraryUsageDescription": "Access to your photos lets you upload existing health documents.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "ai.healthintelligence.app",
       "adaptiveIcon": {
-        "backgroundColor": "#F7F5F0",
+        "backgroundColor": "#0E2A1B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -56,10 +61,22 @@
         {
           "photosPermission": "Access to your photos lets you upload existing health documents."
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.962876896960-vlqdlnaq86tlf0dq3vuh5p56baekquk3"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "375a436b-0d9b-4833-8aa0-0e5a3ca25c4c"
+      }
     }
   }
 }

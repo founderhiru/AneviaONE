@@ -35,9 +35,11 @@ export const BRAND = {
   tagline: 'Every record. Every change. One intelligent health history.',
   /** The name as set in the brand wordmark (launch sequence only). */
   wordmark: PRODUCT_WORDMARK,
-  /** Short line shown only under the wordmark in the launch sequence. */
+  /** Brand tagline under the wordmark — launch sequence and Welcome
+   * (shown upper-case: HEALTHIER GENERATIONS / BRIGHTER LIVES). */
   launchTagline: 'Healthier generations. Brighter lives.',
-  /** Supporting line under the wordmark on the Welcome screen. */
+  /** Short supporting line about the product (no longer on Welcome, which
+   * now repeats the launch sequence's tagline). */
   welcomeTagline: 'Your health. Connected over time.',
   /** No logo asset yet — render a text wordmark using the product name. */
   logo: null as null,

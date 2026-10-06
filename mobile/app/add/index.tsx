@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -16,11 +15,45 @@ import {
   type ProcessingStep,
 } from '../../components';
 import { useTheme } from '../../design/theme';
+import { useSingleFlight } from '../../hooks/useSingleFlight';
+import {
+  CAPTURE_METHODS,
+  MAX_PAGES,
+  choosePhotoPages,
+  pagesToPdf,
+  photographPage,
+  pickPdf,
+  type CaptureMethod,
+  type CapturedPage,
+  type PageResult,
+} from '../../services/documents/capture';
 import { DOCUMENT_STATUS_PRESENTATION, documentsService } from '../../services/documents/documentsService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
 import type { PickedFile, UploadResult, UploadStage } from '../../types';
 
-type FlowStep = 'choose' | 'uploading' | 'done' | 'error';
+type FlowStep = 'choose' | 'preparing' | 'uploading' | 'done' | 'error';
+
+const CAPTURE_ICONS: Record<CaptureMethod, keyof typeof Ionicons.glyphMap> = {
+  pdf: 'document-text-outline',
+  camera: 'camera-outline',
+  library: 'images-outline',
+  scan: 'scan-outline',
+};
+
+/** Asks whether to photograph another page of a scan. */
+function askForAnotherPage(count: number): Promise<boolean> {
+  return new Promise((resolve) =>
+    Alert.alert(
+      `${count} page${count === 1 ? '' : 's'} captured`,
+      'Add another page to this document?',
+      [
+        { text: 'Done', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Add page', onPress: () => resolve(true) },
+      ],
+      { cancelable: false }
+    )
+  );
+}
 
 const STAGE_LABELS: Record<UploadStage, string> = {
   validating: 'Checking the file',
@@ -31,10 +64,13 @@ const STAGE_LABELS: Record<UploadStage, string> = {
 const STAGE_ORDER: UploadStage[] = ['validating', 'uploading', 'saving'];
 
 /**
- * Add Record. Pick a PDF → validate → store the original privately → record
- * it, all through `documentsService` (real in production, in-memory in demo
- * mode). The result screen only reports what actually happened: the counts
- * card appears only when the service returns a processing summary.
+ * Add Health Record: Upload PDF, Take Photo, Choose Photo or Scan Document.
+ * Every path ends in one PDF → validate → store the original privately →
+ * record it, all through `documentsService` (real in production, in-memory
+ * in demo mode). Photos and scans become a PDF of the pages on the device
+ * (services/documents/capture.ts); nothing reads or interprets them here.
+ * The result screen only reports what actually happened: the counts card
+ * appears only when the service returns a processing summary.
  */
 export default function AddRecordScreen() {
   const theme = useTheme();
@@ -43,6 +79,7 @@ export default function AddRecordScreen() {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [failure, setFailure] = useState<{ message: string; retryable: boolean } | null>(null);
   const [pickedFile, setPickedFile] = useState<PickedFile | null>(null);
+  const captureOnce = useSingleFlight();
 
   async function upload(file: PickedFile) {
     setPickedFile(file);
@@ -62,20 +99,58 @@ export default function AddRecordScreen() {
     }
   }
 
-  function handleCamera() {
-    Alert.alert('Scan document', 'Scanning with your camera is coming soon. For now, please upload a PDF of your report.');
+  function showDenied(message: string) {
+    Alert.alert('Permission needed', message, [
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Upload PDF instead', onPress: () => capture('pdf') },
+    ]);
   }
 
-  async function handleUpload() {
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf'],
-      multiple: false,
-      copyToCacheDirectory: true,
+  async function uploadPages(pages: CapturedPage[], method: Exclude<CaptureMethod, 'pdf'>) {
+    setFailure(null);
+    setStep('preparing');
+    let file: PickedFile;
+    try {
+      file = await pagesToPdf(pages, method);
+    } catch {
+      setPickedFile(null);
+      setFailure({ message: 'We couldn’t turn those pages into a document. Please try again.', retryable: false });
+      setStep('error');
+      return;
+    }
+    await upload(file);
+  }
+
+  async function collectScanPages(): Promise<PageResult> {
+    const pages: CapturedPage[] = [];
+    while (pages.length < MAX_PAGES) {
+      const result = await photographPage();
+      if (result.kind === 'permission_denied') return result;
+      if (result.kind === 'cancelled') break;
+      pages.push(...result.pages);
+      if (pages.length >= MAX_PAGES || !(await askForAnotherPage(pages.length))) break;
+    }
+    return pages.length ? { kind: 'pages', pages } : { kind: 'cancelled' };
+  }
+
+  /** Runs one capture method; a second tap while one is open is ignored. */
+  function capture(method: CaptureMethod) {
+    return captureOnce(async () => {
+      try {
+        if (method === 'pdf') {
+          const result = await pickPdf();
+          if (result.kind === 'file') await upload(result.file);
+          return;
+        }
+        const result = method === 'camera' ? await photographPage() : method === 'library' ? await choosePhotoPages() : await collectScanPages();
+        if (result.kind === 'permission_denied') showDenied(result.message);
+        else if (result.kind === 'pages') await uploadPages(result.pages, method);
+      } catch {
+        setPickedFile(null);
+        setFailure({ message: GENERIC_ERROR_MESSAGE, retryable: false });
+        setStep('error');
+      }
     });
-    if (picked.canceled) return;
-    const asset = picked.assets?.[0];
-    if (!asset) return;
-    upload({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType, size: asset.size });
   }
 
   function handleWhatsApp() {
@@ -86,6 +161,14 @@ export default function AddRecordScreen() {
     Alert.alert(
       'Add manually',
       'Manually entering a record without a document is coming soon. For now, upload a report to add it to your Health Memory.'
+    );
+  }
+
+  if (step === 'preparing') {
+    return (
+      <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'center' }}>
+        <ProcessingState title="Preparing your document…" steps={[{ id: 'pdf', label: 'Saving the pages as a PDF', status: 'active' }]} />
+      </ScreenContainer>
     );
   }
 
@@ -167,18 +250,23 @@ export default function AddRecordScreen() {
   }
 
   return (
-    <ScreenContainer scroll={false}>
-      <ScreenHeader title="Add to Health Memory" onBack={() => router.back()} />
-      <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary, marginTop: theme.spacing.xs }]}>
-        Choose how you&rsquo;d like to add this record.
+    <ScreenContainer>
+      <ScreenHeader title="Add Health Record" onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/home'))} />
+      <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>
+        Add a report, prescription or scan. It&rsquo;s stored privately in your Health Memory.
       </Text>
-      <View style={{ gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
-        <Card onPress={handleCamera} accessibilityLabel="Scan document">
-          <Row icon="camera" label="Scan document" />
-        </Card>
-        <Card onPress={handleUpload} accessibilityLabel="Upload document">
-          <Row icon="cloud-upload-outline" label="Upload document" />
-        </Card>
+      <View style={{ gap: theme.spacing.sm }} testID="add-record-options">
+        {CAPTURE_METHODS.map(({ method, label, description }) => (
+          <Card key={method} onPress={() => capture(method)} accessibilityLabel={label}>
+            <Row icon={CAPTURE_ICONS[method]} label={label} description={description} testID={`capture-${method}`} />
+          </Card>
+        ))}
+      </View>
+      <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+        Photos and scans are saved as a PDF of the pages, exactly as captured.
+      </Text>
+      <View style={{ gap: theme.spacing.sm }}>
+        <Text style={[theme.typography.labelMedium, { color: theme.colors.textSecondary }]}>More ways</Text>
         <Card onPress={handleWhatsApp} accessibilityLabel="Send via WhatsApp">
           <Row icon="logo-whatsapp" label="WhatsApp" />
         </Card>
@@ -190,12 +278,26 @@ export default function AddRecordScreen() {
   );
 }
 
-function Row({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+function Row({
+  icon,
+  label,
+  description,
+  testID,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  description?: string;
+  testID?: string;
+}) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }} testID={testID}>
       <Ionicons name={icon} size={22} color={theme.colors.brandPrimary} />
-      <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{label}</Text>
+        {description ? <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>{description}</Text> : null}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
     </View>
   );
 }

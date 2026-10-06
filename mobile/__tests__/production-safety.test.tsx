@@ -74,9 +74,12 @@ describe('productionProfileService', () => {
 
 describe('Home with no health history (production services)', () => {
   it('shows the empty-history state and no sample years/changes/trends', async () => {
+    // A person with no stored records yet.
+    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([]);
     await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText('Your health history starts here')).toBeTruthy());
-    expect(screen.getByText('Add a record')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Your health history starts here.')).toBeTruthy());
+    expect(screen.getByText('Add a report, scan or photo to begin building your health memory.')).toBeTruthy();
+    expect(screen.getByText('Add Health Record')).toBeTruthy();
     expect(screen.queryByText('2026')).toBeNull();
     expect(screen.queryByText(/HbA1c/)).toBeNull();
   });

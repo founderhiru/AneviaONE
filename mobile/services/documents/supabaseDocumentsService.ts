@@ -155,7 +155,7 @@ export const supabaseDocumentsService: DocumentsService = {
     const { data: reserved, error: reserveError } = await client
       .from('documents')
       .insert({
-        source: 'upload',
+        source: file.source ?? 'upload',
         original_filename: sanitizeFilename(file.name),
         mime_type: content.mimeType,
         file_size_bytes: buffer.byteLength,
