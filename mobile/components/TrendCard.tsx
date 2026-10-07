@@ -16,6 +16,8 @@ const directionSymbol: Record<Trend['direction'], string> = {
   up: '↑',
   down: '↓',
   flat: '→',
+  mixed: '↕',
+  insufficient: '·',
 };
 
 function Sparkline({ trend, color, width, height }: { trend: Trend; color: string; width: number; height: number }) {
@@ -46,6 +48,8 @@ export function TrendCard({ trend, onPress, compact = true }: TrendCardProps) {
     up: theme.colors.trendUp,
     down: theme.colors.trendDown,
     flat: theme.colors.trendFlat,
+    mixed: theme.colors.trendFlat,
+    insufficient: theme.colors.trendFlat,
   }[trend.direction];
 
   return (

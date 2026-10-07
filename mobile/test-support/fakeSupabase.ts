@@ -37,6 +37,7 @@ export function createFakeSupabase(options: { userId?: string | null } = {}) {
     calls,
     storageBucket,
     storage: { from: jest.fn((_bucket: string) => storageBucket) },
+    functions: { invoke: jest.fn(async (_name: string, _options?: unknown): Promise<Response> => ({ data: null, error: null })) },
     auth: {
       getSession: jest.fn(async () => ({ data: { session: userId ? { user: { id: userId } } : null } })),
     },
@@ -54,6 +55,8 @@ export function createFakeSupabase(options: { userId?: string | null } = {}) {
         eq: (column: string, value: unknown) => (call.filters.push(['eq', column, value]), builder),
         neq: (column: string, value: unknown) => (call.filters.push(['neq', column, value]), builder),
         lt: (column: string, value: unknown) => (call.filters.push(['lt', column, value]), builder),
+        in: (column: string, value: unknown) => (call.filters.push(['in', column, value]), builder),
+        is: (column: string, value: unknown) => (call.filters.push(['is', column, value]), builder),
         order: () => builder,
         limit: () => builder,
         single: () => builder,
@@ -98,5 +101,16 @@ export function documentRow(overrides: Record<string, unknown> = {}) {
     created_at: '2026-09-29T10:00:00.000Z',
     updated_at: '2026-09-29T10:00:00.000Z',
     ...overrides,
+  };
+}
+
+/** What the health-memory function returns for an account with no records. */
+export function emptyHealthSnapshot() {
+  return {
+    version: 'g2.0',
+    memory: { conditions: [], medications: [], allergies: [], procedures: [], vaccinations: [], encounters: [], latestResults: [], counts: { records: 0, reports: 0 } },
+    timeline: [],
+    trends: [],
+    changes: { status: 'insufficient_data', latest: null, previous: null, changes: [] },
   };
 }

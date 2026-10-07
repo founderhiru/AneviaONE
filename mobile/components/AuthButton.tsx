@@ -2,11 +2,11 @@ import React from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { AUTH_BUTTON, BRAND_TYPE, FOREST } from '../design/brandSurface';
+import { AUTH_BUTTON, BRAND_TYPE, FOREST, SHEET } from '../design/brandSurface';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export type AuthButtonVariant = 'primary' | 'outline' | 'apple';
+export type AuthButtonVariant = 'primary' | 'outline' | 'apple' | 'emerald';
 
 /**
  * The one sign-in button for the brand surface. Mobile, Google and Apple —
@@ -17,6 +17,7 @@ export type AuthButtonVariant = 'primary' | 'outline' | 'apple';
  *   outline  hairline on the green field (Google, secondary actions)
  *   apple    Apple's black style: Apple logo, white "Continue with Apple",
  *            per Apple's guidelines for custom Sign in with Apple buttons
+ *   emerald  deep emerald on Welcome's white sheet (its main action)
  */
 export function AuthButton({
   label,
@@ -85,6 +86,7 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: FOREST.warmIvory },
   outline: { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderWidth: 1, borderColor: FOREST.hairline },
   apple: { backgroundColor: '#000000', borderWidth: 1, borderColor: 'rgba(246, 249, 239, 0.22)' },
+  emerald: { backgroundColor: SHEET.emerald },
   icon: { marginRight: 12 },
   logo: { width: AUTH_BUTTON.iconSize, height: AUTH_BUTTON.iconSize },
   label: BRAND_TYPE.button,

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { Card, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
+import { AI_CONSENT_COPY, consentService, type AiConsentState } from '../../services/consent/consentService';
 import { profileService } from '../../services/profile/profileService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
 
@@ -12,7 +13,52 @@ const errorMessage = (error: unknown) => (error instanceof ServiceError ? error.
 
 export default function PrivacyScreen() {
   const theme = useTheme();
-  const [requesting, setRequesting] = useState<'download' | 'delete' | null>(null);
+  const [requesting, setRequesting] = useState<'download' | 'delete' | 'consent' | null>(null);
+  const [consent, setConsent] = useState<AiConsentState | null>(null);
+
+  const loadConsent = useCallback(async () => {
+    try {
+      setConsent(await consentService.getAiConsent());
+    } catch {
+      setConsent(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadConsent();
+  }, [loadConsent]);
+
+  async function changeConsent(grant: boolean) {
+    setRequesting('consent');
+    try {
+      if (grant) await consentService.grantAiConsent();
+      else await consentService.revokeAiConsent();
+      await loadConsent();
+    } catch (error) {
+      Alert.alert('Report reading', errorMessage(error));
+    } finally {
+      setRequesting(null);
+    }
+  }
+
+  function handleConsent() {
+    if (consent?.granted) {
+      Alert.alert(
+        'Turn off report reading?',
+        'New reports won’t be read or added to your Health Memory. Your stored originals and results already added stay in your account.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Turn off', style: 'destructive', onPress: () => changeConsent(false) },
+        ]
+      );
+    } else {
+      Alert.alert(AI_CONSENT_COPY.title, AI_CONSENT_COPY.points.join('\n\n'), [
+        { text: AI_CONSENT_COPY.decline, style: 'cancel' },
+        { text: 'Allow', onPress: () => changeConsent(true) },
+      ]);
+    }
+  }
 
   async function handleDownload() {
     setRequesting('download');
@@ -76,6 +122,19 @@ export default function PrivacyScreen() {
         label="You control sharing"
         description="Choose what you allow this app to share, and with whom."
         onPress={() => router.push('/privacy/data-sharing')}
+      />
+      <Row
+        icon="document-text-outline"
+        label="Report reading (AI)"
+        description={
+          consent === null
+            ? 'Checking…'
+            : consent.granted
+              ? `On — your report text is read by our AI provider (Anthropic) to add results to your Health Memory. Since ${new Date(consent.recordedAt ?? '').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}. Tap to turn off.`
+              : 'Off — reports are stored but not read. Tap to turn on.'
+        }
+        onPress={handleConsent}
+        loading={requesting === 'consent'}
       />
       <InfoRow
         icon="sparkles-outline"

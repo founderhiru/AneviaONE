@@ -74,7 +74,7 @@ describe('document status', () => {
   const all: DocumentStatus[] = ['pending_upload', 'uploaded', 'processing', 'extracted', 'validated', 'completed', 'failed'];
 
   it('never claims an uploaded report was read', () => {
-    expect(DOCUMENT_STATUS_PRESENTATION.uploaded.description).toMatch(/nothing from this file has been added to your Health Memory yet/);
+    expect(DOCUMENT_STATUS_PRESENTATION.uploaded.description).toMatch(/nothing from this file has been added to your Health Memory yet/i);
     for (const s of all) expect(DOCUMENT_STATUS_PRESENTATION[s].label).toBeTruthy();
   });
 

@@ -79,7 +79,7 @@ describe('Add Record', () => {
     expect(router.replace).toHaveBeenCalledWith('/changes');
   });
 
-  it('without a processing summary: honest "Stored securely", no invented counts', async () => {
+  it('without a processing summary: honest "Stored securely", no invented counts, and asks before reading', async () => {
     pick({ name: 'lab.pdf' });
     const stored = {
       id: '22222222-2222-4222-8222-222222222222',
@@ -104,7 +104,8 @@ describe('Add Record', () => {
     expect(screen.queryByText('Added to Health Memory')).toBeNull();
     expect(screen.queryByText(/health observation/)).toBeNull();
     expect(screen.queryByText('See what changed →')).toBeNull();
-    expect(screen.getByText(/nothing from this file has been added to your Health Memory yet/)).toBeTruthy();
+    // A real PDF is only read after explicit consent (none recorded yet).
+    await waitFor(() => expect(screen.getByText('Read this report for you?')).toBeTruthy());
     await fireEvent.press(screen.getByText('View document'));
     expect(router.replace).toHaveBeenCalledWith(`/documents/${stored.id}`);
   });

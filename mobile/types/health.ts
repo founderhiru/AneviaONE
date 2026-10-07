@@ -14,7 +14,8 @@ export type Observation = {
   referenceRange?: string; // e.g. "4.0 - 5.6 %"
 };
 
-export type MedicationStatus = 'active' | 'past' | 'as_needed';
+/** 'recorded': listed on a report without a stated status. */
+export type MedicationStatus = 'active' | 'past' | 'as_needed' | 'recorded';
 
 export type Medication = {
   id: string;
@@ -31,7 +32,9 @@ export type Medication = {
 export type Condition = {
   id: string;
   name: string;
-  status: 'active' | 'resolved' | 'monitoring';
+  status: 'active' | 'resolved' | 'monitoring' | 'unknown';
+  /** How the report states it (a family history is never 'diagnosed'). */
+  assertion?: 'mentioned' | 'reported' | 'diagnosed';
   notedDate?: string;
   sourceDocumentId?: string;
 };
@@ -60,6 +63,8 @@ export type Procedure = {
 };
 
 export type HealthEventType =
+  | 'report'
+  | 'encounter'
   | 'annual_check'
   | 'consultation'
   | 'blood_test'
@@ -73,7 +78,8 @@ export type HealthEvent = {
   id: string;
   type: HealthEventType;
   title: string; // e.g. "Annual Health Check"
-  date: string; // ISO date
+  /** ISO date; null when no date is recorded (never invented). */
+  date: string | null;
   provider?: string;
   summary?: string; // e.g. "23 observations" or "Medication changed"
   observationIds?: string[];
@@ -81,7 +87,8 @@ export type HealthEvent = {
   sourceDocumentId?: string;
 };
 
-export type TrendDirection = 'up' | 'down' | 'flat';
+/** 'mixed': values went up and down; 'insufficient': fewer than two measurements. */
+export type TrendDirection = 'up' | 'down' | 'flat' | 'mixed' | 'insufficient';
 
 export type TrendPoint = {
   date: string;
@@ -99,9 +106,20 @@ export type Trend = {
   /** Neutral, non-diagnostic observation, not a medical conclusion. */
   neutralSummary: string;
   referenceRange?: string;
+  /** The same test recorded in other units — shown separately, never converted. */
+  otherUnits?: string[];
 };
 
-export type ChangeType = 'value_change' | 'new_medication' | 'stopped_medication' | 'new_condition';
+export type ChangeType =
+  | 'value_change'
+  | 'new_medication'
+  | 'stopped_medication'
+  | 'medication_not_in_latest'
+  | 'new_condition'
+  | 'new_allergy'
+  | 'new_procedure'
+  | 'new_immunization'
+  | 'new_encounter';
 
 export type HealthChange = {
   id: string;
@@ -114,6 +132,8 @@ export type HealthChange = {
   comparedWithDate?: string; // date of the older record being compared against
   sourceDocumentId?: string;
   comparedSourceDocumentId?: string;
+  /** Neutral sentence describing the change (from records, never a judgement). */
+  summary?: string;
 };
 
 export type HealthProfile = {
@@ -122,4 +142,23 @@ export type HealthProfile = {
   documentCount: number;
   activeMedicationCount: number;
   lastUpdated: string; // ISO date
+};
+
+/**
+ * A test result read from one of the person's own reports (Gate 1). Raw
+ * values are shown exactly as printed; `source` always points back to the
+ * stored original and the page the value was read from.
+ */
+export type RecordedObservation = {
+  id: string;
+  name: string;
+  /** As printed on the report, e.g. "5.8" or "<0.5". */
+  value: string;
+  unit: string | null;
+  referenceRange: string | null;
+  /** ISO date; null when the report's date couldn't be read unambiguously. */
+  date: string | null;
+  /** Read with lower confidence or ambiguity — not yet used for trends. */
+  needsReview: boolean;
+  source: { documentId: string; documentName: string; pageNumber: number | null };
 };

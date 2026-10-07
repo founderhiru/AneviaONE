@@ -82,17 +82,8 @@ export const mockTimeline: HealthEvent[] = [
   },
 ];
 
-/** Groups timeline events by year for section-list style rendering. */
-export function groupTimelineByYear(events: HealthEvent[]): Array<{ year: string; events: HealthEvent[] }> {
-  const sorted = [...events].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const byYear = new Map<string, HealthEvent[]>();
-  for (const e of sorted) {
-    const year = e.date.slice(0, 4);
-    if (!byYear.has(year)) byYear.set(year, []);
-    byYear.get(year)!.push(e);
-  }
-  return Array.from(byYear.entries()).map(([year, events]) => ({ year, events }));
-}
+// Kept here for existing imports; the implementation is shared with production.
+export { groupTimelineByYear } from '../services/health/timeline';
 
 export function getEventById(id: string): HealthEvent | undefined {
   return mockTimeline.find((e) => e.id === id);

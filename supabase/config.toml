@@ -1,3 +1,20 @@
 # Supabase CLI project config (used by `npx supabase link` / `npx supabase db push`).
 # Only the technical project id lives here — it is NOT the consumer brand name.
 project_id = "health-intelligence-app"
+
+# Gate 1 document understanding. The gateway verifies the caller's JWT; the
+# function verifies it again and derives the user only from it.
+[functions.process-document]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+# Gate 2: deterministic Health Memory / Timeline / Trends / What Changed.
+# Reads as the caller (anon key + JWT) — RLS applies; no AI, no service role.
+[functions.health-memory]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+# Gate 3: grounded Ask My Health. Reads as the caller (RLS).
+[functions.ask-health]
+verify_jwt = true
+import_map = "./functions/deno.json"

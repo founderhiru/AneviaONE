@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Card, EvidenceLink, ScreenContainer, StatusBadge, TextInput } from '../../components';
+import { Card, ScreenContainer, StatusBadge, TextInput } from '../../components';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { aiService } from '../../services/ai/aiService';
@@ -38,7 +38,12 @@ export default function AskScreen() {
     setInput('');
     setAsking(true);
 
-    const result = await aiService.askQuestion(question);
+    let result: Awaited<ReturnType<typeof aiService.askQuestion>>;
+    try {
+      result = await aiService.askQuestion(question);
+    } catch {
+      result = { aiExplanation: { text: 'I couldn’t reach your records just now. Please try again.' } };
+    }
     const newMessages: ConversationMessage[] = [];
     if (result.recordAnswer) {
       newMessages.push({
@@ -47,6 +52,7 @@ export default function AskScreen() {
         text: result.recordAnswer.text,
         source: 'record',
         evidence: result.recordAnswer.evidence,
+        wordedByAi: result.recordAnswer.wordedByAi,
         createdAt: new Date().toISOString(),
       });
     }
@@ -77,7 +83,7 @@ export default function AskScreen() {
           {!isUser && message.source ? (
             <View style={{ marginBottom: theme.spacing.xxs }}>
               <StatusBadge
-                label={message.source === 'record' ? 'From your records' : 'AI explanation'}
+                label={message.source === 'record' ? (message.wordedByAi ? 'From your records · worded by AI' : 'From your records') : 'AI explanation'}
                 tone={message.source === 'record' ? 'accent' : 'neutral'}
               />
             </View>
@@ -91,8 +97,28 @@ export default function AskScreen() {
             {message.text}
           </Text>
           {message.evidence?.length ? (
-            <View style={{ marginTop: theme.spacing.xs }}>
-              <EvidenceLink onPress={() => router.push(`/documents/${message.evidence![0].documentId}`)} />
+            <View style={{ marginTop: theme.spacing.xs, gap: theme.spacing.xxs }} testID="answer-sources">
+              {message.evidence.slice(0, 4).map((e, i) => (
+                <Pressable
+                  key={`${e.documentId}-${e.pageNumber ?? 0}-${i}`}
+                  onPress={() => router.push(`/documents/${e.documentId}`)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Source: ${e.documentTitle}${e.pageNumber ? `, page ${e.pageNumber}` : ''}`}
+                >
+                  <Text style={[theme.typography.caption, { color: theme.colors.brandPrimary }]}>
+                    {e.documentTitle}
+                    {e.pageNumber ? ` · page ${e.pageNumber}` : ''}
+                  </Text>
+                  {e.excerpt ? (
+                    <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]} numberOfLines={2}>
+                      “{e.excerpt}”
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+              {message.evidence.length > 4 ? (
+                <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>+{message.evidence.length - 4} more sources</Text>
+              ) : null}
             </View>
           ) : null}
         </Card>
@@ -108,7 +134,7 @@ export default function AskScreen() {
             {PRODUCT_TERMS.askMyHealth}
           </Text>
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-            Ask questions about your health history.
+            Understand your recorded health history. Answers come only from your reports — not diagnosis or treatment advice.
           </Text>
         </View>
 

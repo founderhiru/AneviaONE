@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, SecondaryButton } from '../../components';
 import { useTheme } from '../../design/theme';
-import { getObservationsByIds } from '../../mock/observations';
 import { healthService } from '../../services/health/healthService';
 import type { HealthEvent, Observation } from '../../types';
 
@@ -20,7 +19,7 @@ export default function EventDetailScreen() {
     try {
       const result = await healthService.getEventById(id);
       setEvent(result ?? undefined);
-      if (result?.observationIds) setObservations(getObservationsByIds(result.observationIds));
+      if (result) setObservations(await healthService.getEventObservations(result));
     } catch {
       setError(true);
     }
@@ -64,7 +63,7 @@ export default function EventDetailScreen() {
       <ScreenHeader title={event.title} />
       <View style={{ gap: 2 }}>
         <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-          {new Date(event.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
+          {event.date ? new Date(event.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Date not recorded'}
         </Text>
         {event.provider ? (
           <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>{event.provider}</Text>

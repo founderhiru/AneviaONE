@@ -63,27 +63,32 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 /** Mobile, Google and — once availability resolves — Apple; never Email. */
-async function expectSignInOptions({ apple }: { apple: boolean }) {
-  expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
-  expect(screen.getByText('Continue with Mobile')).toBeTruthy();
+async function expectSignInOptions({ apple, email = false }: { apple: boolean; email?: boolean }) {
+  // Mobile is the number field itself — no "Continue with Mobile" gateway.
+  expect(screen.getByTestId('mobile-number-input')).toBeTruthy();
+  expect(screen.queryByText('Continue with Mobile')).toBeNull();
   expect(screen.getByTestId('continue-with-google')).toBeTruthy();
   if (apple) expect(await screen.findByTestId('continue-with-apple')).toBeTruthy();
   else expect(screen.queryByTestId('continue-with-apple')).toBeNull();
-  expect(screen.queryByTestId('continue-with-email')).toBeNull();
-  expect(screen.queryByText(/email/i)).toBeNull();
+  if (email) {
+    expect(await screen.findByTestId('continue-with-email')).toBeTruthy();
+  } else {
+    expect(screen.queryByTestId('continue-with-email')).toBeNull();
+    expect(screen.queryByText(/email/i)).toBeNull();
+  }
 }
 
 describe('Welcome entry points', () => {
-  it('offers Mobile, Google and Apple (where supported), and no Email', async () => {
+  it('offers Mobile, Google, Apple (where supported) and Email', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    await expectSignInOptions({ apple: true });
+    await expectSignInOptions({ apple: true, email: true });
   });
 
   it('hides Apple where Sign in with Apple is not available', async () => {
     __setAppleAvailableForTests(false);
     await renderWithAuth(<WelcomeScreen />);
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await expectSignInOptions({ apple: false });
+    await expectSignInOptions({ apple: false, email: true });
     expect(screen.queryByText(/apple/i)).toBeNull();
   });
 
@@ -93,10 +98,13 @@ describe('Welcome entry points', () => {
     expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=apple');
   });
 
-  it('offers Explore as an intentional entry, never as a "skip" or "guest" login', async () => {
+  it('offers the sample history as a quiet "Skip", never as a guest login', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByText(`Explore ${BRAND.wordmark}`)).toBeTruthy();
-    expect(screen.queryByText(/guest|skip/i)).toBeNull();
+    const skip = screen.getByTestId('explore-cta');
+    expect(screen.getByText('Skip')).toBeTruthy();
+    expect(skip.props.accessibilityHint).toBe('Opens a sample health history. No sign-in needed.');
+    expect(screen.queryByText(/guest/i)).toBeNull();
+    expect(screen.queryByText(`Explore ${BRAND.wordmark}`)).toBeNull();
   });
 
   it('opens Explore without signing in', async () => {
@@ -107,9 +115,11 @@ describe('Welcome entry points', () => {
     spies.forEach((spy) => expect(spy).not.toHaveBeenCalled());
   });
 
-  it('shows the AneviaONE mark', async () => {
+  it('shows the AneviaONE wordmark and the connected-history story', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByTestId('brand-mark', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('brand-wordmark')).toBeTruthy();
+    expect(screen.getByLabelText(BRAND.welcomeTagline)).toBeTruthy();
+    expect(screen.getByTestId('welcome-hero-art', { includeHiddenElements: true })).toBeTruthy();
   });
 });
 
@@ -191,17 +201,22 @@ describe('Make it yours', () => {
     expect(screen.getByText('Make it yours')).toBeTruthy();
     // A link, not the full sign-in panel: no sign-in buttons on Home.
     expect(screen.queryByTestId('make-it-yours')).toBeNull();
-    expect(screen.queryByTestId('continue-with-mobile')).toBeNull();
+    expect(screen.queryByTestId('mobile-number-input')).toBeNull();
     await fireEvent.press(screen.getByTestId('explore-make-it-yours'));
     expect(router.push).toHaveBeenCalledWith('/explore/make-it-yours');
   });
 
-  it.each(EXPLORE_SCREENS.filter(([name]) => name !== 'home'))('%s ends with Make it yours', async (_name, Screen) => {
+  it.each(EXPLORE_SCREENS.filter(([name]) => name !== 'home'))('%s ends with Make it yours → the one sign-in screen', async (name, Screen) => {
     await renderWithProviders(<Screen />);
     expect(screen.getByTestId('make-it-yours')).toBeTruthy();
     expect(screen.getByText('Make it yours')).toBeTruthy();
     expect(screen.getByText(`Bring your own health history into ${BRAND.wordmark}.`)).toBeTruthy();
-    await expectSignInOptions({ apple: true });
+    // A hand-off, never a sign-in form of its own.
+    expect(screen.queryByTestId(/^continue-with-/)).toBeNull();
+    expect(screen.queryByTestId('mobile-number-input')).toBeNull();
+    await fireEvent.press(screen.getByText('Get started'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/(auth)/welcome', params: { from: 'app' } });
+    expect(name).toBeTruthy();
   });
 
   it('the Make It Yours screen opens without a session and shows its content', async () => {
@@ -216,22 +231,14 @@ describe('Make it yours', () => {
     expect(screen.queryByText(/price|subscribe|trial|premium/i)).toBeNull();
   });
 
-  it('the Make It Yours screen offers Mobile, Google and Apple — no Email — into the existing sign-in', async () => {
+  it('the Make It Yours screen has one action, Get started, into the one sign-in screen — no second login form', async () => {
     await renderWithProviders(<MakeItYoursScreen />);
-    await expectSignInOptions({ apple: true });
-    await fireEvent.press(screen.getByTestId('continue-with-mobile'));
-    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=mobile');
-    await fireEvent.press(screen.getByTestId('continue-with-google'));
-    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=google');
-    await fireEvent.press(screen.getByTestId('continue-with-apple'));
-    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=apple');
-  });
-
-  it('the Make It Yours screen hides Apple where it is not supported', async () => {
-    __setAppleAvailableForTests(false);
-    await renderWithProviders(<MakeItYoursScreen />);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await expectSignInOptions({ apple: false });
+    expect(screen.queryByTestId(/^continue-with-/)).toBeNull();
+    expect(screen.queryByTestId('mobile-number-input')).toBeNull();
+    const getStarted = screen.getByTestId('make-it-yours-get-started');
+    expect(getStarted.props.accessibilityHint).toMatch(/Opens sign-in/);
+    await fireEvent.press(getStarted);
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/(auth)/welcome', params: { from: 'app' } });
   });
 });
 
@@ -240,7 +247,7 @@ describe('Sample data stays on the device', () => {
     const spies = spyOnBackends();
     for (const [, Screen] of [...EXPLORE_SCREENS, ['make-it-yours', MakeItYoursScreen] as const]) {
       const view = await renderWithProviders(<Screen />);
-      await screen.findAllByTestId(/continue-with-apple|explore-make-it-yours/);
+      await screen.findAllByTestId(/get-started|explore-make-it-yours/);
       for (const button of screen.getAllByRole('button')) await fireEvent.press(button);
       await view.unmount();
     }

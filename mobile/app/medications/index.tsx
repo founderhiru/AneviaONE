@@ -13,6 +13,7 @@ const statusLabel: Record<Medication['status'], string> = {
   active: 'Active',
   past: 'Past',
   as_needed: 'As needed',
+  recorded: 'Recorded',
 };
 
 export default function MedicationsScreen() {

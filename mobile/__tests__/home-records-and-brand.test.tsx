@@ -22,6 +22,16 @@ import { documentsService } from '../services/documents/documentsService';
 import type { StoredDocument } from '../types';
 import { renderWithAuth, renderWithProviders } from './testUtils';
 
+jest.mock('../services/supabaseClient', () => ({
+  // An account with no records: health-memory returns an empty snapshot.
+  getSupabaseClient: jest.fn(() => {
+    const { createFakeSupabase, emptyHealthSnapshot } = jest.requireActual('../test-support/fakeSupabase');
+    const fake = createFakeSupabase();
+    fake.functions.invoke.mockResolvedValue({ data: emptyHealthSnapshot(), error: null });
+    return fake;
+  }),
+  isSupabaseConfigured: true,
+}));
 jest.mock('../services/health/healthService', () => {
   const actual = jest.requireActual('../services/health/healthService');
   return { ...actual, healthService: actual.productionHealthService };
@@ -63,7 +73,7 @@ describe('Home — recent health records', () => {
     expect(screen.getByText('Medical Report.pdf')).toBeTruthy();
     expect(screen.getAllByText(/Uploaded today/)).toHaveLength(2);
     expect(list).toHaveBeenCalled();
-    expect(screen.queryByText('Your health history starts here.')).toBeNull();
+    expect(screen.queryByText('Your health story starts here.')).toBeNull();
   });
 
   it('tapping a record opens the existing document detail; View all opens My documents', async () => {
@@ -88,13 +98,13 @@ describe('Home — recent health records', () => {
     expect(screen.queryByText('Report 4.pdf')).toBeNull();
   });
 
-  it('with no records yet: “Your health history starts here.” and Add Health Record', async () => {
+  it('with no records yet: “Your health story starts here.” and Add health record', async () => {
     jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([]);
     await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText('Your health history starts here.')).toBeTruthy());
-    expect(screen.getByText('Add a report, scan or photo to begin building your health memory.')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Your health story starts here.')).toBeTruthy());
+    expect(screen.getByText(`Add your first health report and ${BRAND.wordmark} will begin connecting the pieces over time.`)).toBeTruthy();
     await act(async () => {
-      fireEvent.press(screen.getByText('Add Health Record'));
+      fireEvent.press(screen.getByText('Add health record'));
     });
     expect(router.push).toHaveBeenCalledWith('/add');
   });
@@ -103,7 +113,7 @@ describe('Home — recent health records', () => {
     const list = jest.spyOn(documentsService, 'listDocuments').mockRejectedValueOnce(new Error('offline')).mockResolvedValue([BLOOD]);
     await renderWithAuth(<HomeScreen />);
     await waitFor(() => expect(screen.getByTestId('home-records-retry')).toBeTruthy());
-    expect(screen.queryByText('Your health history starts here.')).toBeNull();
+    expect(screen.queryByText('Your health story starts here.')).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByTestId('home-records-retry'));
     });
@@ -144,25 +154,29 @@ describe('Brand — one canonical mark', () => {
     expect(screen.getByLabelText(BRAND.launchTagline)).toBeTruthy();
   });
 
-  it('Welcome renders the same mark, name and tagline as the settled splash', async () => {
+  it('Welcome shows the canonical AneviaONE symbol above the wordmark — the splash’s own mark, not a new one', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByTestId('brand-mark', { includeHiddenElements: true })).toBeTruthy();
+    const marks = screen.getAllByTestId('brand-mark', { includeHiddenElements: true });
+    expect(marks).toHaveLength(1);
+    // The same BrandMarkArt glyphs as the splash: the A and its leaf.
     expect(parts()).toEqual(expect.arrayContaining(['leaf', 'letter']));
+    expect(screen.getByTestId('brand-wordmark')).toBeTruthy();
     expect(screen.getByText(BRAND.wordmark)).toBeTruthy();
-    for (const line of LAUNCH_TAGLINE_LINES) expect(screen.getByText(line)).toBeTruthy();
+    expect(screen.getByLabelText(BRAND.welcomeTagline)).toBeTruthy();
   });
 
-  it('sign-in buttons on Welcome share one label style (Mobile, Google, Apple)', async () => {
+  it('every way in on Welcome is labelled (the mobile number, Continue, Google, Apple, Email)', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    const label = (testID: string) => {
-      const text = within(screen.getByTestId(testID)).getByText(/^Continue with/);
-      const style = Object.assign({}, ...[text.props.style].flat(Infinity).filter(Boolean));
-      return { fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.lineHeight };
-    };
-    const apple = await screen.findByTestId('continue-with-apple');
-    expect(apple).toBeTruthy();
-    const mobile = label('continue-with-mobile');
-    expect(label('continue-with-google')).toEqual(mobile);
-    expect(label('continue-with-apple')).toEqual(mobile);
+    expect(screen.getByTestId('mobile-number-input').props.accessibilityLabel).toBe('Mobile number, after +91');
+    expect(within(screen.getByTestId('send-otp')).getByText('Continue')).toBeTruthy();
+    for (const [id, label] of [
+      ['continue-with-google', 'Continue with Google'],
+      ['continue-with-apple', 'Continue with Apple'],
+      ['continue-with-email', 'Continue with Email'],
+    ]) {
+      const button = await screen.findByTestId(id);
+      expect(button.props.accessibilityLabel).toBe(label);
+      expect(button.props.accessibilityRole).toBe('button');
+    }
   });
 });

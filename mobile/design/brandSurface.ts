@@ -35,6 +35,22 @@ export const FOREST = {
 } as const;
 
 /**
+ * The white sign-in sheet that rises over the forest field on Welcome:
+ * forest ink on white, with one deep-emerald primary action.
+ */
+export const SHEET = {
+  surface: '#FFFFFF',
+  ink: '#0E2A1B',
+  textMuted: 'rgba(14, 42, 27, 0.66)',
+  textFaint: 'rgba(14, 42, 27, 0.5)',
+  hairline: 'rgba(14, 42, 27, 0.14)',
+  /** Primary action on the sheet. */
+  emerald: '#17492E',
+  link: '#1C5C3A',
+  radius: 28,
+} as const;
+
+/**
  * Type for the brand surface. The wordmark and tagline match the settled
  * splash frame exactly, so Welcome continues it without a jump; every
  * sign-in button shares one label style.

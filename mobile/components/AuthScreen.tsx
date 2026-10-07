@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BRAND_TYPE, FOREST } from '../design/brandSurface';
-import { BrandAtmosphere } from './BrandAtmosphere';
+import { EmeraldField, EXPLORE } from './explore/ExploreUI';
 import { BrandMark } from './BrandMark';
 
 /** Shown when a sign-in step throws instead of returning a result. */
@@ -24,9 +24,10 @@ export function leaveAuthStep() {
 }
 
 /**
- * Frame for every sign-in step (mobile number, code, Google, Apple): the
- * brand's forest field, a visible Back control, the mark, a title and the
- * step's content, with the main action(s) pinned at the bottom.
+ * Frame for the steps that follow Welcome's sign-in form (code, Google,
+ * Apple, Email): the deep-emerald field with its sweep of gold light, a
+ * visible Back control, the mark, a title and the step's content, with
+ * anything pinned at the bottom.
  */
 export function AuthScreen({
   title,
@@ -47,7 +48,7 @@ export function AuthScreen({
   return (
     <View style={styles.root} testID={testID}>
       <StatusBar style="light" />
-      <BrandAtmosphere id="authField" strands />
+      <EmeraldField id="authField" />
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Pressable
@@ -115,7 +116,7 @@ export function AuthError({ message, code }: { message?: string; code?: string }
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: FOREST.field },
+  root: { flex: 1, backgroundColor: EXPLORE.field },
   safe: { flex: 1, paddingHorizontal: 24 },
   flex: { flex: 1 },
   back: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, gap: 2, marginLeft: -6 },

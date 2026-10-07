@@ -10,7 +10,8 @@ import { BRAND } from '../../config/brand';
 import { radius } from '../../design/radius';
 import { spacing } from '../../design/spacing';
 import { typography } from '../../design/typography';
-import { AuthOptions } from '../AuthOptions';
+import { openAuth } from '../../navigation/authRoutes';
+import { AuthButton } from '../AuthButton';
 import { BrandMark } from '../BrandMark';
 
 /**
@@ -132,7 +133,8 @@ export function EmeraldField({ id }: { id: string }) {
 
 /**
  * "Make it yours" — the hand-off from the sample to a person's own Health
- * Memory, leading into the existing sign-in flow.
+ * Memory. Get started opens the one sign-in screen (openAuth); this panel
+ * never carries a sign-in form of its own.
  */
 export function MakeItYours({ id = 'makeItYours' }: { id?: string }) {
   return (
@@ -145,7 +147,13 @@ export function MakeItYours({ id = 'makeItYours' }: { id?: string }) {
         </Text>
         <Text style={styles.panelCopy}>{`Bring your own health history into ${BRAND.wordmark}.`}</Text>
         <View style={styles.panelActions}>
-          <AuthOptions />
+          <AuthButton
+            variant="primary"
+            label="Get started"
+            onPress={() => openAuth()}
+            accessibilityHint="Opens sign-in. Log in or sign up with your mobile number, Google or email."
+            testID={`${id}-get-started`}
+          />
         </View>
       </View>
     </View>

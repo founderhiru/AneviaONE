@@ -66,6 +66,11 @@ export const mockAuthService: AuthService = {
     return { success: true };
   },
 
+  async completeEmailLink(): Promise<VerifyOtpResult> {
+    // Demo sign-in has no emailed links — only the code.
+    return { success: false, errorMessage: 'Sign-in links aren’t available in the demo. Enter the code instead.' };
+  },
+
   async verifyEmailOtp(email: string, otp: string): Promise<VerifyOtpResult> {
     await delay(500);
     if (otp !== MOCK_OTP) {

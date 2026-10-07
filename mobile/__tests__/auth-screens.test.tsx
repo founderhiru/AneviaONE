@@ -30,18 +30,19 @@ beforeEach(() => {
 });
 
 describe('Welcome screen', () => {
-  it('shows the brand-neutral name/tagline and both entry points', async () => {
+  it('shows the brand-neutral name/tagline and the entry points', async () => {
     await renderWithAuth(<WelcomeScreen />);
     expect(screen.getByText(BRAND.wordmark)).toBeTruthy();
-    expect(screen.getByTestId('continue-with-mobile')).toBeTruthy();
+    expect(screen.getByText(`Welcome to ${BRAND.wordmark}`)).toBeTruthy();
+    expect(screen.getByTestId('mobile-number-input')).toBeTruthy();
     expect(screen.getByTestId('continue-with-google')).toBeTruthy();
-    expect(screen.queryByTestId('continue-with-email')).toBeNull();
+    expect(await screen.findByTestId('continue-with-email')).toBeTruthy();
   });
 
-  it('navigates to the mobile login screen', async () => {
+  it('navigates to the Email sign-in step', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    fireEvent.press(screen.getByTestId('continue-with-mobile'));
-    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=mobile');
+    await fireEvent.press(await screen.findByTestId('continue-with-email'));
+    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=email');
   });
 
   it('navigates to the Google login screen', async () => {
@@ -51,10 +52,9 @@ describe('Welcome screen', () => {
   });
 });
 
-describe('Login screen — Mobile OTP (primary path)', () => {
+describe('Welcome — Mobile OTP (primary path)', () => {
   it('sends an OTP and navigates to the OTP screen once a valid number is entered', async () => {
-    (useLocalSearchParams as jest.Mock).mockReturnValue({});
-    await renderWithAuth(<LoginScreen />);
+    await renderWithAuth(<WelcomeScreen />);
 
     const input = screen.getByTestId('mobile-number-input');
     await act(async () => {
@@ -69,15 +69,14 @@ describe('Login screen — Mobile OTP (primary path)', () => {
     await waitFor(() =>
       expect(router.push).toHaveBeenCalledWith({
         pathname: '/(auth)/otp',
-        params: { mobileNumber: '9876543210' },
+        params: { mobileNumber: '+919876543210' },
       })
     );
   });
 
   it('shows a validation error for a too-short number', async () => {
-    (useLocalSearchParams as jest.Mock).mockReturnValue({});
-    await renderWithAuth(<LoginScreen />);
-    // Send OTP stays disabled below 10 digits — nothing to send, no navigation.
+    await renderWithAuth(<WelcomeScreen />);
+    // Continue stays disabled below 10 digits — nothing to send, no navigation.
     expect(screen.getByTestId('send-otp').props.accessibilityState.disabled).toBe(true);
   });
 });

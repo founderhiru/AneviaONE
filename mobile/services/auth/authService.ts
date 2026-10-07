@@ -1,5 +1,5 @@
 import { isDemoMode } from '../../config/appMode';
-import { mockAuthService } from './mockAuthService';
+import { loadDemoServices } from '../demo/demoServices';
 import { supabaseAuthService } from './supabaseAuthService';
 import type { AuthService } from './authTypes';
 
@@ -11,6 +11,6 @@ import type { AuthService } from './authTypes';
  *                     screen; it NEVER silently falls back to the mock.
  *   demo mode       → the isolated mock (explicit opt-in, visibly badged).
  */
-export const authService: AuthService = isDemoMode ? mockAuthService : supabaseAuthService;
+export const authService: AuthService = isDemoMode ? loadDemoServices().auth : supabaseAuthService;
 
 export * from './authTypes';

@@ -15,6 +15,7 @@ export * from './LoadingState';
 export * from './Modal';
 export * from './OtpInput';
 export * from './ProcessingState';
+export * from './ReadReportPanel';
 export * from './ScreenContainer';
 export * from './ScreenHeader';
 export * from './SecondaryButton';
