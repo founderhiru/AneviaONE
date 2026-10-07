@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Card, EmptyState, EvidenceLink, ErrorState, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { healthService } from '../../services/health/healthService';
 import type { Trend } from '../../types';
 
@@ -72,6 +73,9 @@ export default function TrendDetailScreen() {
       setError(true);
     }
   }
+
+  // A report finished reading: show its new records.
+  useHealthMemoryUpdates(load);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

@@ -37,6 +37,10 @@ export type StoredDocument = {
   processingError: string | null;
   /** Why reading failed (server-set); 'identity_mismatch' means the report needs the person's review. */
   failureKind?: string | null;
+  /** Results this report contributes to Health Memory (its latest successful
+   * read: facts that passed, plus ones already there). 0 = read, nothing
+   * found; undefined/null = not read yet or unknown. */
+  healthInfoCount?: number | null;
   uploadedAt: string | null;
   createdAt: string;
   updatedAt: string;

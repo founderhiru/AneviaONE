@@ -21,6 +21,16 @@ export type ProcessingState =
   | { phase: 'needs_review'; message: string };
 
 export const MAX_ATTEMPTS = 3;
+export const POLL_INTERVAL_MS = 2000;
+/** After this long the app stops waiting (reading continues on the server). */
+export const POLL_TIMEOUT_MS = 4 * 60 * 1000;
+
+/**
+ * Reads that finished before this moment used the earlier evidence matching,
+ * which could reject every result of a text PDF. A report read then that came
+ * back with nothing at all gets ONE automatic re-read (see selectAutoReads).
+ */
+export const EARLIER_READING_BEFORE = '2026-10-07T16:55:00Z';
 const RETRYABLE: FailureKind[] = ['transient', 'provider', 'validation', 'consent_required'];
 
 export const FAILURE_TITLE = 'Couldn’t read this report yet.';
@@ -32,6 +42,55 @@ export interface ProcessingService {
    * Throws ServiceError('consent_required') without consent. */
   start(documentId: string, options?: { retry?: boolean; reprocess?: boolean }): Promise<'processing' | 'completed'>;
   getState(documentId: string): Promise<ProcessingState>;
+  /** The person's documents that should be read without anyone asking (selectAutoReads). */
+  listAutoReads(): Promise<AutoRead[]>;
+}
+
+export type AutoRead = { documentId: string; reprocess: boolean };
+
+type AutoReadDocumentRow = { id: string; status: string; failure_kind: FailureKind | null; processing_attempts: number | null };
+type AutoReadRunRow = {
+  document_id: string;
+  status: string;
+  facts_written: number | null;
+  facts_needs_review: number | null;
+  facts_duplicate: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+/**
+ * Which documents to read automatically:
+ *   • `uploaded` — never read yet;
+ *   • `failed` only because consent was missing, while tries remain (the
+ *     server's own retry limit) — never other failures, so nothing is
+ *     retried over and over;
+ *   • `completed` whose LATEST run read nothing at all (0 added, 0 held, 0
+ *     already known) and finished before EARLIER_READING_BEFORE — re-read
+ *     once. That re-read starts a newer run, so it is never picked again.
+ * Everything else (completed, processing, failed for good) is left alone.
+ */
+export function selectAutoReads(documents: AutoReadDocumentRow[], runs: AutoReadRunRow[]): AutoRead[] {
+  const latestRun = new Map<string, AutoReadRunRow>();
+  for (const run of runs) {
+    const seen = latestRun.get(run.document_id);
+    if (!seen || (run.started_at ?? '') > (seen.started_at ?? '')) latestRun.set(run.document_id, run);
+  }
+  const reads: AutoRead[] = [];
+  for (const doc of documents) {
+    if (doc.status === 'uploaded') reads.push({ documentId: doc.id, reprocess: false });
+    else if (doc.status === 'failed' && doc.failure_kind === 'consent_required' && (doc.processing_attempts ?? 0) < MAX_ATTEMPTS) {
+      reads.push({ documentId: doc.id, reprocess: false });
+    } else if (doc.status === 'completed') {
+      const run = latestRun.get(doc.id);
+      const readNothing =
+        run?.status === 'succeeded' && !run.facts_written && !run.facts_needs_review && !run.facts_duplicate;
+      if (readNothing && run.completed_at && Date.parse(run.completed_at) < Date.parse(EARLIER_READING_BEFORE)) {
+        reads.push({ documentId: doc.id, reprocess: true });
+      }
+    }
+  }
+  return reads;
 }
 
 type DocumentStateRow = {
@@ -126,6 +185,27 @@ export const supabaseProcessingService: ProcessingService = {
     }
     return toProcessingState(row as DocumentStateRow, run);
   },
+
+  async listAutoReads() {
+    const client = requireClient();
+    // RLS: only the signed-in person's rows.
+    const { data: docs, error } = await client
+      .from('documents')
+      .select('id, status, failure_kind, processing_attempts')
+      .in('status', ['uploaded', 'failed', 'completed']);
+    if (error) throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t check your reports. Please try again.', retryable: true });
+    const completed = (docs ?? []).filter((d) => d.status === 'completed').map((d) => d.id as string);
+    let runs: AutoReadRunRow[] = [];
+    if (completed.length) {
+      const { data, error: runsError } = await client
+        .from('extraction_runs')
+        .select('document_id, status, facts_written, facts_needs_review, facts_duplicate, started_at, completed_at')
+        .in('document_id', completed);
+      // Without run history no completed report is re-read.
+      if (!runsError) runs = (data ?? []) as AutoReadRunRow[];
+    }
+    return selectAutoReads((docs ?? []) as AutoReadDocumentRow[], runs);
+  },
 };
 
 /** DEMO MODE: a short simulated read; no network, nothing leaves the device. */
@@ -142,6 +222,25 @@ export const demoProcessingService: ProcessingService = {
     if (Date.now() - state.startedAt < DEMO_PROCESSING_MS) return { phase: 'processing' };
     return { phase: 'ready', resultsAdded: 2, needsReview: 0, alreadyInMemory: 0 };
   },
+  // Demo uploads are summarised on the spot; nothing waits to be read.
+  async listAutoReads() {
+    return [];
+  },
 };
 
 export const processingService: ProcessingService = isDemoMode ? demoProcessingService : supabaseProcessingService;
+
+const starting = new Map<string, Promise<'processing' | 'completed'>>();
+/**
+ * The one way the app asks for a read: while a request for a document is in
+ * flight, asking again (the upload screen, the document screen and the
+ * background sweep can overlap) joins it instead of sending another. The
+ * server's atomic claim is still what guarantees a single read.
+ */
+export function startReading(documentId: string, options: { retry?: boolean; reprocess?: boolean } = {}) {
+  const pending = starting.get(documentId);
+  if (pending) return pending;
+  const request = processingService.start(documentId, options).finally(() => starting.delete(documentId));
+  starting.set(documentId, request);
+  return request;
+}

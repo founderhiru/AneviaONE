@@ -191,7 +191,7 @@ describe('Ask My Health', () => {
 describe('Needs review', () => {
   it('a report that may belong to someone else is "Needs review", not a generic failure', () => {
     expect(presentDocumentStatus({ status: 'failed', failureKind: 'identity_mismatch' }).label).toBe('Needs review');
-    expect(presentDocumentStatus({ status: 'failed', failureKind: 'provider' }).label).toBe('Couldn’t read this report yet');
+    expect(presentDocumentStatus({ status: 'failed', failureKind: 'provider' }).label).toBe('Failed');
     expect(toProcessingState({ status: 'failed', failure_kind: 'identity_mismatch', processing_error: 'This report may belong to someone else.', processing_attempts: 1 }, null)).toEqual({
       phase: 'needs_review',
       message: 'This report may belong to someone else.',

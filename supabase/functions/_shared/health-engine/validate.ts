@@ -153,6 +153,12 @@ function dateOrFlag(raw: string | null, flags: string[], today: Date, pageText: 
     flags.push('ambiguous_date');
     return { iso: null, invalid: false };
   }
+  // On the page but in a form we can't read: keep the fact undated (nothing
+  // invented) and hold it for review — never discard it for its date format.
+  if (parsed.kind === 'unrecognized') {
+    flags.push('unrecognized_date');
+    return { iso: null, invalid: false };
+  }
   return { iso: null, invalid: true };
 }
 

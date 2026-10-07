@@ -11,18 +11,25 @@ export type ProcessingStep = {
 
 export type ProcessingStateProps = {
   title: string;
+  /** One plain sentence under the title. */
+  description?: string;
   steps: ProcessingStep[];
 };
 
 /** A step checklist (upload stages, report reading). Purely presentational:
  * callers pass steps that reflect what has actually happened. */
-export function ProcessingState({ title, steps }: ProcessingStateProps) {
+export function ProcessingState({ title, description, steps }: ProcessingStateProps) {
   const theme = useTheme();
   return (
     <View style={{ gap: theme.spacing.lg, padding: theme.spacing.xl }} accessibilityRole="progressbar" accessibilityLabel={title}>
       <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, textAlign: 'center' }]}>
         {title}
       </Text>
+      {description ? (
+        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary, textAlign: 'center', marginTop: -theme.spacing.sm }]}>
+          {description}
+        </Text>
+      ) : null}
       <View style={{ gap: theme.spacing.sm }}>
         {steps.map((step) => (
           <View key={step.id} style={styles.row}>

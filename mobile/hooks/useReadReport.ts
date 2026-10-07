@@ -2,12 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { consentService } from '../services/consent/consentService';
 import { invalidateHealthMemory } from '../services/health/healthMemoryApi';
-import { processingService, type ProcessingState } from '../services/processing/processingService';
+import { readWaitingDocuments } from '../services/processing/autoRead';
+import {
+  POLL_INTERVAL_MS,
+  POLL_TIMEOUT_MS,
+  processingService,
+  startReading,
+  type ProcessingState,
+} from '../services/processing/processingService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../services/serviceError';
 
-export const POLL_INTERVAL_MS = 2000;
-/** After this long the screen stops waiting (reading continues on the server). */
-export const POLL_TIMEOUT_MS = 4 * 60 * 1000;
+export { POLL_INTERVAL_MS, POLL_TIMEOUT_MS };
 
 export type ReadReportView =
   | { kind: 'loading' }
@@ -21,8 +26,10 @@ export type ReadReportView =
  * Drives reading one stored report: consent → ask the server → watch the
  * document's status until it is ready or fails.
  *
- * `autoStart` (the Add Record flow) starts reading straight after upload
- * when consent is already recorded; otherwise the consent screen is shown.
+ * `autoStart` (after upload, and on the document screen) starts reading a
+ * report that hasn't been read yet as soon as consent is recorded; without
+ * consent the consent screen is shown once, and "Allow" starts the read.
+ * Nobody has to tap "Read report".
  */
 export function useReadReport(documentId: string | null, options: { autoStart?: boolean } = {}) {
   const [view, setView] = useState<ReadReportView>({ kind: 'loading' });
@@ -30,6 +37,8 @@ export function useReadReport(documentId: string | null, options: { autoStart?: 
   const mounted = useRef(true);
   /** "Read again" was asked for: after consent is given, re-read (don't just reopen). */
   const wantsReprocess = useRef(false);
+  /** Reading was seen in progress here, so "ready" means new records just arrived. */
+  const sawReading = useRef(false);
   const autoStart = options.autoStart ?? false;
 
   const stopPolling = () => {
@@ -68,7 +77,8 @@ export function useReadReport(documentId: string | null, options: { autoStart?: 
     async (id: string, retry = false, reprocess = false) => {
       setView({ kind: 'state', state: { phase: 'processing' } });
       try {
-        const result = await processingService.start(id, { retry, reprocess });
+        sawReading.current = true;
+        const result = await startReading(id, { retry, reprocess });
         if (!mounted.current) return;
         // A re-read reports "completed" until the server has claimed it again.
         if (result === 'completed' && !reprocess) setView({ kind: 'state', state: await processingService.getState(id) });
@@ -89,6 +99,7 @@ export function useReadReport(documentId: string | null, options: { autoStart?: 
       const state = await processingService.getState(documentId);
       if (!mounted.current) return;
       if (state.phase === 'processing') {
+        sawReading.current = true;
         setView({ kind: 'state', state });
         poll(documentId, Date.now());
         return;
@@ -106,10 +117,14 @@ export function useReadReport(documentId: string | null, options: { autoStart?: 
     }
   }, [documentId, autoStart, begin, poll]);
 
-  // New trusted records: Health Memory, Timeline, Trends and What Changed must refetch.
+  // New trusted records: Home, Health Memory, Timeline, Trends and What
+  // Changed refetch. Opening an already-read report changes nothing.
   const ready = view.kind === 'state' && view.state.phase === 'ready';
   useEffect(() => {
-    if (ready) invalidateHealthMemory();
+    if (ready && sawReading.current) {
+      sawReading.current = false;
+      invalidateHealthMemory();
+    }
   }, [ready]);
 
   useEffect(() => {
@@ -169,6 +184,8 @@ export function useReadReport(documentId: string | null, options: { autoStart?: 
       const reprocess = wantsReprocess.current;
       wantsReprocess.current = false;
       await begin(documentId, !reprocess, reprocess);
+      // Other reports that were waiting for this consent are read too.
+      void readWaitingDocuments();
     },
     /** Declining keeps the original stored; nothing is read. */
     decline() {

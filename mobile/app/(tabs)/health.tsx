@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Card, ErrorState, LoadingState, ScreenContainer, SectionHeader, StatusBadge, TrendCard } from '../../components';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { healthService } from '../../services/health/healthService';
 import type { Allergy, Condition, Medication, Procedure, RecordedObservation, Trend, Vaccination } from '../../types';
 
@@ -52,6 +53,9 @@ export default function HealthScreen() {
       setError(true);
     }
   }
+
+  // A report finished reading: show its new records.
+  useHealthMemoryUpdates(load);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

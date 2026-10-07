@@ -18,33 +18,35 @@ export const DOCUMENT_STATUS_PRESENTATION: Record<DocumentStatus, DocumentStatus
     description: 'This upload didn’t finish. Please upload the file again.',
     tone: 'warning',
   },
+  // Read automatically once consent is recorded — no one has to ask.
   uploaded: {
-    label: 'Stored securely',
-    description: 'Your original is saved privately to your account. Nothing from this file has been added to your Health Memory yet.',
+    label: 'Processing',
+    description: 'Your original is saved privately and is read automatically. Nothing from this file has been added to your Health Memory yet.',
     tone: 'neutral',
   },
   processing: {
-    label: 'Reading your report',
-    description: 'We’re reading this report. This can take a few minutes.',
+    label: 'Reading report',
+    description: 'We’re extracting the important health information. This can take a few minutes.',
     tone: 'accent',
   },
   extracted: {
-    label: 'Reading your report',
-    description: 'We’re reading this report. This can take a few minutes.',
+    label: 'Reading report',
+    description: 'We’re extracting the important health information. This can take a few minutes.',
     tone: 'accent',
   },
   validated: {
-    label: 'Checking results',
+    label: 'Reading report',
     description: 'We’re double-checking the information from this report.',
     tone: 'accent',
   },
   completed: {
-    label: 'Added to Health Memory',
-    description: 'Information from this report is in your Health Memory.',
+    // Says only that it was read; whether anything was found is below.
+    label: 'Read',
+    description: 'Your report has been read.',
     tone: 'success',
   },
   failed: {
-    label: 'Couldn’t read this report yet',
+    label: 'Failed',
     description: 'Your original is still stored safely, but we couldn’t read it yet.',
     tone: 'danger',
   },
@@ -56,9 +58,30 @@ export const NEEDS_REVIEW_PRESENTATION: DocumentStatusPresentation = {
   tone: 'warning',
 };
 
+/** A completed report that added results to Health Memory. */
+export const ADDED_PRESENTATION: DocumentStatusPresentation = {
+  label: 'Added to Health Memory',
+  description: 'Your report has been read. Information from it is in your Health Memory.',
+  tone: 'success',
+};
+
+/** A completed report in which no health information was found — never shown as "added". */
+export const NO_HEALTH_INFO_PRESENTATION: DocumentStatusPresentation = {
+  label: 'No health information found',
+  description: 'Report read — no health information was found to add. Your original is stored safely.',
+  tone: 'neutral',
+};
+
 /** Presentation for one document, including the "Needs review" case. */
-export function presentDocumentStatus(document: { status: DocumentStatus; failureKind?: string | null }): DocumentStatusPresentation {
+export function presentDocumentStatus(document: {
+  status: DocumentStatus;
+  failureKind?: string | null;
+  healthInfoCount?: number | null;
+}): DocumentStatusPresentation {
   if (document.status === 'failed' && document.failureKind === 'identity_mismatch') return NEEDS_REVIEW_PRESENTATION;
+  if (document.status === 'completed' && typeof document.healthInfoCount === 'number') {
+    return document.healthInfoCount > 0 ? ADDED_PRESENTATION : NO_HEALTH_INFO_PRESENTATION;
+  }
   return DOCUMENT_STATUS_PRESENTATION[document.status];
 }
 
