@@ -23,8 +23,11 @@ export const BRAND = {
   parent: 'MedhaIQ Systems',
   tagline: 'Every record. Every change. One intelligent health history.',
   promise: 'Your health has a history. Now it has intelligence.',
+  /** Brand signature (matches mobile `launchTagline`). Footer only. */
+  signature: 'Healthier generations. Brighter lives.',
+  // Describes what exists today and what is being built, in that order.
   description:
-    `${NAME} brings your health records, reports, medications and changes together into one intelligent health history.`,
+    `${NAME} is a Personal Health Intelligence app being built to bring your health records into one connected history. Today you can add reports and keep them in private storage.`,
   title: `${NAME} | ${CATEGORY}`,
 } as const;
 

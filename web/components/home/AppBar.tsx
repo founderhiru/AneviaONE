@@ -14,7 +14,7 @@ export function AppBar() {
           <div className="appbar__copy">
             <p className="eyebrow">Get the {BRAND.name} app</p>
             <h2 id="appbar-title" className="appbar__title">
-              Your health history, always with you.
+              Your health reports, always with you.
             </h2>
           </div>
           <StoreButtons className="appbar__stores" />

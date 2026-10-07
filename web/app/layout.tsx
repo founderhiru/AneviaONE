@@ -58,15 +58,6 @@ const jsonLd = {
       description: BRAND.description,
       publisher: { '@id': `${SITE.url}/#org` },
     },
-    {
-      // No price, rating or availability claims — none are verified yet.
-      '@type': 'SoftwareApplication',
-      name: BRAND.name,
-      applicationCategory: 'HealthApplication',
-      operatingSystem: 'iOS, Android',
-      description: BRAND.description,
-      publisher: { '@id': `${SITE.url}/#org` },
-    },
   ],
 };
 

@@ -16,3 +16,25 @@ export function webFaqGroups(): FaqGroup[] {
 }
 
 export type { ResolvedFaqEntry };
+
+/**
+ * The ten questions a prospective user asks first, in reading order. They are
+ * the same entries as /faq (shared/faq.ts) — one source, no second copy.
+ */
+const HOME_FAQ_IDS = [
+  'what-is',
+  'not-a-locker',
+  'file-types',
+  'connect-history',
+  'what-changed',
+  'ask',
+  'private',
+  'delete',
+  'diagnose',
+  'get-started',
+] as const;
+
+export function homeFaq(): ResolvedFaqEntry[] {
+  const byId = new Map(faqForPlatform('web', BRAND.name).map((e) => [e.id, e]));
+  return HOME_FAQ_IDS.map((id) => byId.get(id)).filter((e): e is ResolvedFaqEntry => Boolean(e));
+}

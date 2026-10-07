@@ -54,6 +54,20 @@
   --alert-ink: #a9372a;
   --alert-bg: #fbe6e2;
 
+  /* Brand surface — the AneviaONE mark's forest green, gold and ivory.
+     Mirrors mobile/design/brandSurface.ts (FOREST); used for the logo badge
+     and the footer only. The navy/teal/ivory palette above is unchanged. */
+  --forest-950: #0a2215;
+  --forest-900: #0e2a1b;
+  --forest-800: #183a23;
+  --forest-700: #22492c;
+  --forest-600: #2c5a36;
+  --gold: #f2d58a;
+  --champagne: #f1e3b0;
+  --mark-ivory: #f6f9ef;
+  --lime-gold: #c9dc86;
+  --emerald-700: #1d6b47; /* "ONE" on light surfaces, AA on ivory */
+
   /* Type */
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
 
@@ -510,3 +524,24 @@ ol {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---------- Status pills — what is available vs being built ---------- */
+.status {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 24px;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  font-size: 0.7rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status--now { background: var(--mint-100); color: var(--good-ink); }
+.status--soon { background: var(--ivory-2); color: var(--ink-700); border: 1px solid var(--line); }
+.status--sample { background: var(--lav-50); color: var(--lav-600); }
+.on-dark .status--now { background: rgba(95, 192, 138, 0.18); color: #9fe0bd; }
+.on-dark .status--soon { background: rgba(255, 255, 255, 0.08); color: #c8d6ea; border-color: rgba(255, 255, 255, 0.18); }
+.on-dark .status--sample { background: rgba(222, 216, 244, 0.14); color: #d9d2f3; }

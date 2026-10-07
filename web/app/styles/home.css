@@ -411,3 +411,19 @@
 .change__delta--watch { background: rgba(240, 180, 70, 0.16); color: #f6cb72; }
 
 @media (max-width: 720px) { .icard { padding: 24px; } }
+
+/* ---------- FAQ (homepage) ---------- */
+.hfaq { background: var(--ivory); }
+.hfaq__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); }
+.hfaq__all { margin-top: 20px; }
+.hfaq__list { align-content: start; }
+@media (min-width: 960px) {
+  .hfaq__grid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr); align-items: start; }
+  .hfaq__head { position: sticky; top: calc(var(--header-h) + 32px); }
+}
+
+.hero__status { max-width: 52ch; margin-top: 22px; }
+.product-sec__status { max-width: 60ch; margin-top: 18px; font-size: 1.04rem; }
+.product-sec__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 22px; }
+.chapter__visual { position: relative; }
+.chapter__visual > .status--sample { position: absolute; top: 12px; left: 12px; z-index: 2; }
