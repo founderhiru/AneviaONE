@@ -226,7 +226,7 @@ describe('Add Record → reading the report', () => {
     for (const step of ['Uploading', 'Processing', 'Reading report', 'Ready']) expect(screen.getByText(step)).toBeTruthy();
 
     await waitFor(() => expect(screen.getByText('2 results added to your Health Memory')).toBeTruthy(), { timeout: 6000 });
-    expect(screen.getByText('Added to Health Memory')).toBeTruthy();
+    expect(screen.getAllByText('Your report is ready.').length).toBeGreaterThan(0);
     await fireEvent.press(screen.getByText('View results'));
     expect(router.replace).toHaveBeenCalledWith('/(tabs)/health');
   }, 10000);
@@ -251,8 +251,10 @@ describe('Add Record → reading the report', () => {
       fireEvent.press(screen.getByText('Not now'));
     });
     expect(start).not.toHaveBeenCalled();
-    expect(screen.getByText('Stored securely')).toBeTruthy();
-    expect(screen.getByText('Read this report')).toBeTruthy();
+    expect(screen.getByText('Uploaded')).toBeTruthy();
+    // No "Read report" button — only a way to allow reading after "Not now".
+    expect(screen.queryByText('Read this report')).toBeNull();
+    expect(screen.getByText('Allow report reading')).toBeTruthy();
   });
 
   it('failure: “Couldn’t read this report yet.” with the reason and Retry', async () => {

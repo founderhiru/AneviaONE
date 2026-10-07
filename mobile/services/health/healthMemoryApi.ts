@@ -64,9 +64,20 @@ export type HealthSnapshot = {
 const CACHE_MS = 30_000;
 let cache: { at: number; promise: Promise<HealthSnapshot> } | null = null;
 
+const listeners = new Set<() => void>();
+
 /** Called when a report finishes reading, so screens show the new records. */
 export function invalidateHealthMemory() {
   cache = null;
+  listeners.forEach((listener) => listener());
+}
+
+/** Home, Health, Timeline, Trends and What Changed reload when this fires. */
+export function onHealthMemoryChanged(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 async function fetchSnapshot(): Promise<HealthSnapshot> {

@@ -1,15 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
 import {
+  AiConsentCard,
   Avatar,
+  Card,
   EmptyState,
   ErrorState,
   HealthChangeCard,
   HealthHistoryLine,
   LoadingState,
+  ProcessingState,
+  READING_COPY,
+  readingSteps,
   ScreenContainer,
   SectionHeader,
 } from '../../components';
@@ -17,6 +22,8 @@ import { StoredDocumentCard } from '../../components/StoredDocumentCard';
 import { BRAND, PRODUCT_TERMS, wordmarkParts } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
+import { useAutoRead } from '../../hooks/useAutoRead';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { documentsService } from '../../services/documents/documentsService';
 import { healthService } from '../../services/health/healthService';
 import { monthYear, summarizeHome, visibleYears } from '../../services/health/homeSummary';
@@ -55,6 +62,8 @@ export default function HomeScreen() {
   const [documentsError, setDocumentsError] = useState(false);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Reports waiting to be read are read automatically (consent once).
+  const autoRead = useAutoRead();
 
   // The person's own uploaded records, newest first — the same
   // `documentsService` as My documents (RLS: only their rows).
@@ -103,11 +112,52 @@ export default function HomeScreen() {
     }, [loadDocuments]),
   );
 
+  // A report finished reading: its records are now in Health Memory.
+  useHealthMemoryUpdates(load);
+
+  // A read started or stopped: the records list shows each one's status.
+  const readingCount = useRef(autoRead.reading);
+  useEffect(() => {
+    if (readingCount.current === autoRead.reading) return;
+    readingCount.current = autoRead.reading;
+    loadDocuments();
+  }, [autoRead.reading, loadDocuments]);
+
   async function handleRefresh() {
     setRefreshing(true);
-    await load();
+    await Promise.all([load(), autoRead.refresh()]);
     setRefreshing(false);
   }
+
+  const readingStatus = autoRead.showConsent ? (
+    <View style={{ gap: theme.spacing.xs }}>
+      <AiConsentCard
+        title={autoRead.waitingForConsent > 1 ? 'Read your reports for you?' : undefined}
+        onAllow={autoRead.allow}
+        onDecline={autoRead.decline}
+      />
+      {autoRead.error ? (
+        <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite">
+          {autoRead.error}
+        </Text>
+      ) : null}
+    </View>
+  ) : autoRead.reading > 0 ? (
+    <Card testID="home-reading">
+      <ProcessingState
+        title={READING_COPY.title}
+        description={READING_COPY.description}
+        steps={readingSteps('reading')}
+      />
+    </Card>
+  ) : autoRead.justFinished ? (
+    <Card testID="home-report-ready">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+        <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+        <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{READING_COPY.ready}</Text>
+      </View>
+    </Card>
+  ) : null;
 
   const isLoading = (changes === null && trends === null && !error) || documents === null;
   const hasNoHistory = !isLoading && (changes ?? []).length === 0 && (trends ?? []).length === 0 && storyYears.length === 0;
@@ -181,6 +231,8 @@ export default function HomeScreen() {
           <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]}>Your health story continues.</Text>
         )}
       </View>
+
+      {readingStatus}
 
       {isLoading ? (
         <LoadingState label="Loading your Health Memory…" />

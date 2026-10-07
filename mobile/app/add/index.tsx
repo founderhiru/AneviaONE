@@ -8,6 +8,7 @@ import {
   Card,
   ErrorState,
   ProcessingState,
+  READING_COPY,
   ReadReportPanel,
   ScreenContainer,
   ScreenHeader,
@@ -288,20 +289,23 @@ export default function AddRecordScreen() {
 
 /**
  * After a real upload: the original is stored, then read on the server
- * (consent first) — a PDF from its text, a photo or scan from images of its
- * pages. Either way the results go through the same checks.
+ * automatically (consent first, once) — a PDF from its text, a photo or scan
+ * from images of its pages. Either way the results go through the same
+ * checks. There is no "Read report" step.
  */
 function StoredResult({ document }: { document: StoredDocument }) {
   const theme = useTheme();
   const reading = useReadReport(document.id, { autoStart: true });
-  const ready = reading.view.kind === 'state' && reading.view.state.phase === 'ready';
+  const state = reading.view.kind === 'state' ? reading.view.state : null;
+  const ready = state?.phase === 'ready';
+  const foundNothing = state?.phase === 'ready' && state.resultsAdded === 0 && state.needsReview === 0 && state.alreadyInMemory === 0;
   return (
     <ScreenContainer contentStyle={{ justifyContent: 'space-between' }}>
       <View style={{ gap: theme.spacing.md }}>
         <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
           <SuccessCheck />
           <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]} accessibilityRole="header">
-            {ready ? 'Added to Health Memory' : 'Stored securely'}
+            {foundNothing ? 'Report read' : ready ? READING_COPY.ready : 'Uploaded'}
           </Text>
           <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary, textAlign: 'center' }]}>
             {document.originalFilename}

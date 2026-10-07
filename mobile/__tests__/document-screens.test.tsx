@@ -79,7 +79,7 @@ describe('Add Record', () => {
     expect(router.replace).toHaveBeenCalledWith('/changes');
   });
 
-  it('without a processing summary: honest "Stored securely", no invented counts, and asks before reading', async () => {
+  it('without a processing summary: honest "Uploaded", no invented counts, and asks before reading', async () => {
     pick({ name: 'lab.pdf' });
     const stored = {
       id: '22222222-2222-4222-8222-222222222222',
@@ -100,7 +100,7 @@ describe('Add Record', () => {
     await renderWithAuth(<AddRecordScreen />);
     await pressUpload();
 
-    await waitFor(() => expect(screen.getByText('Stored securely')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Uploaded')).toBeTruthy());
     expect(screen.queryByText('Added to Health Memory')).toBeNull();
     expect(screen.queryByText(/health observation/)).toBeNull();
     expect(screen.queryByText('See what changed →')).toBeNull();
@@ -244,7 +244,8 @@ describe('My documents + document viewer', () => {
 
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: stored.id });
     await renderWithAuth(<DocumentViewerScreen />);
-    await waitFor(() => expect(screen.getByText('Stored securely')).toBeTruthy());
+    // Not read yet: shown as Processing (it is read automatically).
+    await waitFor(() => expect(screen.getByText('Processing')).toBeTruthy());
     expect(screen.queryByText('Sample data')).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByLabelText('View original document'));

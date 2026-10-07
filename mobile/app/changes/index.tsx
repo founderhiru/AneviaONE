@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 
 import { EmptyState, ErrorState, FadeInView, HealthChangeCard, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
 import { useTheme } from '../../design/theme';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { healthService } from '../../services/health/healthService';
 import type { HealthChange } from '../../types';
 
@@ -20,6 +21,9 @@ export default function WhatChangedScreen() {
       setError(true);
     }
   }
+
+  // A report finished reading: show its new records.
+  useHealthMemoryUpdates(load);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

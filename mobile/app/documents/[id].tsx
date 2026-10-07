@@ -45,8 +45,9 @@ function StoredDocumentView({ id }: { id: string }) {
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [results, setResults] = useState<RecordedObservation[]>([]);
-  // Uploaded PDFs and camera scans are both read on the server.
-  const reading = useReadReport(document ? id : null);
+  // Uploaded PDFs and camera scans are both read on the server — straight
+  // away (consent first if it isn't recorded); "Read again" is the only button.
+  const reading = useReadReport(document ? id : null, { autoStart: true });
   const phase = reading.view.kind === 'state' ? reading.view.state.phase : null;
 
   const load = useCallback(
@@ -136,7 +137,7 @@ function StoredDocumentView({ id }: { id: string }) {
         </View>
       </Card>
 
-      {/* Reading status for PDFs and scans alike; once read, it offers Read again. */}
+      {/* Reading status for PDFs and scans alike; once read, it offers Read again (secondary). */}
       {reading.view.kind !== 'loading' ? (
         <ReadReportPanel
           view={reading.view}

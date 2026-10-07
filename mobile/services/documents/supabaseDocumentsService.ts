@@ -106,6 +106,33 @@ async function cleanupStalePendingUploads(client: SupabaseClient): Promise<void>
   for (const row of data ?? []) await abandonUpload(client, row);
 }
 
+type RunCounts = { document_id: string; facts_written: number | null; facts_needs_review: number | null; facts_duplicate: number | null; completed_at: string | null };
+
+/**
+ * Adds how many results each completed report contributes to Health Memory,
+ * from its latest successful read (RLS: the person's own runs only). On any
+ * error the count stays unknown — the screens then make no claim either way.
+ */
+async function withHealthInfo(client: SupabaseClient, documents: StoredDocument[]): Promise<StoredDocument[]> {
+  const ids = documents.filter((d) => d.status === 'completed').map((d) => d.id);
+  if (ids.length === 0) return documents;
+  const { data, error } = await client
+    .from('extraction_runs')
+    .select('document_id, facts_written, facts_needs_review, facts_duplicate, completed_at')
+    .eq('status', 'succeeded')
+    .in('document_id', ids)
+    .order('completed_at', { ascending: false });
+  if (error || !data) return documents;
+  const latest = new Map<string, RunCounts>();
+  for (const run of data as RunCounts[]) if (!latest.has(run.document_id)) latest.set(run.document_id, run);
+  return documents.map((d) => {
+    const run = latest.get(d.id);
+    if (!run) return d;
+    const trusted = (run.facts_written ?? 0) - (run.facts_needs_review ?? 0) + (run.facts_duplicate ?? 0);
+    return { ...d, healthInfoCount: Math.max(0, trusted) };
+  });
+}
+
 export const supabaseDocumentsService: DocumentsService = {
   async listDocuments() {
     const client = requireClient();
@@ -119,7 +146,7 @@ export const supabaseDocumentsService: DocumentsService = {
       throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t load your documents. Please try again.', retryable: true });
     }
     cleanupStalePendingUploads(client).catch(() => undefined);
-    return (data as DocumentRow[]).map(rowToStoredDocument).filter((d) => isListedStatus(d.status));
+    return withHealthInfo(client, (data as DocumentRow[]).map(rowToStoredDocument).filter((d) => isListedStatus(d.status)));
   },
 
   async getDocument(id) {
@@ -131,7 +158,9 @@ export const supabaseDocumentsService: DocumentsService = {
     if (error) {
       throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t load this document. Please try again.', retryable: true });
     }
-    return data ? rowToStoredDocument(data as DocumentRow) : null;
+    if (!data) return null;
+    const [document] = await withHealthInfo(client, [rowToStoredDocument(data as DocumentRow)]);
+    return document;
   },
 
   async uploadDocument(file: PickedFile, onStage) {

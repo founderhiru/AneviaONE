@@ -135,7 +135,14 @@ export function parseReferenceRange(raw: string | null | undefined): ParsedRange
 
 // ------------------------------------------------------------------ dates ---
 
-export type ParsedDate = { kind: 'date'; iso: string } | { kind: 'ambiguous' } | { kind: 'invalid' };
+/**
+ * date        — a real calendar date (ISO)
+ * ambiguous   — DD/MM vs MM/DD can't be told apart from this document
+ * invalid     — impossible or in the future (31/02/2026, a date next year)
+ * unrecognized — written in a form this parser doesn't know; NOT evidence of
+ *                a wrong date, so callers keep the fact undated, for review
+ */
+export type ParsedDate = { kind: 'date'; iso: string } | { kind: 'ambiguous' } | { kind: 'invalid' } | { kind: 'unrecognized' };
 
 const MONTHS: Record<string, number> = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
@@ -187,16 +194,24 @@ export function parseDateAsWritten(
   order: DateOrder | null = null,
 ): ParsedDate | null {
   if (!raw) return null;
-  const text = normalizeText(raw).replace(/,/g, ' ').replace(/\s+/g, ' ');
+  // Reports print dates with times, ordinals and commas ("07/10/2026 10:45 AM",
+  // "Oct 7th, 2026"); only the calendar date is used, so those are dropped
+  // — the remaining text must still be a complete date.
+  const text = normalizeText(raw)
+    .replace(/,/g, ' ')
+    .replace(/\s+(at\s+)?\d{1,2}[:.]\d{2}([:.]\d{2})?\s*([ap]\.?m\.?|hrs|hours|h)?\s*(ist|utc|gmt)?$/i, '')
+    .replace(/\b(\d{1,2})(st|nd|rd|th)\b/gi, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(text);
   if (m) return toIso(Number(m[1]), Number(m[2]), Number(m[3]), today);
 
-  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(text);
+  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/.exec(text);
   if (m) {
     const first = Number(m[1]);
     const second = Number(m[2]);
-    const year = Number(m[3]);
+    const year = fullYear(m[3], today);
     if (first > 12 && second <= 12) return toIso(year, second, first, today); // DD/MM/YYYY
     if (second > 12 && first <= 12) return toIso(year, first, second, today); // MM/DD/YYYY
     if (first === second) return toIso(year, first, second, today);
@@ -206,11 +221,20 @@ export function parseDateAsWritten(
     return first > 12 && second > 12 ? { kind: 'invalid' } : { kind: 'ambiguous' };
   }
 
-  m = /^(\d{1,2})[-\s.]([A-Za-z]{3,9})[-\s.](\d{4})$/.exec(text); // 12 Mar 2026 / 12-Mar-2026
-  if (m && MONTHS[m[2].toLowerCase()]) return toIso(Number(m[3]), MONTHS[m[2].toLowerCase()], Number(m[1]), today);
+  m = /^(\d{1,2})[-\s.]([A-Za-z]{3,9})\.?[-\s.](\d{2}|\d{4})$/.exec(text); // 12 Mar 2026 / 12-Mar-26 / 12 Sept. 2026
+  if (m && MONTHS[m[2].toLowerCase()]) return toIso(fullYear(m[3], today), MONTHS[m[2].toLowerCase()], Number(m[1]), today);
 
-  m = /^([A-Za-z]{3,9})\s(\d{1,2})\s(\d{4})$/.exec(text); // March 12 2026
-  if (m && MONTHS[m[1].toLowerCase()]) return toIso(Number(m[3]), MONTHS[m[1].toLowerCase()], Number(m[2]), today);
+  m = /^([A-Za-z]{3,9})\.?[-\s.](\d{1,2})[-\s.](\d{2}|\d{4})$/.exec(text); // March 12 2026 / Mar-12-26
+  if (m && MONTHS[m[1].toLowerCase()]) return toIso(fullYear(m[3], today), MONTHS[m[1].toLowerCase()], Number(m[2]), today);
 
-  return { kind: 'invalid' };
+  // Not a form we know — that says nothing about whether the date is right.
+  return { kind: 'unrecognized' };
+}
+
+/** "26" → 2026 (not after this year), "85" → 1985; four digits as written. */
+function fullYear(written: string, today: Date): number {
+  if (written.length === 4) return Number(written);
+  const yy = Number(written);
+  const thisYear = today.getUTCFullYear() % 100;
+  return yy <= thisYear ? 2000 + yy : 1900 + yy;
 }
