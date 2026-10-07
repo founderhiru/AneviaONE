@@ -19,7 +19,7 @@ describe('Home screen', () => {
   it('loads and shows What Changed, trends, and Ask entry point', async () => {
     await renderWithAuth(<HomeScreen />);
     await waitFor(() => expect(screen.getByText(/What Changed/)).toBeTruthy());
-    expect(screen.getByText('Ask about your health history...')).toBeTruthy();
+    expect(screen.getByText('Ask about your health...')).toBeTruthy();
   });
 
   it('navigates to the timeline tab from the health story section', async () => {

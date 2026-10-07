@@ -10,6 +10,8 @@ export type ConversationMessage = {
    * from AI-generated explanation, per the UI's safety requirement. */
   source?: MessageSource;
   evidence?: Evidence[];
+  /** A record-backed answer whose wording came from the AI (citations checked by the server). */
+  wordedByAi?: boolean;
   createdAt: string;
 };
 

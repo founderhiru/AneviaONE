@@ -9,6 +9,8 @@ import { AnimatedSplash, ConfigurationRequired, DemoModeBadge } from '../compone
 import { APP_MODE, isDemoMode } from '../config/appMode';
 import { useTheme } from '../design/theme';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
+import { markLaunchSplashDone } from '../hooks/useLaunchSplash';
+import { AUTH_ROUTE } from '../navigation/authRoutes';
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
@@ -36,7 +38,9 @@ function RootNavigator() {
     const atEntry = segmentList.length === 0; // the placeholder `index` route
 
     if (!user && !inAuthGroup && !inExplore) {
-      router.replace('/(auth)/welcome');
+      // Launch, a chosen sign-out and an expired session all go to the one
+      // sign-in screen, Welcome (which says why when a session ran out).
+      router.replace(AUTH_ROUTE);
       return;
     }
 
@@ -61,7 +65,15 @@ function RootNavigator() {
         <Stack.Screen name="explore" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>
-      {showSplash ? <AnimatedSplash ready={!isLoading} onFinished={() => setSplashRevealDone(true)} /> : null}
+      {showSplash ? (
+        <AnimatedSplash
+          ready={!isLoading}
+          onFinished={() => {
+            setSplashRevealDone(true);
+            markLaunchSplashDone();
+          }}
+        />
+      ) : null}
     </View>
   );
 }

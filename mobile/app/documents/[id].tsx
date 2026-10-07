@@ -4,19 +4,21 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { isDemoMode } from '../../config/appMode';
 import { useTheme } from '../../design/theme';
+import { useReadReport } from '../../hooks/useReadReport';
+import { loadDemoServices } from '../../services/demo/demoServices';
 import {
-  DOCUMENT_STATUS_PRESENTATION,
+  presentDocumentStatus,
   documentsService,
   formatFileSize,
   hasStoredOriginal,
   isStoredDocumentId,
 } from '../../services/documents/documentsService';
-import { sampleDocumentsService } from '../../services/documents/sampleDocuments';
 import { healthService } from '../../services/health/healthService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
-import type { Document, HealthChange, Observation, StoredDocument } from '../../types';
+import type { Document, HealthChange, Observation, RecordedObservation, StoredDocument } from '../../types';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -24,8 +26,10 @@ function formatDate(iso: string): string {
 
 /**
  * Document screen.
- *   • Real stored documents (UUID ids) → their real metadata; the original
- *     opens through a short-lived signed URL (never a public URL).
+ *   • Real stored documents (UUID ids) → their real metadata and reading
+ *     status (read / retry), the results read from it with the page each
+ *     came from, and the original via a short-lived signed URL (never a
+ *     public URL). We don't promise to jump to the page inside the PDF.
  *   • Records behind the sample Health Memory → the existing viewer,
  *     clearly labelled "Sample data".
  */
@@ -40,21 +44,36 @@ function StoredDocumentView({ id }: { id: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [results, setResults] = useState<RecordedObservation[]>([]);
+  // Uploaded PDFs and camera scans are both read on the server.
+  const reading = useReadReport(document ? id : null);
+  const phase = reading.view.kind === 'state' ? reading.view.state.phase : null;
 
-  const load = useCallback(async () => {
-    setLoadError(null);
-    setDocument(undefined);
-    try {
-      setDocument(await documentsService.getDocument(id));
-    } catch (error) {
-      setLoadError(error instanceof ServiceError ? error.userMessage : GENERIC_ERROR_MESSAGE);
-    }
-  }, [id]);
+  const load = useCallback(
+    async (quiet = false) => {
+      setLoadError(null);
+      if (!quiet) setDocument(undefined);
+      try {
+        const doc = await documentsService.getDocument(id);
+        setDocument(doc);
+        setResults(doc?.status === 'completed' ? await healthService.getDocumentObservations(id) : []);
+      } catch (error) {
+        if (!quiet) setLoadError(error instanceof ServiceError ? error.userMessage : GENERIC_ERROR_MESSAGE);
+      }
+    },
+    [id]
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Reading finished or failed while this screen was open: refresh status and results.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (phase === 'ready' || phase === 'failed') load(true);
+  }, [phase, load]);
 
   async function openOriginal(doc: StoredDocument) {
     setOpenError(null);
@@ -73,7 +92,7 @@ function StoredDocumentView({ id }: { id: string }) {
     return (
       <ScreenContainer>
         <ScreenHeader title="Report" />
-        <ErrorState description={loadError} onRetry={load} />
+        <ErrorState description={loadError} onRetry={() => load()} />
       </ScreenContainer>
     );
   }
@@ -97,7 +116,7 @@ function StoredDocumentView({ id }: { id: string }) {
     );
   }
 
-  const presentation = DOCUMENT_STATUS_PRESENTATION[document.status];
+  const presentation = presentDocumentStatus(document);
 
   return (
     <ScreenContainer>
@@ -114,11 +133,31 @@ function StoredDocumentView({ id }: { id: string }) {
         <View style={{ gap: theme.spacing.xs }}>
           <StatusBadge label={presentation.label} tone={presentation.tone} />
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{presentation.description}</Text>
-          {document.status === 'failed' && document.processingError ? (
-            <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>{document.processingError}</Text>
-          ) : null}
         </View>
       </Card>
+
+      {/* Reading status for PDFs and scans alike; once read, it offers Read again. */}
+      {reading.view.kind !== 'loading' ? (
+        <ReadReportPanel
+          view={reading.view}
+          onAllow={reading.allow}
+          onDecline={reading.decline}
+          onRead={reading.read}
+          onReadAgain={reading.readAgain}
+        />
+      ) : null}
+
+      {results.length > 0 ? (
+        <View style={{ gap: theme.spacing.sm }} testID="document-results">
+          <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>Read from this report</Text>
+          {results.map((r) => (
+            <RecordedResultRow key={r.id} result={r} />
+          ))}
+          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+            Values are shown exactly as printed. Open the original to check them against the page shown.
+          </Text>
+        </View>
+      ) : null}
 
       <Card>
         <View
@@ -156,7 +195,31 @@ function StoredDocumentView({ id }: { id: string }) {
   );
 }
 
-/** The existing viewer, now only for sample records — labelled as such. */
+function RecordedResultRow({ result }: { result: RecordedObservation }) {
+  const theme = useTheme();
+  return (
+    <Card>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: theme.spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary }]}>{result.name}</Text>
+          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+            {result.source.pageNumber ? `Page ${result.source.pageNumber}` : 'Page not recorded'}
+            {result.referenceRange ? ` · Range ${result.referenceRange}` : ''}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
+            {result.value}
+            {result.unit ? ` ${result.unit}` : ''}
+          </Text>
+          {result.needsReview ? <StatusBadge label="Not yet checked" tone="warning" /> : null}
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+/** The existing viewer, now only for sample records (demo mode) — labelled as such. */
 function SampleDocumentView({ id }: { id: string }) {
   const theme = useTheme();
   const [document, setDocument] = useState<Document | null | undefined>(null);
@@ -167,10 +230,12 @@ function SampleDocumentView({ id }: { id: string }) {
   async function load() {
     setError(false);
     try {
-      const doc = await sampleDocumentsService.getSampleDocument(id);
+      // Sample records exist only in demo builds; production has none.
+      const samples = isDemoMode ? loadDemoServices().sampleDocuments : null;
+      const doc = samples ? await samples.getSampleDocument(id) : undefined;
       setDocument(doc ?? undefined);
-      if (doc) {
-        setObservations(await sampleDocumentsService.getSampleObservations(doc));
+      if (doc && samples) {
+        setObservations(await samples.getSampleObservations(doc));
         const allChanges = await healthService.getWhatChanged();
         setChanges(allChanges.filter((change) => change.sourceDocumentId === doc.id));
       }

@@ -10,7 +10,8 @@ export type TimelineEventProps = {
   isLast?: boolean;
 };
 
-function formatMonth(iso: string): string {
+function formatMonth(iso: string | null): string {
+  if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-IN', { month: 'short' });
 }
 
@@ -20,7 +21,7 @@ export function TimelineEvent({ event, onPress, isLast }: TimelineEventProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${event.title}, ${event.date}${event.summary ? `, ${event.summary}` : ''}`}
+      accessibilityLabel={`${event.title}, ${event.date ?? 'date not recorded'}${event.summary ? `, ${event.summary}` : ''}`}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.75 : 1 }]}
     >
       <View style={styles.rail}>

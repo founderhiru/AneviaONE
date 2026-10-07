@@ -36,6 +36,9 @@ export interface AuthService {
   sendEmailOtp(email: string): Promise<SendOtpResult>;
   /** Verifies the emailed code and returns/creates the linked user. */
   verifyEmailOtp(email: string, otp: string): Promise<VerifyOtpResult>;
+  /** Completes sign-in from the link in that same email, when it is opened
+   * on this device: exchanges the link's one-time code for a session. */
+  completeEmailLink(code: string): Promise<VerifyOtpResult>;
   /** Native Google Sign-In (Google's iOS SDK): the Google ID token is
    * exchanged for a Supabase session via `signInWithIdToken` — the same
    * account model as the other methods. */

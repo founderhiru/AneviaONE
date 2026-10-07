@@ -112,7 +112,7 @@ export default function TrendDetailScreen() {
     );
   }
 
-  const directionColor = { up: theme.colors.trendUp, down: theme.colors.trendDown, flat: theme.colors.trendFlat }[trend.direction];
+  const directionColor = { up: theme.colors.trendUp, down: theme.colors.trendDown, flat: theme.colors.trendFlat, mixed: theme.colors.trendFlat, insufficient: theme.colors.trendFlat }[trend.direction];
 
   return (
     <ScreenContainer>
@@ -122,11 +122,16 @@ export default function TrendDetailScreen() {
         <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>Current</Text>
         <Text style={[theme.typography.displayLarge, { color: theme.colors.textPrimary }]}>
           {trend.currentValue}
-          {trend.unit ? trend.unit : ''}
+          {trend.unit ? (trend.unit === '%' ? '%' : ` ${trend.unit}`) : ''}
         </Text>
         {trend.referenceRange ? (
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-            Reference range: {trend.referenceRange}
+            Range printed on the latest report: {trend.referenceRange}
+          </Text>
+        ) : null}
+        {trend.otherUnits?.length ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+            Also recorded in {trend.otherUnits.join(', ')} — shown separately, not converted.
           </Text>
         ) : null}
       </View>

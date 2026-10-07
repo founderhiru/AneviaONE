@@ -50,6 +50,10 @@ echo "▸ Re-running in hosted mode (no direct Storage writes — as the Supabas
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/security_isolation_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /' | grep -E "FAIL|ERROR|ALL SECURITY"
 
+echo "▸ Running Gate 1 engine test (consent, claim/retry, idempotency, confidence gate, isolation)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/gate1_engine_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   echo "▸ Running health data model integrity & isolation test (proposed schema)"
   PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \

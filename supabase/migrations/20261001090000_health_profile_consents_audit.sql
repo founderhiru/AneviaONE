@@ -1,9 +1,8 @@
 -- =============================================================================
--- PROPOSED (not applied) · Health data model 1/4
+-- Health data model 1/4 (promoted for Gate 1 — document understanding)
 -- health_profiles · consents (append-only ledger) · audit_logs (append-only)
 --
--- Lives in supabase/migrations_proposed/ so `supabase db push` ignores it
--- until approved; then move the files into supabase/migrations/.
+-- Promoted from supabase/migrations_proposed/ for Gate 1 (unchanged schema).
 -- Depends on: supabase/migrations/2026092912* (Phase 1).
 -- =============================================================================
 

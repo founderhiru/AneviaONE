@@ -17,6 +17,7 @@ export type ServiceErrorCode =
   | 'rate_limited'
   | 'invalid_code'
   | 'not_available'
+  | 'consent_required'
   | 'unknown';
 
 export class ServiceError extends Error {

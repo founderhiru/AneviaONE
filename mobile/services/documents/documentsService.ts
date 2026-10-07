@@ -1,5 +1,5 @@
 import { isDemoMode } from '../../config/appMode';
-import { demoDocumentsService } from './demoDocumentsService';
+import { loadDemoServices } from '../demo/demoServices';
 import type { DocumentsService } from './documentsTypes';
 import { supabaseDocumentsService } from './supabaseDocumentsService';
 
@@ -14,7 +14,7 @@ import { supabaseDocumentsService } from './supabaseDocumentsService';
  * `UploadResult.processing`. Sample reports behind the still-mocked Health
  * Memory screens live in `sampleDocuments.ts`.
  */
-export const documentsService: DocumentsService = isDemoMode ? demoDocumentsService : supabaseDocumentsService;
+export const documentsService: DocumentsService = isDemoMode ? loadDemoServices().documents : supabaseDocumentsService;
 
 export type { DocumentsService } from './documentsTypes';
 export * from './documentStatus';

@@ -35,6 +35,8 @@ export type StoredDocument = {
   status: DocumentStatus;
   /** User-safe explanation when status = 'failed'. */
   processingError: string | null;
+  /** Why reading failed (server-set); 'identity_mismatch' means the report needs the person's review. */
+  failureKind?: string | null;
   uploadedAt: string | null;
   createdAt: string;
   updatedAt: string;

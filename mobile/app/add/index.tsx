@@ -8,6 +8,7 @@ import {
   Card,
   ErrorState,
   ProcessingState,
+  ReadReportPanel,
   ScreenContainer,
   ScreenHeader,
   SecondaryButton,
@@ -15,6 +16,7 @@ import {
   type ProcessingStep,
 } from '../../components';
 import { useTheme } from '../../design/theme';
+import { useReadReport } from '../../hooks/useReadReport';
 import { useSingleFlight } from '../../hooks/useSingleFlight';
 import {
   CAPTURE_METHODS,
@@ -29,7 +31,7 @@ import {
 } from '../../services/documents/capture';
 import { DOCUMENT_STATUS_PRESENTATION, documentsService } from '../../services/documents/documentsService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
-import type { PickedFile, UploadResult, UploadStage } from '../../types';
+import type { PickedFile, StoredDocument, UploadResult, UploadStage } from '../../types';
 
 type FlowStep = 'choose' | 'preparing' | 'uploading' | 'done' | 'error';
 
@@ -70,7 +72,9 @@ const STAGE_ORDER: UploadStage[] = ['validating', 'uploading', 'saving'];
  * in demo mode). Photos and scans become a PDF of the pages on the device
  * (services/documents/capture.ts); nothing reads or interprets them here.
  * The result screen only reports what actually happened: the counts card
- * appears only when the service returns a processing summary.
+ * appears only when the service returns a processing summary (demo). A real
+ * PDF then goes on to be read on the server — after explicit consent —
+ * with progress shown as Uploading → Processing → Reading report → Ready.
  */
 export default function AddRecordScreen() {
   const theme = useTheme();
@@ -201,6 +205,10 @@ export default function AddRecordScreen() {
     );
   }
 
+  if (step === 'done' && result && !result.processing) {
+    return <StoredResult document={result.document} />;
+  }
+
   if (step === 'done' && result) {
     const { document, processing } = result;
     const counts = processing
@@ -273,6 +281,43 @@ export default function AddRecordScreen() {
         <Card onPress={handleManual} accessibilityLabel="Add manually">
           <Row icon="create-outline" label="Add manually" />
         </Card>
+      </View>
+    </ScreenContainer>
+  );
+}
+
+/**
+ * After a real upload: the original is stored, then read on the server
+ * (consent first) — a PDF from its text, a photo or scan from images of its
+ * pages. Either way the results go through the same checks.
+ */
+function StoredResult({ document }: { document: StoredDocument }) {
+  const theme = useTheme();
+  const reading = useReadReport(document.id, { autoStart: true });
+  const ready = reading.view.kind === 'state' && reading.view.state.phase === 'ready';
+  return (
+    <ScreenContainer contentStyle={{ justifyContent: 'space-between' }}>
+      <View style={{ gap: theme.spacing.md }}>
+        <View style={{ alignItems: 'center', gap: theme.spacing.sm }}>
+          <SuccessCheck />
+          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, textAlign: 'center' }]} accessibilityRole="header">
+            {ready ? 'Added to Health Memory' : 'Stored securely'}
+          </Text>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary, textAlign: 'center' }]}>
+            {document.originalFilename}
+          </Text>
+        </View>
+        <ReadReportPanel
+          view={reading.view}
+          onAllow={reading.allow}
+          onDecline={reading.decline}
+          onRead={reading.read}
+          onViewResults={() => router.replace('/(tabs)/health')}
+        />
+      </View>
+      <View style={{ gap: theme.spacing.sm }}>
+        <Button label="View document" onPress={() => router.replace(`/documents/${document.id}`)} />
+        <SecondaryButton label="Done" onPress={() => router.replace('/(tabs)/home')} />
       </View>
     </ScreenContainer>
   );

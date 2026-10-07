@@ -20,8 +20,7 @@ export const DOCUMENT_STATUS_PRESENTATION: Record<DocumentStatus, DocumentStatus
   },
   uploaded: {
     label: 'Stored securely',
-    description:
-      'Your original is saved privately to your account. Automatic reading of reports is coming soon — nothing from this file has been added to your Health Memory yet.',
+    description: 'Your original is saved privately to your account. Nothing from this file has been added to your Health Memory yet.',
     tone: 'neutral',
   },
   processing: {
@@ -45,11 +44,23 @@ export const DOCUMENT_STATUS_PRESENTATION: Record<DocumentStatus, DocumentStatus
     tone: 'success',
   },
   failed: {
-    label: 'Couldn’t read this report',
-    description: 'Your original is still stored safely, but we couldn’t read it.',
+    label: 'Couldn’t read this report yet',
+    description: 'Your original is still stored safely, but we couldn’t read it yet.',
     tone: 'danger',
   },
 };
+
+export const NEEDS_REVIEW_PRESENTATION: DocumentStatusPresentation = {
+  label: 'Needs review',
+  description: 'This report may belong to someone else, so nothing from it was added to your Health Memory.',
+  tone: 'warning',
+};
+
+/** Presentation for one document, including the "Needs review" case. */
+export function presentDocumentStatus(document: { status: DocumentStatus; failureKind?: string | null }): DocumentStatusPresentation {
+  if (document.status === 'failed' && document.failureKind === 'identity_mismatch') return NEEDS_REVIEW_PRESENTATION;
+  return DOCUMENT_STATUS_PRESENTATION[document.status];
+}
 
 /** Documents shown in lists: everything except abandoned uploads. */
 export function isListedStatus(status: DocumentStatus): boolean {
@@ -61,7 +72,7 @@ export function hasStoredOriginal(status: DocumentStatus): boolean {
   return status !== 'pending_upload';
 }
 
-/** Server-side processing is running (Phase 2+). */
+/** Server-side reading is running. */
 export function isProcessing(status: DocumentStatus): boolean {
   return status === 'processing' || status === 'extracted' || status === 'validated';
 }

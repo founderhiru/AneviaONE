@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../design/theme';
-import { DOCUMENT_STATUS_PRESENTATION, formatFileSize } from '../services/documents/documentsService';
+import { presentDocumentStatus, formatFileSize } from '../services/documents/documentsService';
 import type { StoredDocument } from '../types';
 import { Card } from './Card';
 import { StatusBadge } from './StatusBadge';
@@ -25,7 +25,7 @@ export function uploadedLabel(iso: string, now = new Date()): string {
 /** One of the person's real stored documents (Home's recent records, My documents). */
 export function StoredDocumentCard({ document, onPress }: { document: StoredDocument; onPress: () => void }) {
   const theme = useTheme();
-  const presentation = DOCUMENT_STATUS_PRESENTATION[document.status];
+  const presentation = presentDocumentStatus(document);
   const when = uploadedLabel(document.uploadedAt ?? document.createdAt);
   return (
     <Card onPress={onPress} accessibilityLabel={`${document.originalFilename}, ${when}, ${presentation.label}`}>

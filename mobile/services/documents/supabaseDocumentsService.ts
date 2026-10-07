@@ -41,13 +41,14 @@ type DocumentRow = {
   storage_path: string;
   status: DocumentStatus;
   processing_error: string | null;
+  failure_kind?: string | null;
   uploaded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 const DOCUMENT_COLUMNS =
-  'id, user_id, source, document_type, original_filename, mime_type, file_size_bytes, storage_path, status, processing_error, uploaded_at, created_at, updated_at';
+  'id, user_id, source, document_type, original_filename, mime_type, file_size_bytes, storage_path, status, processing_error, failure_kind, uploaded_at, created_at, updated_at';
 
 export function rowToStoredDocument(row: DocumentRow): StoredDocument {
   return {
@@ -61,6 +62,7 @@ export function rowToStoredDocument(row: DocumentRow): StoredDocument {
     storagePath: row.storage_path,
     status: row.status,
     processingError: row.processing_error,
+    failureKind: row.failure_kind ?? null,
     uploadedAt: row.uploaded_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

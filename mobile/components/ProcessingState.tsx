@@ -14,9 +14,8 @@ export type ProcessingStateProps = {
   steps: ProcessingStep[];
 };
 
-/** Renders the mock document-processing checklist used on the Add Record
- * flow ("Understanding your report…"). Clearly a UI-only simulation — no
- * real extraction happens behind this component. */
+/** A step checklist (upload stages, report reading). Purely presentational:
+ * callers pass steps that reflect what has actually happened. */
 export function ProcessingState({ title, steps }: ProcessingStateProps) {
   const theme = useTheme();
   return (

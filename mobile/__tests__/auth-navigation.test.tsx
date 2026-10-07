@@ -68,13 +68,13 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 describe('Back is always available', () => {
-  it('Welcome → Mobile → Back returns to Welcome', async () => {
+  it('Welcome → Google → Back returns to Welcome', async () => {
     const welcome = await renderWithAuth(<WelcomeScreen />);
-    await press('continue-with-mobile');
-    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=mobile');
+    await press('continue-with-google');
+    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=google');
     await welcome.unmount();
 
-    await renderStep({ method: 'mobile' });
+    await renderStep({ method: 'google' });
     expect(screen.getByLabelText('Go back')).toBeTruthy();
     await press('auth-back');
     expect(router.back).toHaveBeenCalledTimes(1);
@@ -88,24 +88,24 @@ describe('Back is always available', () => {
     expect(router.replace).toHaveBeenCalledWith('/(auth)/welcome');
   });
 
-  it('Mobile → OTP → Back returns to the number entry', async () => {
-    const mobile = await renderStep({ method: 'mobile' });
+  it('Mobile (on Welcome) → OTP → Back returns to the number entry', async () => {
+    const mobile = await renderWithAuth(<WelcomeScreen />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('mobile-number-input'), '9876543210');
     });
     await press('send-otp');
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith({ pathname: '/(auth)/otp', params: { mobileNumber: '9876543210' } }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith({ pathname: '/(auth)/otp', params: { mobileNumber: '+919876543210' } }));
     await mobile.unmount();
 
-    await renderStep({ mobileNumber: '9876543210' }, <OtpScreen />);
+    await renderStep({ mobileNumber: '+919876543210' }, <OtpScreen />);
     await press('auth-back');
     expect(router.back).toHaveBeenCalledTimes(1);
     await press('otp-change-destination');
     expect(router.back).toHaveBeenCalledTimes(2);
   });
 
-  it('every sign-in step (Mobile, Google, Apple, code) shows Back', async () => {
-    for (const params of [{ method: 'mobile' }, { method: 'google' }, { method: 'apple' }, { method: 'email' }]) {
+  it('every sign-in step (Google, Apple, Email, code) shows Back', async () => {
+    for (const params of [{ method: 'google' }, { method: 'apple' }, { method: 'email' }]) {
       const view = await renderStep(params);
       expect(screen.getByTestId('auth-back')).toBeTruthy();
       await view.unmount();
@@ -114,10 +114,22 @@ describe('Back is always available', () => {
     expect(screen.getByTestId('auth-back')).toBeTruthy();
   });
 
-  it('Make it yours → sign-in, and back out of Make it yours', async () => {
+  it('Make it yours → Get started opens the one sign-in screen; Back there returns to Make it yours', async () => {
+    const view = await renderWithAuth(<MakeItYoursScreen />);
+    await press('make-it-yours-get-started');
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/(auth)/welcome', params: { from: 'app' } });
+    await view.unmount();
+
+    // Welcome, opened from Make it yours, shows Back, which returns there.
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ from: 'app' });
+    await renderWithAuth(<WelcomeScreen />);
+    expect(screen.getByText('Log in or sign up')).toBeTruthy();
+    await press('auth-back');
+    expect(router.back).toHaveBeenCalledTimes(1);
+  });
+
+  it('and back out of Make it yours itself', async () => {
     await renderWithAuth(<MakeItYoursScreen />);
-    await press('continue-with-google');
-    expect(router.push).toHaveBeenCalledWith('/(auth)/login?method=google');
     await press('make-it-yours-back');
     expect(router.back).toHaveBeenCalled();
   });
@@ -233,8 +245,8 @@ describe('Apple', () => {
 });
 
 describe('Mobile code', () => {
-  it('a wrong code clears for a retry, and a new code can be requested', async () => {
-    await renderStep({ mobileNumber: '9876543210' }, <OtpScreen />);
+  it('a wrong code clears for a retry; resend waits for the cooldown', async () => {
+    await renderStep({ mobileNumber: '+919876543210' }, <OtpScreen />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('otp-hidden-input'), '000000');
     });
@@ -242,13 +254,35 @@ describe('Mobile code', () => {
     expect(screen.getByTestId('otp-hidden-input').props.value).toBe('');
     expect(screen.getByTestId('verify-otp').props.accessibilityState.busy).toBe(false);
 
-    const resend = jest.spyOn(authService, 'sendMobileOtp');
-    await press('otp-resend');
-    expect(resend).toHaveBeenCalledWith('9876543210');
+    // A code was just sent: resend waits out the cooldown first.
+    expect(screen.getByTestId('otp-resend').props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText('Resend code in 30s')).toBeTruthy();
+  });
+
+  it('after the cooldown a new code is sent to the same number, and the cooldown restarts', async () => {
+    jest.useFakeTimers();
+    try {
+      const resend = jest.spyOn(authService, 'sendMobileOtp').mockResolvedValue({ success: true });
+      await renderStep({ mobileNumber: '+919876543210' }, <OtpScreen />);
+      for (let i = 0; i < 30; i += 1) {
+        await act(async () => {
+          jest.advanceTimersByTime(1000);
+        });
+      }
+      expect(screen.getByText('Resend code')).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('otp-resend'));
+      });
+      expect(resend).toHaveBeenCalledTimes(1);
+      expect(resend).toHaveBeenCalledWith('+919876543210');
+      expect(screen.getByText('Code sent · Resend code in 30s')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('the right code signs the person in', async () => {
-    await renderStep({ mobileNumber: '9876543210' }, <OtpScreen />);
+    await renderStep({ mobileNumber: '+919876543210' }, <OtpScreen />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('otp-hidden-input'), '123456');
     });

@@ -1,5 +1,5 @@
 -- =============================================================================
--- PROPOSED (not applied) · Health data model 2/4
+-- Health data model 2/4 (promoted for Gate 1 — document understanding)
 -- documents enrichment · document_pages · extraction_runs · derivatives bucket
 --
 -- Everything here is written ONLY by server code (service role, e.g. the

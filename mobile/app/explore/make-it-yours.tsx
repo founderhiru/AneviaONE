@@ -5,17 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AuthOptions } from '../../components/AuthOptions';
+import { AuthButton } from '../../components/AuthButton';
 import { BrandMark } from '../../components/BrandMark';
 import { EmeraldField, EXPLORE } from '../../components/explore/ExploreUI';
 import { BRAND } from '../../config/brand';
+import { openAuth } from '../../navigation/authRoutes';
 import { spacing } from '../../design/spacing';
 import { typography } from '../../design/typography';
 
 /**
  * The close of the Explore experience: from the sample to the person's own
- * history, through the existing sign-in. Deliberately quiet — no features
- * list, no pricing, nothing to dismiss.
+ * history. Deliberately quiet — no features list, no pricing, nothing to
+ * dismiss. It is a hand-off, not a sign-in form: Get started opens the one
+ * sign-in screen (openAuth), and Back there returns here.
  */
 export default function MakeItYoursScreen() {
   const backIcon = Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back';
@@ -47,7 +49,13 @@ export default function MakeItYoursScreen() {
         </View>
 
         <View style={styles.actions}>
-          <AuthOptions />
+          <AuthButton
+            variant="primary"
+            label="Get started"
+            onPress={() => openAuth()}
+            accessibilityHint="Opens sign-in. Log in or sign up with your mobile number, Google or email."
+            testID="make-it-yours-get-started"
+          />
           <Text style={styles.fine}>Your health information belongs to you.</Text>
         </View>
       </SafeAreaView>

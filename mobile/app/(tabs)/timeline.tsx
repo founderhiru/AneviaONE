@@ -4,8 +4,8 @@ import { router } from 'expo-router';
 
 import { EmptyState, ErrorState, FadeInView, LoadingState, ScreenContainer, TimelineEvent } from '../../components';
 import { useTheme } from '../../design/theme';
-import { groupTimelineByYear } from '../../mock';
 import { healthService } from '../../services/health/healthService';
+import { groupTimelineByYear } from '../../services/health/timeline';
 import type { HealthEvent } from '../../types';
 
 export default function TimelineScreen() {
@@ -75,7 +75,7 @@ export default function TimelineScreen() {
                   <TimelineEvent
                     event={event}
                     isLast={index === yearEvents.length - 1}
-                    onPress={() => router.push(`/timeline/${event.id}`)}
+                    onPress={() => router.push(`/timeline/${encodeURIComponent(event.id)}`)}
                   />
                 </FadeInView>
               );

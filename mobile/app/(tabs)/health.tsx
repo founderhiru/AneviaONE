@@ -6,9 +6,10 @@ import { Card, ErrorState, LoadingState, ScreenContainer, SectionHeader, StatusB
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { healthService } from '../../services/health/healthService';
-import type { Allergy, Condition, Medication, Procedure, Trend, Vaccination } from '../../types';
+import type { Allergy, Condition, Medication, Procedure, RecordedObservation, Trend, Vaccination } from '../../types';
 
 type HealthData = {
+  results: RecordedObservation[];
   trends: Trend[];
   medications: Medication[];
   conditions: Condition[];
@@ -37,7 +38,8 @@ export default function HealthScreen() {
   async function load() {
     setError(false);
     try {
-      const [trends, medications, conditions, allergies, vaccinations, procedures] = await Promise.all([
+      const [results, trends, medications, conditions, allergies, vaccinations, procedures] = await Promise.all([
+        healthService.getRecordedObservations(),
         healthService.getTrends(),
         healthService.getMedications(),
         healthService.getConditions(),
@@ -45,7 +47,7 @@ export default function HealthScreen() {
         healthService.getVaccinations(),
         healthService.getProcedures(),
       ]);
-      setData({ trends, medications, conditions, allergies, vaccinations, procedures });
+      setData({ results, trends, medications, conditions, allergies, vaccinations, procedures });
     } catch {
       setError(true);
     }
@@ -80,6 +82,17 @@ export default function HealthScreen() {
       <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]} accessibilityRole="header">
         Health
       </Text>
+
+      <View style={{ gap: theme.spacing.sm }} testID="test-results">
+        <SectionHeader title="Test results" />
+        {data.results.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+            Results read from your reports appear here, each with the report and page it came from.
+          </Text>
+        ) : (
+          data.results.slice(0, 20).map((r) => <TestResultCard key={r.id} result={r} />)
+        )}
+      </View>
 
       <View style={{ gap: theme.spacing.sm }}>
         <SectionHeader title="Blood & Metabolic" />
@@ -119,10 +132,10 @@ export default function HealthScreen() {
                 <View>
                   <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{med.name}</Text>
                   <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-                    {med.dosage} · {med.frequency}
+                    {[med.dosage, med.frequency].filter(Boolean).join(' · ') || 'As written on your report'}
                   </Text>
                 </View>
-                <StatusBadge label={med.status === 'active' ? 'Active' : med.status === 'past' ? 'Past' : 'As needed'} tone={med.status === 'active' ? 'success' : 'neutral'} />
+                <StatusBadge label={med.status === 'active' ? 'Active' : med.status === 'past' ? 'Past' : med.status === 'as_needed' ? 'As needed' : 'Recorded'} tone={med.status === 'active' ? 'success' : 'neutral'} />
               </View>
             </Card>
           ))
@@ -135,8 +148,13 @@ export default function HealthScreen() {
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None on file.</Text>
         ) : (
           data.conditions.map((c) => (
-            <Card key={c.id}>
+            <Card key={c.id} onPress={c.sourceDocumentId ? () => router.push(`/documents/${c.sourceDocumentId}`) : undefined}>
               <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{c.name}</Text>
+              {c.assertion ? (
+                <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
+                  {c.assertion === 'diagnosed' ? 'Recorded as diagnosed' : c.assertion === 'reported' ? 'Reported' : 'Mentioned in a report (not a diagnosis)'}
+                </Text>
+              ) : null}
             </Card>
           ))
         )}
@@ -151,6 +169,9 @@ export default function HealthScreen() {
 
       <View style={{ gap: theme.spacing.sm }}>
         <SectionHeader title="Procedures" />
+        {data.procedures.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None recorded.</Text>
+        ) : null}
         {data.procedures.map((p) => (
           <Card key={p.id}>
             <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{p.name}</Text>
@@ -160,6 +181,9 @@ export default function HealthScreen() {
 
       <View style={{ gap: theme.spacing.sm }}>
         <SectionHeader title="Allergies" />
+        {data.allergies.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None recorded.</Text>
+        ) : null}
         {data.allergies.map((a) => (
           <Card key={a.id}>
             <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{a.substance}</Text>
@@ -172,6 +196,9 @@ export default function HealthScreen() {
 
       <View style={{ gap: theme.spacing.sm }}>
         <SectionHeader title="Vaccinations" />
+        {data.vaccinations.length === 0 ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None recorded.</Text>
+        ) : null}
         {data.vaccinations.map((v) => (
           <Card key={v.id}>
             <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{v.name}</Text>
@@ -179,5 +206,42 @@ export default function HealthScreen() {
         ))}
       </View>
     </ScreenContainer>
+  );
+}
+
+function formatResultDate(iso: string | null): string {
+  if (!iso) return 'Date not clear on report';
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/** One result, exactly as printed, with its source: tapping opens the stored report. */
+function TestResultCard({ result }: { result: RecordedObservation }) {
+  const theme = useTheme();
+  const page = result.source.pageNumber ? `, page ${result.source.pageNumber}` : '';
+  return (
+    <Card
+      onPress={result.source.documentId ? () => router.push(`/documents/${result.source.documentId}`) : undefined}
+      accessibilityLabel={`${result.name} ${result.value}${result.unit ? ` ${result.unit}` : ''}, from ${result.source.documentName}${page}`}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{result.name}</Text>
+          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>{formatResultDate(result.date)}</Text>
+          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]} numberOfLines={1}>
+            From {result.source.documentName}
+            {page}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary }]}>
+            {result.value}
+            {result.unit ? ` ${result.unit}` : ''}
+          </Text>
+          {result.referenceRange ? (
+            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>Range {result.referenceRange}</Text>
+          ) : null}
+        </View>
+      </View>
+    </Card>
   );
 }

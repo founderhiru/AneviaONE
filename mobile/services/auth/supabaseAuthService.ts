@@ -5,6 +5,7 @@ import { isNetworkError, ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { appleFullName, isApplePrivateRelayEmail, isValidEmail, maskEmail, normalizeEmail, normalizeMobileNumber } from './authInput';
 import { isAppleSignInAvailable, requestAppleCredential } from './appleAuth';
+import { emailLinkRedirect } from './emailLink';
 import { requestGoogleIdToken, signOutOfGoogle } from './googleAuth';
 import type {
   AppleSignInResult,
@@ -23,6 +24,8 @@ import type {
  */
 
 const NOT_CONFIGURED = 'Sign-in is not available right now. Please try again later.';
+const EMAIL_LINK_FAILED =
+  'This sign-in link has expired, was already used, or was opened on a different device. Enter the 6-digit code from the email instead, or request a new one.';
 const APPLE_UNAVAILABLE = 'Sign in with Apple isn’t available on this device.';
 const GOOGLE_UNAVAILABLE = 'Sign in with Google isn’t available in this version of the app.';
 
@@ -94,7 +97,7 @@ function authErrorMessage(error: AuthError | Error | null | undefined, context: 
   if (context === 'verify') return 'That code is incorrect or has expired. Please try again or request a new code.';
   if (context === 'oauth') return 'Could not complete sign-in. Please try again.';
   if (code === 'phone_provider_disabled' || code === 'sms_send_failed') {
-    return 'Sign-in by SMS isn’t available yet. Please continue with Google or Apple.';
+    return 'Sign-in by SMS isn’t available yet. Please use one of the other options below.';
   }
   return 'We couldn’t send a code right now. Please try again.';
 }
@@ -265,7 +268,9 @@ export const supabaseAuthService: AuthService = {
     if (!isValidEmail(email)) return { success: false, errorMessage: 'Enter a valid email address.' };
     const { error } = await client.auth.signInWithOtp({
       email: normalizeEmail(email),
-      options: { shouldCreateUser: true },
+      // The email's link returns to the app (not the Site URL); the 6-digit
+      // code in the same email works on any device.
+      options: { shouldCreateUser: true, emailRedirectTo: emailLinkRedirect() },
     });
     if (error) return { success: false, errorMessage: authErrorMessage(error, 'send') };
     return { success: true };
@@ -276,6 +281,16 @@ export const supabaseAuthService: AuthService = {
     if (!client) return { success: false, errorMessage: NOT_CONFIGURED };
     const { data, error } = await client.auth.verifyOtp({ email: normalizeEmail(email), token: otp, type: 'email' });
     if (error || !data.user) return { success: false, errorMessage: authErrorMessage(error, 'verify') };
+    return { success: true, ...(await signedInResult(client, data.user)) };
+  },
+
+  async completeEmailLink(code): Promise<VerifyOtpResult> {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, errorMessage: NOT_CONFIGURED };
+    // PKCE: only the device that asked for the email holds the matching
+    // verifier, so a link opened elsewhere fails here — the code still works.
+    const { data, error } = await client.auth.exchangeCodeForSession(code);
+    if (error || !data.user) return { success: false, errorMessage: EMAIL_LINK_FAILED };
     return { success: true, ...(await signedInResult(client, data.user)) };
   },
 
