@@ -12,6 +12,7 @@ export type ServiceErrorCode =
   | 'permission'
   | 'not_found'
   | 'invalid_file'
+  | 'invalid_input'
   | 'upload_failed'
   | 'save_failed'
   | 'rate_limited'

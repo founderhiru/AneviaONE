@@ -1,16 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { Avatar, Card, LoadingState, ScreenContainer } from '../../components';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { healthService } from '../../services/health/healthService';
-import type { HealthProfile } from '../../types';
+import { profileService } from '../../services/profile/profileService';
+import type { HealthProfile, IdentityProfile } from '../../types';
 
-type Row = { label: string; onPress: () => void; danger?: boolean };
+type Row = { label: string; onPress: () => void; danger?: boolean; detail?: string; testID?: string };
+
+/** Whether identity details are in place — never the values themselves. */
+function identityStatus(identity: IdentityProfile | null): string | undefined {
+  if (!identity) return undefined;
+  if (identity.fullName && identity.dateOfBirth) return 'Added';
+  if (identity.fullName || identity.dateOfBirth) return 'Incomplete';
+  return 'Not added';
+}
 
 function RowList({ rows }: { rows: Row[] }) {
   const theme = useTheme();
@@ -21,6 +30,8 @@ function RowList({ rows }: { rows: Row[] }) {
           key={row.label}
           onPress={row.onPress}
           accessibilityRole="button"
+          accessibilityLabel={row.detail ? `${row.label}, ${row.detail}` : row.label}
+          testID={row.testID}
           style={({ pressed }) => [
             {
               flexDirection: 'row',
@@ -43,7 +54,10 @@ function RowList({ rows }: { rows: Row[] }) {
           >
             {row.label}
           </Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+            {row.detail ? <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>{row.detail}</Text> : null}
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+          </View>
         </Pressable>
       ))}
     </Card>
@@ -55,6 +69,17 @@ export default function MeScreen() {
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<HealthProfile | null>(null);
   const [profileError, setProfileError] = useState(false);
+  const [identity, setIdentity] = useState<IdentityProfile | null>(null);
+
+  // Refreshed whenever Me is shown (e.g. back from Identity details).
+  useFocusEffect(
+    useCallback(() => {
+      profileService
+        .getMyIdentity()
+        .then(setIdentity)
+        .catch(() => setIdentity(null));
+    }, []),
+  );
 
   useEffect(() => {
     healthService
@@ -102,6 +127,12 @@ export default function MeScreen() {
           </Card>
         </View>
       )}
+
+      <RowList
+        rows={[
+          { label: 'Identity details', detail: identityStatus(identity), onPress: () => router.push('/profile/identity'), testID: 'me-identity' },
+        ]}
+      />
 
       <RowList
         rows={[

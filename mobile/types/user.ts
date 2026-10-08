@@ -20,3 +20,15 @@ export type User = {
   linkedIdentities: LinkedIdentity[];
   onboardingComplete: boolean;
 };
+
+/**
+ * The person's identity details, used later to check that a health report
+ * belongs to them. Both are optional until they choose to add them; nothing
+ * is ever derived from the email address, sign-in provider or documents.
+ */
+export type IdentityProfile = {
+  /** Exactly as entered (surrounding spaces trimmed). */
+  fullName: string | null;
+  /** Calendar date, YYYY-MM-DD. */
+  dateOfBirth: string | null;
+};

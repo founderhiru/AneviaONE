@@ -1,7 +1,9 @@
 import { isDemoMode } from '../../config/appMode';
-import type { HealthProfile } from '../../types';
+import type { HealthProfile, IdentityProfile } from '../../types';
 import { healthService } from '../health/healthService';
-import { ServiceError } from '../serviceError';
+import { isNetworkError, ServiceError } from '../serviceError';
+import { getSupabaseClient } from '../supabaseClient';
+import { checkFullName } from './identityValidation';
 
 export type DataSharingSetting = {
   id: string;
@@ -26,6 +28,32 @@ export interface ProfileService {
   setDataSharingSetting(id: string, enabled: boolean): Promise<void>;
   requestDataDownload(): Promise<{ requested: true }>;
   requestAccountDeletion(): Promise<{ requested: true }>;
+  /** The signed-in person's own identity details (never anyone else's). */
+  getMyIdentity(): Promise<IdentityProfile>;
+  /** Saves both values (null = not provided / clears it). Throws on invalid input. */
+  updateMyIdentity(identity: IdentityProfile): Promise<IdentityProfile>;
+}
+
+/**
+ * Errors here never carry the cause: a database refusal can include the
+ * submitted row, and the name / date of birth must not reach any log.
+ */
+const IDENTITY_LOAD_FAILED = 'We couldn’t load your identity details. Please try again.';
+const IDENTITY_SAVE_FAILED = 'We couldn’t save your identity details. Nothing was changed — please try again.';
+const identityError = (error: unknown, message: string) =>
+  isNetworkError(error)
+    ? new ServiceError('network', 'You appear to be offline. Check your connection and try again.', { retryable: true })
+    : new ServiceError('unknown', message, { retryable: true });
+
+/** Rejects anything the database would refuse, before it is sent. */
+function assertValidIdentity(identity: IdentityProfile) {
+  if (identity.fullName !== null) {
+    const name = checkFullName(identity.fullName);
+    if (!name.ok || name.value === null) throw new ServiceError('invalid_input', name.ok ? 'Enter your full name.' : name.error);
+  }
+  if (identity.dateOfBirth !== null && !/^\d{4}-\d{2}-\d{2}$/.test(identity.dateOfBirth)) {
+    throw new ServiceError('invalid_input', 'Enter a valid date of birth.');
+  }
 }
 
 const delay = <T,>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(value), 300));
@@ -46,6 +74,7 @@ const SHARING_OPTIONS: DataSharingSetting[] = [
 ];
 
 /** DEMO MODE ONLY — in-memory settings and simulated requests. */
+let demoIdentity: IdentityProfile = { fullName: null, dateOfBirth: null };
 let demoSharingSettings: DataSharingSetting[] = SHARING_OPTIONS.map((s) =>
   s.id === 'share-doctor-brief' ? { ...s, enabled: true } : s
 );
@@ -59,6 +88,12 @@ export const demoProfileService: ProfileService = {
   },
   requestDataDownload: () => delay({ requested: true }),
   requestAccountDeletion: () => delay({ requested: true }),
+  getMyIdentity: () => delay({ ...demoIdentity }),
+  async updateMyIdentity(identity) {
+    assertValidIdentity(identity);
+    demoIdentity = { fullName: identity.fullName?.trim() ?? null, dateOfBirth: identity.dateOfBirth };
+    return delay({ ...demoIdentity });
+  },
 };
 
 const notAvailable = (what: string) =>
@@ -79,6 +114,36 @@ export const productionProfileService: ProfileService = {
   },
   async requestAccountDeletion() {
     throw notAvailable('Deleting your account');
+  },
+
+  async getMyIdentity() {
+    const client = getSupabaseClient();
+    if (!client) throw new ServiceError('not_configured', IDENTITY_LOAD_FAILED);
+    const { data } = await client.auth.getSession();
+    const userId = data.session?.user.id;
+    if (!userId) throw new ServiceError('not_signed_in', 'Please sign in again to continue.');
+    // RLS returns only the signed-in person's rows; the filter is for clarity.
+    const [profile, health] = await Promise.all([
+      client.from('profiles').select('full_name').eq('id', userId).maybeSingle(),
+      client.from('health_profiles').select('date_of_birth').eq('user_id', userId).maybeSingle(),
+    ]);
+    if (profile.error || health.error) throw identityError(profile.error ?? health.error, IDENTITY_LOAD_FAILED);
+    return {
+      fullName: (profile.data as { full_name: string | null } | null)?.full_name ?? null,
+      dateOfBirth: (health.data as { date_of_birth: string | null } | null)?.date_of_birth ?? null,
+    };
+  },
+  async updateMyIdentity(identity) {
+    assertValidIdentity(identity);
+    const client = getSupabaseClient();
+    if (!client) throw new ServiceError('not_configured', IDENTITY_SAVE_FAILED);
+    // One call, as the signed-in person: both values are saved together or not at all.
+    const { error } = await client.rpc('set_my_identity', {
+      p_full_name: identity.fullName === null ? null : identity.fullName.trim(),
+      p_date_of_birth: identity.dateOfBirth,
+    });
+    if (error) throw identityError(error, IDENTITY_SAVE_FAILED);
+    return { fullName: identity.fullName === null ? null : identity.fullName.trim(), dateOfBirth: identity.dateOfBirth };
   },
 };
 
