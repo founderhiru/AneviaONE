@@ -4,7 +4,7 @@ import { buildChanges } from '../changes.ts';
 import { createHealthMemoryHandler } from '../handler.ts';
 import { buildHealthMemory } from '../memory.ts';
 import { loadTrustedRecords, type TrustedRecord } from '../records.ts';
-import { buildTimeline } from '../timeline.ts';
+import { buildTimeline, NEUTRAL_REPORT_LABEL } from '../timeline.ts';
 import { buildTrends, describe } from '../trends.ts';
 import { DOCS, MemorySource, OTHER, USER } from './fixtures.ts';
 
@@ -47,7 +47,7 @@ Deno.test('trends: direction only when every step agrees; duplicates merged', ()
   assertEquals(describe([p('2026-01-01', 2)], null).direction, 'insufficient_data');
 
   const rec = (id: string, doc: string, date: string, v: number): TrustedRecord => ({
-    id, kind: 'observation', name: 'HbA1c', key: 'hba1c', date, dateSource: 'report', value: String(v), unit: '%', valueNumeric: v, unitNormalized: '%', referenceRange: null,
+    id, kind: 'observation', name: 'HbA1c', key: 'hba1c', date, dateSource: 'report', value: String(v), unit: '%', valueNumeric: v, unitNormalized: '%', referenceRange: null, category: null,
     evidence: { documentId: doc, documentName: doc, reportDate: date, pageNumber: 1, sourceText: null, confidence: 1, extractionRunId: null },
   });
   const [t] = buildTrends([rec('x1', 'd1', '2026-01-01', 6), rec('x2', 'd2', '2026-01-01', 6), rec('x3', 'd3', '2026-02-01', 7)]);
@@ -57,13 +57,16 @@ Deno.test('trends: direction only when every step agrees; duplicates merged', ()
 
 Deno.test('timeline: report events by date, own-dated vaccination separate, undated last', async () => {
   const timeline = buildTimeline(await load());
+  // Ordinary single-date reports keep their dates. Their results carry no
+  // classified area, so they are labelled neutrally — never by file name.
   assertEquals(timeline.map((e) => [e.type, e.date, e.title]), [
-    ['report', '2026-09-15', 'Report C.pdf'],
-    ['report', '2026-06-10', 'Report B.pdf'],
-    ['report', '2026-03-12', 'Report A.pdf'],
+    ['report', '2026-09-15', NEUTRAL_REPORT_LABEL],
+    ['report', '2026-06-10', NEUTRAL_REPORT_LABEL],
+    ['report', '2026-03-12', NEUTRAL_REPORT_LABEL],
     ['immunization', '2025-11-02', 'Influenza vaccine'],
-    ['report', null, 'Undated note.pdf'],
+    ['report', null, NEUTRAL_REPORT_LABEL],
   ]);
+  assertEquals(timeline.find((e) => e.date === '2026-09-15')!.evidence[0].documentName, 'Report C.pdf'); // still traceable
   assertEquals(timeline[0].summary, '3 test results · 2 medications · 1 allergy · 1 procedure');
   for (const e of timeline) assertEquals(e.recordIds.length > 0 && e.evidence.length > 0, true);
 });
@@ -135,4 +138,72 @@ Deno.test('handler: 401 without a JWT; reads only as the caller', async () => {
   assertEquals(other.memory.medications.map((m: { name: string }) => m.name), ['Insulin']);
   const mine = await (await call('jwt-user')).json();
   assertEquals(JSON.stringify(mine).includes('Insulin'), false);
+});
+
+// --------------------------------------- timeline dates: records over report --
+
+/** A trusted result as records.ts builds it: its own date, else the report's date. */
+function result(id: string, opts: { doc?: string; own?: string | null; reportDate?: string | null; category?: string | null } = {}): TrustedRecord {
+  const { doc = 'scan', own = null, reportDate = null, category = 'urine' } = opts;
+  const dated = own ? { date: own, dateSource: 'record' as const } : reportDate ? { date: reportDate, dateSource: 'report' as const } : { date: null, dateSource: null };
+  return {
+    id, kind: 'observation', name: `Test ${id}`, key: `test${id}`, ...dated, value: '1', unit: null, valueNumeric: 1, unitNormalized: null, referenceRange: null, category,
+    evidence: { documentId: doc, documentName: 'Scanned document 2026-10-07 20.04.pdf', reportDate, pageNumber: 5, sourceText: 'x', confidence: 0.95, extractionRunId: 'run' },
+  };
+}
+
+Deno.test('timeline: results dated 06 Oct in a document whose report date is 05 Oct → the event is 06 Oct', () => {
+  // A scan holding several report sections: the document's single report date
+  // (05 Oct) came from another section; the trusted results here are 06 Oct.
+  const urine = Array.from({ length: 14 }, (_, i) => result(`u${i}`, { own: '2026-10-06', reportDate: '2026-10-05' }));
+  const events = buildTimeline(urine);
+  assertEquals(events.length, 1);
+  const [event] = events;
+  assertEquals([event.id, event.date, event.title, event.summary], ['report:scan', '2026-10-06', 'Urine tests', '14 test results']);
+  assertEquals(event.recordIds.length, 14);
+});
+
+Deno.test('timeline: results without their own date fall back to the report date', () => {
+  const events = buildTimeline([result('a', { reportDate: '2026-10-05' }), result('b', { reportDate: '2026-10-05' })]);
+  assertEquals(events.map((e) => [e.id, e.date]), [['report:scan', '2026-10-05']]);
+});
+
+Deno.test('timeline: a multi-report scan gives one event per date — never all results under the report date', () => {
+  // Blood pages sampled 05 Oct (= the document's report date), urine page sampled 06 Oct,
+  // plus a result with no own date (falls back to the report date).
+  const recs = [
+    result('b1', { own: '2026-10-05', reportDate: '2026-10-05', category: 'laboratory' }),
+    result('b2', { own: '2026-10-05', reportDate: '2026-10-05', category: 'laboratory' }),
+    result('u1', { own: '2026-10-06', reportDate: '2026-10-05' }),
+    result('u2', { own: '2026-10-06', reportDate: '2026-10-05' }),
+    result('n1', { reportDate: '2026-10-05', category: 'laboratory' }),
+  ];
+  // Deterministic whatever order the records arrive in.
+  for (const order of [recs, [...recs].reverse(), [recs[2], recs[4], recs[0], recs[3], recs[1]]]) {
+    assertEquals(
+      buildTimeline(order).map((e) => [e.id, e.date, e.title, e.summary, e.recordIds]),
+      [
+        ['report:scan:2026-10-06', '2026-10-06', 'Urine tests', '2 test results', ['u1', 'u2']],
+        ['report:scan:2026-10-05', '2026-10-05', 'Lab tests', '3 test results', ['b1', 'b2', 'n1']],
+      ],
+    );
+  }
+});
+
+Deno.test('timeline: dated and undated records in one document → a dated event and an undated one last', () => {
+  const events = buildTimeline([result('a', { own: '2026-10-06' }), result('b')]);
+  assertEquals(events.map((e) => [e.id, e.date]), [['report:scan:2026-10-06', '2026-10-06'], ['report:scan:undated', null]]);
+});
+
+Deno.test('timeline: no own date and no report date → undated, never invented', () => {
+  const events = buildTimeline([result('a'), result('b')]);
+  assertEquals(events.map((e) => [e.id, e.date]), [['report:scan', null]]);
+});
+
+Deno.test('timeline labels: one classified area names the event; unclassified or "other" is neutral', () => {
+  const label = (category: string | null) => buildTimeline([result('a', { own: '2026-10-06', category })])[0].title;
+  assertEquals(label('urine'), 'Urine tests');
+  assertEquals(label('laboratory'), 'Lab tests');
+  assertEquals(label('other'), NEUTRAL_REPORT_LABEL);
+  assertEquals(label(null), NEUTRAL_REPORT_LABEL);
 });

@@ -1,9 +1,22 @@
 /**
- * Timeline — one event per report (dated by its printed report date, else
- * its records' dates) plus separate events for procedures, vaccinations and
- * visits whose own date differs from their report's date. Every event lists
- * the trusted records behind it. Missing dates are never invented: undated
- * events are returned last, flagged `date: null`.
+ * Timeline — report events plus separate events for procedures, vaccinations
+ * and visits whose own date differs from their report's date. Every event
+ * lists the trusted records behind it.
+ *
+ * Report events are dated by the records they summarise. Each record's date
+ * is its own (a result's sample/test date), else its document's printed
+ * report date, else none (records.ts). A document's records are grouped by
+ * that date: one event per date. An upload holding several report sections
+ * (e.g. blood tests sampled 05 Oct and a urine test sampled 06 Oct) gives one
+ * event per section date — never every result under the document's single
+ * report date. A document whose records share one date keeps a single event
+ * with its usual id; extra date groups get the date appended to the id.
+ * Missing dates are never invented: undated events are returned last,
+ * flagged `date: null`.
+ *
+ * A report event is labelled by the health area of its results when they
+ * all share one classified area (e.g. "Urine tests"), else "Health report" —
+ * never by the uploaded file's technical name (still in `evidence`).
  */
 
 import type { Evidence, TrustedRecord } from './records.ts';
@@ -31,6 +44,24 @@ const NOUNS: Record<TrustedRecord['kind'], [string, string]> = {
   immunization: ['vaccination', 'vaccinations'],
   encounter: ['visit', 'visits'],
 };
+/** Areas named only from the classification stored with each result; "other" is not an area. */
+const AREA_LABELS: Record<string, string> = {
+  laboratory: 'Lab tests',
+  urine: 'Urine tests',
+  vital_sign: 'Vital signs',
+  imaging: 'Imaging',
+};
+export const NEUTRAL_REPORT_LABEL = 'Health report';
+
+/** "Urine tests" when every result is in that one area; otherwise the neutral label. */
+function reportLabel(records: TrustedRecord[]): string {
+  const observations = records.filter((r) => r.kind === 'observation');
+  if (observations.length === 0) return NEUTRAL_REPORT_LABEL;
+  const areas = new Set(observations.map((r) => AREA_LABELS[r.category ?? ''] ?? null));
+  const [only] = [...areas];
+  return areas.size === 1 && only ? only : NEUTRAL_REPORT_LABEL;
+}
+
 const KIND_ORDER: TrustedRecord['kind'][] = ['observation', 'medication', 'condition', 'allergy', 'procedure', 'immunization', 'encounter'];
 
 function countSummary(records: TrustedRecord[]): string {
@@ -54,19 +85,20 @@ export function buildTimeline(records: TrustedRecord[]): TimelineEvent[] {
   }
 
   for (const [docId, recs] of byDoc) {
-    const first = recs[0];
-    const ownDates = recs.map((r) => r.date).filter((d): d is string => d !== null).sort();
-    const date = first.evidence.reportDate ?? ownDates[ownDates.length - 1] ?? null;
-    events.push({
-      id: `report:${docId}`,
-      type: 'report',
-      date,
-      title: first.evidence.documentName ?? 'Report',
-      summary: countSummary(recs),
-      documentId: docId,
-      recordIds: recs.map((r) => r.id).sort(),
-      evidence: [first.evidence],
-    });
+    const byDate = new Map<string | null, TrustedRecord[]>();
+    for (const r of recs) byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]);
+    for (const [date, group] of byDate) {
+      events.push({
+        id: byDate.size === 1 ? `report:${docId}` : `report:${docId}:${date ?? 'undated'}`,
+        type: 'report',
+        date,
+        title: reportLabel(group),
+        summary: countSummary(group),
+        documentId: docId,
+        recordIds: group.map((r) => r.id).sort(),
+        evidence: [group[0].evidence],
+      });
+    }
   }
 
   for (const r of separate) {
