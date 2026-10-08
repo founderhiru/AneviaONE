@@ -20,4 +20,11 @@ export interface DocumentsService {
   uploadDocument(file: PickedFile, onStage?: (stage: UploadStage) => void): Promise<UploadResult>;
   /** A short-lived URL for viewing the original. Never a permanent/public URL. */
   getOriginalDocumentUrl(document: StoredDocument): Promise<string>;
+  /**
+   * Deletes one of the signed-in user's documents on the server: the stored
+   * original and the health information read from it (anything another of
+   * their documents also supports is kept). Resolves only once it is gone;
+   * otherwise throws — the document is never reported as deleted early.
+   */
+  deleteDocument(id: string): Promise<void>;
 }

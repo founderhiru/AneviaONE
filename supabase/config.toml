@@ -18,3 +18,8 @@ import_map = "./functions/deno.json"
 [functions.ask-health]
 verify_jwt = true
 import_map = "./functions/deno.json"
+
+# Phase B: a person deletes one of their documents (ownership checked server-side).
+[functions.delete-document]
+verify_jwt = true
+import_map = "./functions/deno.json"

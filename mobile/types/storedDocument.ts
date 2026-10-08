@@ -14,7 +14,9 @@ export type DocumentStatus =
   | 'extracted'
   | 'validated'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  /** Deletion started on the server but hasn't finished (retryable). */
+  | 'deleting';
 
 /** Mirrors `public.document_type`. */
 export type StoredDocumentType = 'unclassified' | 'blood_test' | 'other';

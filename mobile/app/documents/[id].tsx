@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -45,9 +45,12 @@ function StoredDocumentView({ id }: { id: string }) {
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [results, setResults] = useState<RecordedObservation[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // Uploaded PDFs and camera scans are both read on the server — straight
   // away (consent first if it isn't recorded); "Read again" is the only button.
-  const reading = useReadReport(document ? id : null, { autoStart: true });
+  // A document whose deletion didn't finish is never read again.
+  const reading = useReadReport(document && document.status !== 'deleting' ? id : null, { autoStart: true });
   const phase = reading.view.kind === 'state' ? reading.view.state.phase : null;
 
   const load = useCallback(
@@ -87,6 +90,30 @@ function StoredDocumentView({ id }: { id: string }) {
     } finally {
       setOpening(false);
     }
+  }
+
+  async function deleteDocument() {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      await documentsService.deleteDocument(id);
+      router.replace({ pathname: '/documents', params: { deleted: '1' } });
+    } catch (error) {
+      setDeleteError(error instanceof ServiceError ? error.userMessage : GENERIC_ERROR_MESSAGE);
+      setDeleting(false);
+      load(true); // the status may now read "Deletion not finished"
+    }
+  }
+
+  function confirmDelete() {
+    Alert.alert(
+      'Delete this health record?',
+      'This will remove the uploaded document and the health information extracted from it.\n\nThis action can’t be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: deleteDocument },
+      ],
+    );
   }
 
   if (loadError) {
@@ -192,6 +219,40 @@ function StoredDocumentView({ id }: { id: string }) {
           {openError}
         </Text>
       ) : null}
+
+      {/* Kept apart at the very end, behind a confirmation — never on the list. */}
+      <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.xs }}>
+        <Pressable
+          onPress={deleting ? undefined : confirmDelete}
+          accessibilityRole="button"
+          accessibilityLabel="Delete document"
+          accessibilityState={{ disabled: deleting, busy: deleting }}
+          testID="delete-document"
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: theme.spacing.xs,
+            minHeight: theme.minTouchTarget,
+            borderRadius: theme.radius.md,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            opacity: pressed || deleting ? 0.7 : 1,
+          })}
+        >
+          {deleting ? (
+            <ActivityIndicator size="small" color={theme.colors.danger} />
+          ) : (
+            <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+          )}
+          <Text style={[theme.typography.labelLarge, { color: theme.colors.danger }]}>{deleting ? 'Deleting…' : 'Delete document'}</Text>
+        </Pressable>
+        {deleteError ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite" testID="delete-error">
+            {deleteError}
+          </Text>
+        ) : null}
+      </View>
     </ScreenContainer>
   );
 }

@@ -50,6 +50,11 @@ export const DOCUMENT_STATUS_PRESENTATION: Record<DocumentStatus, DocumentStatus
     description: 'Your original is still stored safely, but we couldn’t read it yet.',
     tone: 'danger',
   },
+  deleting: {
+    label: 'Deletion not finished',
+    description: 'We started deleting this report but couldn’t finish. Try deleting it again.',
+    tone: 'warning',
+  },
 };
 
 export const NEEDS_REVIEW_PRESENTATION: DocumentStatusPresentation = {
@@ -90,9 +95,9 @@ export function isListedStatus(status: DocumentStatus): boolean {
   return status !== 'pending_upload';
 }
 
-/** The original file is confirmed stored and can be opened. */
+/** The original file is confirmed stored and can be opened (not while it is being deleted). */
 export function hasStoredOriginal(status: DocumentStatus): boolean {
-  return status !== 'pending_upload';
+  return status !== 'pending_upload' && status !== 'deleting';
 }
 
 /** Server-side reading is running. */

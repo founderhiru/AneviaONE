@@ -22,6 +22,8 @@ const ALLOWED_KEYS = new Set([
   'facts_discarded',
   'facts_duplicate',
   'facts_rejected',
+  'facts_removed',
+  'facts_kept',
   'duration_ms',
   'model',
   'pipeline_version',

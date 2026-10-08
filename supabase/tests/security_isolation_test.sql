@@ -238,6 +238,32 @@ begin
       format('delete from storage.objects where name = %L', doc_a.storage_path));
   end if;
 
+  -- Phase B · deletion is a server-only flow (delete-document Edge Function).
+  perform pg_temp.expect_blocked('B cannot start deleting A''s document',
+    format('select public.engine_begin_document_deletion(%L, %L)', doc_a.id, user_a));
+  perform pg_temp.expect_blocked('B cannot run a deletion of A''s document',
+    format('select public.engine_delete_document(%L, %L)', doc_a.id, user_a));
+  perform pg_temp.expect_blocked('B cannot move A''s document to deleting',
+    format($q$update public.documents set status = 'deleting' where id = %L$q$, doc_a.id));
+  perform pg_temp.expect_count('B cannot see any of A''s fact sources', 'select * from public.fact_sources', 0);
+  perform pg_temp.expect_blocked('B cannot write fact sources',
+    format($q$insert into public.fact_sources (user_id, fact_table, fact_id, document_id, document_page_id, extraction_run_id,
+              source_text, confidence, confidence_gate)
+              values (%L, 'observations', gen_random_uuid(), %L, gen_random_uuid(), gen_random_uuid(), 'x', 0.9, 'passed')$q$,
+           user_b, doc_a.id));
+  reset role; perform pg_temp.act_as_admin();
+
+  perform pg_temp.act_as(user_a);
+  perform pg_temp.expect_blocked('A cannot move their own document to deleting from the app',
+    format($q$update public.documents set status = 'deleting' where id = %L$q$, doc_a.id));
+  perform pg_temp.expect_blocked('A cannot call the server deletion functions from the app',
+    format('select public.engine_begin_document_deletion(%L, %L)', doc_a.id, user_a));
+  reset role; perform pg_temp.act_as_admin();
+
+  perform pg_temp.act_as(null, 'anon');
+  perform pg_temp.expect_blocked('anonymous callers cannot read fact sources', 'select * from public.fact_sources');
+  perform pg_temp.expect_blocked('anonymous callers cannot start a deletion',
+    format('select public.engine_begin_document_deletion(%L, %L)', doc_a.id, user_a));
   reset role; perform pg_temp.act_as_admin();
 
   -- ------------------------------------------------ server (service role) ---

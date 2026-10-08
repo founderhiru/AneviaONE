@@ -54,6 +54,10 @@ echo "▸ Running Gate 1 engine test (consent, claim/retry, idempotency, confide
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/gate1_engine_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 
+echo "▸ Running document deletion test (ownership, source integrity, idempotency, audit)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/document_deletion_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   echo "▸ Running health data model integrity & isolation test (proposed schema)"
   PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \

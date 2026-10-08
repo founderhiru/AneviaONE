@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
-import { View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { EmptyState, ErrorState, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
 import { StoredDocumentCard } from '../../components/StoredDocumentCard';
@@ -12,6 +13,8 @@ import type { StoredDocument } from '../../types';
 /** The signed-in user's real stored originals (reloaded whenever shown). */
 export default function MyDocumentsScreen() {
   const theme = useTheme();
+  // Arrived here straight after deleting a document.
+  const { deleted } = useLocalSearchParams<{ deleted?: string }>();
   const [documents, setDocuments] = useState<StoredDocument[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +36,17 @@ export default function MyDocumentsScreen() {
   return (
     <ScreenContainer>
       <ScreenHeader title="My documents" onBack={() => router.back()} />
+
+      {deleted === '1' ? (
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}
+          accessibilityLiveRegion="polite"
+          testID="document-deleted-notice"
+        >
+          <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>Health record deleted.</Text>
+        </View>
+      ) : null}
 
       {error ? (
         <ErrorState description={error} onRetry={load} />

@@ -83,6 +83,11 @@ export const demoDocumentsService: DocumentsService = {
     return { document, processing: sampleProcessingSummary() };
   },
 
+  async deleteDocument(id) {
+    if (!documents.delete(id)) throw new ServiceError('not_found', 'We couldn’t find this document.');
+    localUris.delete(id);
+  },
+
   async getOriginalDocumentUrl(document) {
     const uri = localUris.get(document.id);
     if (!uri) throw new ServiceError('not_found', 'This demo file is no longer available.');
