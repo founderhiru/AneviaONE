@@ -160,6 +160,39 @@ function diagnose(stage: string, error: unknown) {
   console.warn(`[auth] ${stage} failed`, { diagnosticCode: oauthDiagnosticCode(error), name: e.name, code: e.code, status: e.status, message: e.message });
 }
 
+const SIGN_OUT_SERVER_TIMEOUT_MS = 3000;
+const GOOGLE_SIGN_OUT_TIMEOUT_MS = 2000;
+const TIMED_OUT = Symbol('timed out');
+
+/** Resolves with `promise`'s value, or TIMED_OUT after `ms` (the promise is left to settle on its own). */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Deletes this device's stored session directly from the auth client's own
+ * storage (the Keychain adapter in the app), without a network round-trip.
+ * supabase-js only clears it after reading the session — which, for an
+ * expired token, means refreshing it over the network first; offline, that
+ * fails and the session is left in place. The keys are the client's own
+ * (`storageKey`, plus its `-user` and `-code-verifier` companions).
+ */
+async function removeStoredSession(client: SupabaseClient): Promise<void> {
+  const auth = client.auth as unknown as { storageKey?: string; storage?: { removeItem(key: string): Promise<void> | void } };
+  if (!auth.storageKey || !auth.storage) return;
+  for (const key of [auth.storageKey, `${auth.storageKey}-user`, `${auth.storageKey}-code-verifier`]) {
+    try {
+      await auth.storage.removeItem(key);
+    } catch (error) {
+      diagnose('sign-out:clear', error);
+    }
+  }
+}
+
 /** The friendly OAuth failure, plus a safe code for diagnosing it. */
 function oauthFailure(error: unknown): { success: false; errorMessage: string; diagnosticCode: string } {
   return { success: false, errorMessage: authErrorMessage(error as Error, 'oauth'), diagnosticCode: oauthDiagnosticCode(error) };
@@ -430,17 +463,26 @@ export const supabaseAuthService: AuthService = {
   async signOut() {
     const client = getSupabaseClient();
     if (!client) return;
-    // Even if the server can't be reached (or the call throws), always end
-    // the session on this device so the next sign-in starts clean.
+    // No background token refresh may write the session back mid-sign-out.
+    await client.auth.stopAutoRefresh();
     try {
-      const { error } = await client.auth.signOut();
-      if (error) throw error;
+      // Tell the server (revokes this session's refresh token). Best-effort
+      // and time-limited: on a lost network supabase-js first retries
+      // refreshing an expired token for ~30s, and a request that never
+      // answers would otherwise hold sign-out forever.
+      const result = await withTimeout(client.auth.signOut(), SIGN_OUT_SERVER_TIMEOUT_MS);
+      if (result === TIMED_OUT) diagnose('sign-out', new Error('sign-out timed out'));
+      else if (result.error) diagnose('sign-out', result.error);
     } catch (error) {
       diagnose('sign-out', error);
-      await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
     }
-    // Also end Google's own sign-in on this device (best-effort), so the next
-    // Google sign-in can choose an account rather than silently reusing one.
-    await signOutOfGoogle();
+    // Whatever the server said, nothing of the session may remain on this
+    // device — otherwise the next launch silently signs the person back in.
+    await removeStoredSession(client);
+    // Also end Google's own sign-in on this device (best-effort, bounded), so
+    // the next Google sign-in can choose an account rather than reusing one.
+    await withTimeout(signOutOfGoogle(), GOOGLE_SIGN_OUT_TIMEOUT_MS);
+    // Token refresh resumes for whoever signs in next (nothing to refresh now).
+    await client.auth.startAutoRefresh();
   },
 };

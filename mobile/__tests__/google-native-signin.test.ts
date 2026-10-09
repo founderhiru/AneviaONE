@@ -67,6 +67,9 @@ function fakeClient({ onboarded = true }: { onboarded?: boolean } = {}) {
         state.session = null;
         return { error: null };
       }),
+      // Real supabase-js auth methods that sign-out pauses/resumes.
+      stopAutoRefresh: jest.fn(async () => undefined),
+      startAutoRefresh: jest.fn(async () => undefined),
       // Must never be used by Google sign-in any more.
       signInWithOAuth: jest.fn(),
       exchangeCodeForSession: jest.fn(),
