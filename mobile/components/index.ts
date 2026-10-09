@@ -11,6 +11,7 @@ export * from './EvidenceLink';
 export * from './FadeInView';
 export * from './HealthChangeCard';
 export * from './HealthHistoryLine';
+export * from './IdentityFields';
 export * from './LoadingState';
 export * from './Modal';
 export * from './OtpInput';

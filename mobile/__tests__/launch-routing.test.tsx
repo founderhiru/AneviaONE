@@ -17,6 +17,8 @@ const baseUser: User = {
   email: 'priya@example.com',
   createdAt: '2026-09-29T10:00:00Z',
   onboardingComplete: true,
+  identityOnboardingComplete: true,
+  identityUploadPromptSeen: true,
   linkedIdentities: [],
 };
 

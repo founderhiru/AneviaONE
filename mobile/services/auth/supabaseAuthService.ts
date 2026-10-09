@@ -1,6 +1,6 @@
 import type { AuthError, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 
-import type { AuthProvider, LinkedIdentity, User } from '../../types';
+import type { AuthProvider, LinkedIdentity, OnboardingFlags, User } from '../../types';
 import { isNetworkError, ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { appleFullName, isApplePrivateRelayEmail, isValidEmail, maskEmail, normalizeEmail, normalizeMobileNumber } from './authInput';
@@ -28,6 +28,12 @@ const EMAIL_LINK_FAILED =
   'This sign-in link has expired, was already used, or was opened on a different device. Enter the 6-digit code from the email instead, or request a new one.';
 const APPLE_UNAVAILABLE = 'Sign in with Apple isn’t available on this device.';
 const GOOGLE_UNAVAILABLE = 'Sign in with Google isn’t available in this version of the app.';
+
+/** user_metadata keys for the one-time onboarding steps. */
+const ONBOARDING_FLAG_KEYS: Record<keyof OnboardingFlags, string> = {
+  identityOnboardingComplete: 'identity_onboarding_complete',
+  identityUploadPromptSeen: 'identity_upload_prompt_seen',
+};
 
 type ProfileRow = { onboarding_completed_at: string | null; display_name: string | null };
 
@@ -64,6 +70,10 @@ export function toDomainUser(supabaseUser: SupabaseUser, profile: ProfileRow | n
     // Source of truth is profiles.onboarding_completed_at; the user_metadata
     // mirror lets an offline cold start route correctly.
     onboardingComplete: Boolean(profile?.onboarding_completed_at) || Boolean(supabaseUser.user_metadata?.onboarding_complete),
+    // One-time UX steps, kept in the account's metadata (no schema change):
+    // they only decide whether a note is shown, never what is trusted.
+    identityOnboardingComplete: Boolean(supabaseUser.user_metadata?.[ONBOARDING_FLAG_KEYS.identityOnboardingComplete]),
+    identityUploadPromptSeen: Boolean(supabaseUser.user_metadata?.[ONBOARDING_FLAG_KEYS.identityUploadPromptSeen]),
     linkedIdentities,
   };
 }
@@ -389,6 +399,21 @@ export const supabaseAuthService: AuthService = {
     }
     // Mirror for offline cold starts; failure here is harmless.
     await client.auth.updateUser({ data: { onboarding_complete: true } }).catch(() => undefined);
+  },
+
+  async saveOnboardingFlags(flags) {
+    const client = getSupabaseClient();
+    if (!client) throw new ServiceError('not_configured', NOT_CONFIGURED);
+    const data: Record<string, true> = {};
+    for (const key of Object.keys(flags) as (keyof OnboardingFlags)[]) {
+      if (flags[key]) data[ONBOARDING_FLAG_KEYS[key]] = true;
+    }
+    if (Object.keys(data).length === 0) return;
+    // Merged into the existing metadata; nothing else about the account changes.
+    const { error } = await client.auth.updateUser({ data });
+    if (error) {
+      throw toServiceError(error, { code: 'save_failed', userMessage: 'We couldn’t save your progress. Please try again.', retryable: true });
+    }
   },
 
   onSignedOut(listener) {

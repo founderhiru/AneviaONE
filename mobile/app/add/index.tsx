@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   ErrorState,
+  LoadingState,
   ProcessingState,
   READING_COPY,
   ReadReportPanel,
@@ -16,7 +17,9 @@ import {
   SuccessCheck,
   type ProcessingStep,
 } from '../../components';
+import { BRAND } from '../../config/brand';
 import { useTheme } from '../../design/theme';
+import { useAuth } from '../../hooks/useAuth';
 import { useReadReport } from '../../hooks/useReadReport';
 import { useSingleFlight } from '../../hooks/useSingleFlight';
 import {
@@ -31,6 +34,7 @@ import {
   type PageResult,
 } from '../../services/documents/capture';
 import { DOCUMENT_STATUS_PRESENTATION, documentsService } from '../../services/documents/documentsService';
+import { profileService } from '../../services/profile/profileService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
 import type { PickedFile, StoredDocument, UploadResult, UploadStage } from '../../types';
 
@@ -79,12 +83,41 @@ const STAGE_ORDER: UploadStage[] = ['validating', 'uploading', 'saving'];
  */
 export default function AddRecordScreen() {
   const theme = useTheme();
+  const { user, markOnboardingFlags } = useAuth();
   const [step, setStep] = useState<FlowStep>('choose');
+  // The identity note is offered once, before the first upload, to someone
+  // who hasn't added a name or date of birth. It never blocks adding a record.
+  const [identityHint, setIdentityHint] = useState<'unknown' | 'show' | 'done'>('unknown');
+  const checkingIdentity = Boolean(user && !user.identityUploadPromptSeen) && identityHint === 'unknown';
   const [stage, setStage] = useState<UploadStage>('validating');
   const [result, setResult] = useState<UploadResult | null>(null);
   const [failure, setFailure] = useState<{ message: string; retryable: boolean } | null>(null);
   const [pickedFile, setPickedFile] = useState<PickedFile | null>(null);
   const captureOnce = useSingleFlight();
+
+  useEffect(() => {
+    if (!checkingIdentity) return;
+    let active = true;
+    profileService
+      .getMyIdentity()
+      .then((identity) => {
+        if (!active) return;
+        setIdentityHint(!identity.fullName && !identity.dateOfBirth ? 'show' : 'done');
+        // Shown or not needed, it is never offered again.
+        markOnboardingFlags({ identityUploadPromptSeen: true });
+      })
+      // Couldn't tell: go straight on, and offer it another time.
+      .catch(() => active && setIdentityHint('done'));
+    return () => {
+      active = false;
+    };
+  }, [checkingIdentity, markOnboardingFlags]);
+
+  function addIdentityDetails() {
+    // Identity details opens over this screen; Back returns here to upload.
+    setIdentityHint('done');
+    router.push('/profile/identity');
+  }
 
   async function upload(file: PickedFile) {
     setPickedFile(file);
@@ -166,6 +199,36 @@ export default function AddRecordScreen() {
     Alert.alert(
       'Add manually',
       'Manually entering a record without a document is coming soon. For now, upload a report to add it to your Health Memory.'
+    );
+  }
+
+  if (step === 'choose' && checkingIdentity) {
+    return (
+      <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'center' }}>
+        <LoadingState />
+      </ScreenContainer>
+    );
+  }
+
+  if (step === 'choose' && identityHint === 'show') {
+    return (
+      <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'space-between' }}>
+        <ScreenHeader title="Add Health Record" />
+        <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.sm }} testID="identity-upload-hint">
+          <Ionicons name="person-circle-outline" size={40} color={theme.colors.brandPrimary} />
+          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
+            Help us recognize your record
+          </Text>
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
+            Adding your full name and date of birth can help {BRAND.productName} determine whether a health record
+            belongs to you.
+          </Text>
+        </View>
+        <View style={{ gap: theme.spacing.sm }}>
+          <Button label="Add identity details" onPress={addIdentityDetails} testID="identity-hint-add" />
+          <SecondaryButton label="Continue without them" onPress={() => setIdentityHint('done')} testID="identity-hint-continue" />
+        </View>
+      </ScreenContainer>
     );
   }
 
@@ -260,7 +323,7 @@ export default function AddRecordScreen() {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="Add Health Record" onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/home'))} />
+      <ScreenHeader title="Add Health Record" />
       <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>
         Add a report, prescription or scan. It&rsquo;s stored privately in your Health Memory.
       </Text>
