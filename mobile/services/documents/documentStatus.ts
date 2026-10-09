@@ -84,18 +84,31 @@ export const HELD_FOR_REVIEW_PRESENTATION: DocumentStatusPresentation = {
   tone: 'warning',
 };
 
+/** Read, but whose report it is couldn't be established — every result is held. */
+export const IDENTITY_UNCONFIRMED_PRESENTATION: DocumentStatusPresentation = {
+  label: 'Needs review',
+  description:
+    'Results were read, but we couldn’t confirm this report is yours, so they aren’t in your Health Memory yet. Your original is stored safely.',
+  tone: 'warning',
+};
+
+/** Identity outcomes that hold a report's results for review (see the health engine's identity check). */
+const IDENTITY_HELD = new Set(['no_identifiers', 'unverifiable']);
+
 /** Presentation for one document, including the "Needs review" cases. */
 export function presentDocumentStatus(document: {
   status: DocumentStatus;
   failureKind?: string | null;
   healthInfoCount?: number | null;
   heldForReviewCount?: number | null;
+  identityCheck?: string | null;
 }): DocumentStatusPresentation {
   if (document.status === 'failed' && document.failureKind === 'identity_mismatch') return NEEDS_REVIEW_PRESENTATION;
   if (document.status === 'completed' && typeof document.healthInfoCount === 'number') {
     if (document.healthInfoCount > 0) return ADDED_PRESENTATION;
     // Never "nothing found" when results were found but are held for review.
-    return (document.heldForReviewCount ?? 0) > 0 ? HELD_FOR_REVIEW_PRESENTATION : NO_HEALTH_INFO_PRESENTATION;
+    if ((document.heldForReviewCount ?? 0) === 0) return NO_HEALTH_INFO_PRESENTATION;
+    return IDENTITY_HELD.has(document.identityCheck ?? '') ? IDENTITY_UNCONFIRMED_PRESENTATION : HELD_FOR_REVIEW_PRESENTATION;
   }
   return DOCUMENT_STATUS_PRESENTATION[document.status];
 }

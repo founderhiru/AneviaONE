@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, ScreenHeader, SecondaryButton, StatusBadge } from '../../components';
 import { isDemoMode } from '../../config/appMode';
 import { useTheme } from '../../design/theme';
 import { useReadReport } from '../../hooks/useReadReport';
 import { loadDemoServices } from '../../services/demo/demoServices';
 import {
+  IDENTITY_UNCONFIRMED_PRESENTATION,
   presentDocumentStatus,
   documentsService,
   formatFileSize,
@@ -174,6 +175,14 @@ function StoredDocumentView({ id }: { id: string }) {
         <View style={{ gap: theme.spacing.xs }}>
           <StatusBadge label={presentation.label} tone={presentation.tone} />
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{presentation.description}</Text>
+          {presentation === IDENTITY_UNCONFIRMED_PRESENTATION ? (
+            <>
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]} testID="identity-held-hint">
+                Adding your full name and date of birth helps us recognize your reports.
+              </Text>
+              <SecondaryButton label="Add identity details" onPress={() => router.push('/profile/identity')} testID="identity-held-add" />
+            </>
+          ) : null}
         </View>
       </Card>
 

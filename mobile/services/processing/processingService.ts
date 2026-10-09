@@ -17,7 +17,9 @@ export type ProcessingState =
    * automatically (any status other than `uploaded`). */
   | { phase: 'not_started'; awaitingRead?: false }
   | { phase: 'processing' }
-  | { phase: 'ready'; resultsAdded: number; needsReview: number; alreadyInMemory: number }
+  /** `identityUnconfirmed`: results are held because the report couldn't be
+   * matched to the person (it names no one, or only weakly), not for clarity. */
+  | { phase: 'ready'; resultsAdded: number; needsReview: number; alreadyInMemory: number; identityUnconfirmed?: boolean }
   | { phase: 'failed'; reason: FailureKind | null; message: string; canRetry: boolean }
   /** The report may belong to someone else: nothing was added; the person decides. */
   | { phase: 'needs_review'; message: string };
@@ -75,6 +77,7 @@ type DocumentStateRow = {
   failure_kind: FailureKind | null;
   processing_error: string | null;
   processing_attempts: number | null;
+  identity_check?: string | null;
 };
 
 export function toProcessingState(
@@ -91,7 +94,14 @@ export function toProcessingState(
     case 'completed': {
       const written = run?.facts_written ?? 0;
       const review = run?.facts_needs_review ?? 0;
-      return { phase: 'ready', resultsAdded: written - review, needsReview: review, alreadyInMemory: run?.facts_duplicate ?? 0 };
+      const identityUnconfirmed = row.identity_check === 'no_identifiers' || row.identity_check === 'unverifiable';
+      return {
+        phase: 'ready',
+        resultsAdded: written - review,
+        needsReview: review,
+        alreadyInMemory: run?.facts_duplicate ?? 0,
+        ...(identityUnconfirmed ? { identityUnconfirmed: true } : {}),
+      };
     }
     case 'failed': {
       const reason = row.failure_kind;
@@ -148,7 +158,7 @@ export const supabaseProcessingService: ProcessingService = {
     const client = requireClient();
     const { data: row, error } = await client
       .from('documents')
-      .select('status, failure_kind, processing_error, processing_attempts')
+      .select('status, failure_kind, processing_error, processing_attempts, identity_check')
       .eq('id', documentId)
       .maybeSingle();
     if (error) throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t check this report. Please try again.', retryable: true });
