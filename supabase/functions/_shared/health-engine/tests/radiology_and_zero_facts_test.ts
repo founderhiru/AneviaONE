@@ -71,6 +71,8 @@ const xrayResponse = () => ({
 });
 
 Deno.test('the extraction prompt covers written imaging reports — and never image interpretation', () => {
+  assertEquals(/A quote may run across a line break/.test(EXTRACTION_SYSTEM_PROMPT), true);
+  assertEquals(/Give provider_name and facility_name only if they appear in that same source_text/.test(EXTRACTION_SYSTEM_PROMPT), true);
   assertEquals(/Written imaging reports/.test(EXTRACTION_SYSTEM_PROMPT), true);
   assertEquals(/never the image itself/.test(EXTRACTION_SYSTEM_PROMPT), true);
   assertEquals(/Never list them as conditions/.test(EXTRACTION_SYSTEM_PROMPT), true);
@@ -122,6 +124,7 @@ Deno.test('radiology: findings not written in the report are never stored; negat
   assertEquals(env.db.facts.some((f) => f.kind === 'conditions'), false);
   const [d] = [...env.db.diagnostics.values()];
   assertEquals(d.rejected, { quote_not_on_page: 1, negated: 1 });
+  assertEquals(d.rejected_by_kind, { observations: { quote_not_on_page: 1 }, conditions: { negated: 1 } });
 });
 
 Deno.test('radiology: identity gates still apply — no identity entered, every finding held', async () => {
@@ -176,7 +179,13 @@ Deno.test('zero facts because every candidate failed evidence checks: a clear fa
   assertEquals(doc.status, 'failed');
   assertEquals(doc.failure_kind, 'validation');
   const [d] = [...env.db.diagnostics.values()];
-  assertEquals(d, { candidates: { observations: 2, medications: 0, conditions: 0, allergies: 0, procedures: 0, encounters: 0 }, accepted: 0, discarded: 0, rejected: { value_not_in_quote: 1, quote_not_on_page: 1 } });
+  assertEquals(d, {
+    candidates: { observations: 2, medications: 0, conditions: 0, allergies: 0, procedures: 0, encounters: 0 },
+    accepted: 0,
+    discarded: 0,
+    rejected: { value_not_in_quote: 1, quote_not_on_page: 1 },
+    rejected_by_kind: { observations: { value_not_in_quote: 1, quote_not_on_page: 1 } },
+  });
 });
 
 Deno.test('a report whose only statements are negatives completes normally (not a reading failure)', async () => {
@@ -205,4 +214,22 @@ Deno.test('slash month-name dates: still never impossible, future or guessed', (
   assertEquals(parseDateAsWritten('07/Oct/2026', TODAY), { kind: 'date', iso: '2026-10-07' });
   assertEquals(parseDateAsWritten('Oct/07/2026 10:45 AM', TODAY), { kind: 'date', iso: '2026-10-07' });
   assertEquals(parseDateAsWritten('07/10/2026', TODAY), { kind: 'ambiguous' });
+});
+
+Deno.test('radiology: a quote may run from the label on one line to the statement on the next', async () => {
+  const env = makeContext();
+  env.extractor.respond = () => ({
+    ...xrayResponse(),
+    observations: [
+      // Label "Findings" is on the previous line; the quote spans the line break, in order.
+      imaging('Findings', 'Costophrenic angles are clear.', 'Findings: Both lung fields are clear. Cardiac size is normal.\nCostophrenic angles are clear.'),
+      // The same statement quoted out of order is not on the page: refused.
+      imaging('Findings', 'Bony thorax is normal.', 'Findings: Bony thorax is normal.'),
+    ],
+  });
+  const out = await processPhoto(env, XRAY);
+  assertEquals(out.status, 'completed');
+  assertEquals(env.db.liveObservations().map((f) => [f.row.name_as_written, f.row.value_as_written]), [['Findings', 'Costophrenic angles are clear.']]);
+  const [d] = [...env.db.diagnostics.values()];
+  assertEquals(d.rejected_by_kind, { observations: { quote_not_on_page: 1 } });
 });
