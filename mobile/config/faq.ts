@@ -10,7 +10,7 @@ export type { FaqCategoryId, ResolvedFaqEntry };
 
 /** Named subsets of the mobile FAQ, reachable from the Me screen. */
 export const FAQ_TOPICS = {
-  /** Me → Data & Security: privacy, security and account/data questions. */
+  /** Data & security topic (`/help?topic=data-security`): privacy, security and account/data questions. */
   'data-security': {
     title: 'Data & Security',
     categories: ['health-records', 'privacy-security', 'account-data'] as FaqCategoryId[],

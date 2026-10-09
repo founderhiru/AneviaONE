@@ -356,10 +356,10 @@ describe('Home — B. early user (one report)', () => {
     expect(screen.getByText('Your health at a glance.')).toBeTruthy();
     expect(screen.getByLabelText('1 Report')).toBeTruthy();
     expect(screen.getByLabelText('6 Results')).toBeTruthy();
-    expect(screen.getByLabelText('1 Area')).toBeTruthy();
     expect(screen.getByLabelText('0 Medications')).toBeTruthy();
-    // One area: no area-name line taking up space.
-    expect(screen.queryByTestId('glance-area-names')).toBeNull();
+    // No ambiguous "Areas" figure on Home.
+    expect(screen.queryByTestId('glance-areas')).toBeNull();
+    expect(screen.queryByText(/^Areas?$/)).toBeNull();
   });
 
   it('worth your attention: the result below its printed range, with follow-up wording only', async () => {
@@ -462,13 +462,14 @@ describe('Home — C. established user', () => {
 });
 
 describe('Home — two areas and held results', () => {
-  it('area names appear only when there is more than one area; held-only reports say Needs review', async () => {
+  it('no Areas figure or area names even with several areas; held-only reports say Needs review', async () => {
     const blood = [result('hb', 'Haemoglobin', '13.1', '12 - 15', { category: 'laboratory', documentId: 'blood' })];
     const heldReport = { ...doc('scan', 'Scanned document.pdf'), healthInfoCount: 0, heldForReviewCount: 36 };
     await renderHome({ snapshot: early(), documents: [doc('urine'), heldReport], results: [...URINE, ...blood] });
     await waitFor(() => expect(screen.getByTestId('home-glance')).toBeTruthy());
-    expect(screen.getByLabelText('2 Areas')).toBeTruthy();
-    expect(screen.getByTestId('glance-area-names')).toHaveTextContent('Urine tests · Lab tests');
+    expect(screen.queryByTestId('glance-areas')).toBeNull();
+    expect(screen.queryByTestId('glance-area-names')).toBeNull();
+    expect(screen.queryByLabelText(/Areas?$/)).toBeNull();
     expect(within(screen.getByTestId('stored-document-scan')).getByText('Needs review')).toBeTruthy();
     expect(screen.queryByText('No health information found')).toBeNull();
   });

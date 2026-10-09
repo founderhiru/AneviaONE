@@ -191,17 +191,6 @@ export default function AddRecordScreen() {
     });
   }
 
-  function handleWhatsApp() {
-    router.replace('/whatsapp');
-  }
-
-  function handleManual() {
-    Alert.alert(
-      'Add manually',
-      'Manually entering a record without a document is coming soon. For now, upload a report to add it to your Health Memory.'
-    );
-  }
-
   if (step === 'choose' && checkingIdentity) {
     return (
       <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'center' }}>
@@ -337,15 +326,8 @@ export default function AddRecordScreen() {
       <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
         Photos and scans are saved as a PDF of the pages, exactly as captured.
       </Text>
-      <View style={{ gap: theme.spacing.sm }}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textSecondary }]}>More ways</Text>
-        <Card onPress={handleWhatsApp} accessibilityLabel="Send via WhatsApp">
-          <Row icon="logo-whatsapp" label="WhatsApp" />
-        </Card>
-        <Card onPress={handleManual} accessibilityLabel="Add manually">
-          <Row icon="create-outline" label="Add manually" />
-        </Card>
-      </View>
+      {/* No "More ways": WhatsApp capture and manual entry aren't available
+          yet (the /whatsapp screen stays parked), so they aren't offered. */}
     </ScreenContainer>
   );
 }

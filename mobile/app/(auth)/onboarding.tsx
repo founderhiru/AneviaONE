@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { Button, Card, ScreenContainer, SecondaryButton } from '../../components';
+import { Button, ScreenContainer, SecondaryButton } from '../../components';
 import { PRODUCT_TERMS, taglineLines } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
-import { whatsappService } from '../../services/whatsapp/whatsappService';
 
-const TOTAL_STEPS = 5;
+// No WhatsApp step: that capture channel isn't available yet (the /whatsapp
+// screen stays parked), so the intro doesn't offer to connect it.
+const TOTAL_STEPS = 4;
 const [TAGLINE_HEADLINE, TAGLINE_SUBLINE] = taglineLines();
 
 export default function OnboardingScreen() {
   const theme = useTheme();
-  const { completeOnboarding, user } = useAuth();
+  const { completeOnboarding } = useAuth();
   const [step, setStep] = useState(0);
-  const [connectingWhatsApp, setConnectingWhatsApp] = useState(false);
 
   function goHome() {
     completeOnboarding();
@@ -26,16 +25,6 @@ export default function OnboardingScreen() {
   function goToAdd() {
     completeOnboarding();
     router.replace('/add');
-  }
-
-  async function handleConnectWhatsApp() {
-    setConnectingWhatsApp(true);
-    // Mock connect using the number already on the account — no real
-    // WhatsApp Business API call here. The full standalone connect flow
-    // (with its own number entry) lives at /whatsapp for later use.
-    await whatsappService.connect(user?.mobileNumber ?? '9876543210');
-    setConnectingWhatsApp(false);
-    setStep(4);
   }
 
   return (
@@ -64,25 +53,6 @@ export default function OnboardingScreen() {
           </Text>
         )}
         {step === 3 && (
-          <View style={{ gap: theme.spacing.md }}>
-            <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
-              Your health records can start here.
-            </Text>
-            <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
-              Send reports, prescriptions and medical documents through WhatsApp. We&rsquo;ll organize them into your{' '}
-              {PRODUCT_TERMS.healthMemory}.
-            </Text>
-            <Card>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                <Ionicons name="logo-whatsapp" size={28} color={theme.colors.success} />
-                <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, flex: 1 }]}>
-                  WhatsApp is a capture channel — the app stays the private place for your full health history.
-                </Text>
-              </View>
-            </Card>
-          </View>
-        )}
-        {step === 4 && (
           <View style={{ gap: theme.spacing.sm }}>
             <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
               Start with your first health record.
@@ -114,17 +84,6 @@ export default function OnboardingScreen() {
         )}
         {(step === 1 || step === 2) && <Button label="Continue" onPress={() => setStep(step + 1)} />}
         {step === 3 && (
-          <>
-            <Button
-              label="Connect WhatsApp"
-              onPress={handleConnectWhatsApp}
-              loading={connectingWhatsApp}
-              testID="onboarding-connect-whatsapp"
-            />
-            <SecondaryButton label="Maybe later" onPress={() => setStep(4)} testID="onboarding-skip-whatsapp" />
-          </>
-        )}
-        {step === 4 && (
           <>
             <Button label="Take a photo" onPress={goToAdd} testID="onboarding-camera" />
             <SecondaryButton label="Upload a document" onPress={goToAdd} testID="onboarding-upload" />

@@ -117,7 +117,8 @@ type Stat = { key: string; value: string; label: string; onPress?: () => void };
 
 const count = (n: number, one: string, many: string): Pick<Stat, 'value' | 'label'> => ({ value: String(n), label: n === 1 ? one : many });
 
-/** Reports | Results | Areas | Medications — one slim forest row. */
+/** Reports | Results | Medications — one slim forest row. (No "Areas" figure:
+ * a count of health areas was ambiguous, so Home doesn't show one.) */
 export function HealthAtAGlance({
   summary,
   onReports,
@@ -130,13 +131,9 @@ export function HealthAtAGlance({
   onMedications: () => void;
 }) {
   const theme = useTheme();
-  const areas = summary.healthAreas;
   const stats: Stat[] = [
     { key: 'reports', ...count(summary.reportCount, 'Report', 'Reports'), onPress: onReports },
     { key: 'results', ...count(summary.resultCount, 'Result', 'Results'), onPress: onResults },
-    areas === null
-      ? { key: 'areas', value: '—', label: 'Areas', onPress: onResults }
-      : { key: 'areas', ...count(areas.length, 'Area', 'Areas'), onPress: onResults },
     { key: 'medications', ...count(summary.medicationCount, 'Medication', 'Medications'), onPress: onMedications },
   ];
   return (
@@ -163,15 +160,6 @@ export function HealthAtAGlance({
           </React.Fragment>
         ))}
       </View>
-      {areas && areas.length > 1 ? (
-        <Text
-          style={[theme.typography.caption, { color: FOREST.champagne, textAlign: 'center', marginTop: theme.spacing.xxs }]}
-          numberOfLines={1}
-          testID="glance-area-names"
-        >
-          {areas.join(' · ')}
-        </Text>
-      ) : null}
     </View>
   );
 }

@@ -70,6 +70,13 @@ export default function MeScreen() {
   const [profile, setProfile] = useState<HealthProfile | null>(null);
   const [profileError, setProfileError] = useState(false);
   const [identity, setIdentity] = useState<IdentityProfile | null>(null);
+  // Sign-out can take a few seconds on a poor connection: say so, and ignore repeat taps.
+  const [signingOut, setSigningOut] = useState(false);
+  const handleSignOut = () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    signOut().catch(() => setSigningOut(false));
+  };
 
   // Refreshed whenever Me is shown (e.g. back from Identity details).
   useFocusEffect(
@@ -137,33 +144,26 @@ export default function MeScreen() {
       <RowList
         rows={[
           { label: 'My documents', onPress: () => router.push('/documents') },
-          { label: 'WhatsApp — Connected Services', onPress: () => router.push('/whatsapp') },
-          { label: `${PRODUCT_TERMS.familyHealth} (coming soon)`, onPress: () => router.push('/family') },
         ]}
       />
 
-      <RowList
-        rows={[
-          { label: 'Data Sharing', onPress: () => router.push('/privacy/data-sharing') },
-          { label: `${PRODUCT_TERMS.doctorBrief} (preview)`, onPress: () => router.push('/doctor-brief') },
-        ]}
-      />
+      {/* Unfinished features are not listed here: WhatsApp (/whatsapp), Family
+          Health (/family), Doctor Brief (/doctor-brief) and Data Sharing
+          (/privacy/data-sharing — no working settings yet) stay parked: their
+          screens remain, but Me doesn't offer them until they're ready. */}
 
       {/* Help & legal. No Contact/Support row: there is no support channel yet
           (the FAQ says so) — add one here when a real one exists. */}
       <RowList
         rows={[
           { label: 'Help & FAQ', onPress: () => router.push('/help') },
+          // The one privacy/security entry (AI consent and data controls).
           { label: 'Privacy & Security', onPress: () => router.push('/privacy') },
-          {
-            label: 'Data & Security',
-            onPress: () => router.push({ pathname: '/help', params: { topic: 'data-security' } }),
-          },
           { label: 'Terms of Service', onPress: () => router.push('/help/terms') },
         ]}
       />
 
-      <RowList rows={[{ label: 'Sign out', onPress: signOut, danger: true, testID: 'me-sign-out' }]} />
+      <RowList rows={[{ label: signingOut ? 'Signing out…' : 'Sign out', onPress: handleSignOut, danger: true, testID: 'me-sign-out' }]} />
     </ScreenContainer>
   );
 }

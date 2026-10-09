@@ -141,12 +141,8 @@ export default function PrivacyScreen() {
         label="Transparent AI"
         description="Every AI-generated explanation is shown separately from your factual records, with the source document linked so you can check it yourself."
       />
-      <Row
-        icon="link-outline"
-        label="Connected Services"
-        description="Manage apps and services linked to your account."
-        onPress={() => router.push('/whatsapp')}
-      />
+      {/* No "Connected Services": the only one (WhatsApp) isn't available yet;
+          its /whatsapp screen stays parked. */}
       <Row
         icon="download-outline"
         label="Download My Data"
