@@ -5,7 +5,7 @@
  * the real SQL is covered by supabase/tests/gate1_engine_test.sql.
  */
 
-import type { ClaimedDocument, CompletionCounts, EngineContext, EngineDb, FailureArgs } from '../pipeline.ts';
+import type { ClaimedDocument, CompletionCounts, EngineContext, EngineDb, FailureArgs, RunDiagnostics } from '../pipeline.ts';
 import type { LogFields, Logger } from '../log.ts';
 import type { StructuredExtractor } from '../extractor.ts';
 import type { Page } from '../validate.ts';
@@ -109,6 +109,12 @@ export class FakeDb implements EngineDb {
   }
   getAccountIdentity() {
     return Promise.resolve(this.identity);
+  }
+  /** Counts-only run diagnostics, by run id. */
+  diagnostics = new Map<string, RunDiagnostics>();
+  recordRunDiagnostics(runId: string, _userId: string, diagnostics: RunDiagnostics) {
+    this.diagnostics.set(runId, diagnostics);
+    return Promise.resolve();
   }
   /** What the app would see through current_observations. */
   liveObservations(userId = USER) {

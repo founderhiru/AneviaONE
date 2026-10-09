@@ -64,9 +64,18 @@ match):
 `20260929120000` … `20261001090200` (base model), `20261006120000` (Gate 1
 processing state, engine functions, confidence gate), `20261008090000` (OCR
 page text source), `20261009090000`/`20261009090100` (deletion),
-`20261010090000` (identity details + `engine_account_identity`).
+`20261010090000` (identity details + `engine_account_identity`),
+`20261011090000` (`extraction_runs.diagnostics`: counts only — candidates per
+fact kind returned by the model, accepted, discarded, rejected per reason —
+written by `engine_record_run_diagnostics`, service role only).
 
-This Gate 1 completion adds **no** migration.
+A run whose model output had candidates but where **every** candidate failed
+evidence/format checks now fails clearly (`validation` /
+`all_candidates_rejected`, retry by the person) instead of completing as "No
+health information found"; its diagnostics show why. Written radiology reports
+(findings, impression, the exam itself) are extracted from the report TEXT as
+imaging observations and an imaging encounter — X-ray images themselves are
+not interpreted.
 
 ## Edge Functions
 

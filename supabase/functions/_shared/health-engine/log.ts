@@ -41,8 +41,9 @@ export type LogFields = Record<string, string | number | boolean | null | undefi
 
 export type Logger = { info(fields: LogFields): void; error(fields: LogFields): void };
 
-/** Per-reason rejection counts (`rejected_quote_not_on_page`, …): numbers only. */
-const REJECTION_COUNT = /^rejected_[a-z_]{1,40}$/;
+/** Per-reason rejection counts (`rejected_quote_not_on_page`, …) and per-kind
+ * candidate counts (`candidates_observations`, …): numbers only. */
+const REJECTION_COUNT = /^(rejected|candidates)_[a-z_]{1,40}$/;
 
 export function redact(fields: LogFields): Record<string, string | number | boolean | null> {
   const safe: Record<string, string | number | boolean | null> = {};

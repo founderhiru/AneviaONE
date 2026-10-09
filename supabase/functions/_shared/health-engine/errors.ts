@@ -21,6 +21,7 @@ export const USER_MESSAGES = {
   consent: 'Allow report reading in the app to read this report.',
   noText: 'No readable text was found in this report.',
   unreadableScan: 'This photo or scan couldn’t be read clearly. Try a sharper, well-lit photo, or upload the original PDF.',
+  notReadReliably: 'We found results on this report but couldn’t confirm them against the page, so nothing was added. Try a sharper photo of each page, or upload the original PDF.',
   scanTooLarge: 'This scan is too large to read automatically. Try fewer pages, or upload the original PDF.',
   /** Our configuration or provider account is at fault — not the person's report. */
   serviceUnavailable: 'Report reading is temporarily unavailable. Please try again later.',
@@ -46,14 +47,17 @@ export type ProviderDiagnostics = {
   missing_config?: string;
 };
 
+/** Provider diagnostics, or validation counts (numbers only, e.g. rejected_<reason>). */
+export type EngineDiagnostics = ProviderDiagnostics & { [count: string]: string | number | undefined };
+
 export class EngineError extends Error {
-  readonly diagnostics: ProviderDiagnostics;
+  readonly diagnostics: EngineDiagnostics;
   constructor(
     readonly kind: FailureKind,
     /** Short, non-sensitive, machine-readable: ^[a-z0-9_]{1,64}$ */
     readonly code: string,
     readonly userMessage: string,
-    options?: { cause?: unknown; diagnostics?: ProviderDiagnostics },
+    options?: { cause?: unknown; diagnostics?: EngineDiagnostics },
   ) {
     super(code, options);
     this.diagnostics = options?.diagnostics ?? {};

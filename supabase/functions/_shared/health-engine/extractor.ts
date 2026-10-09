@@ -16,7 +16,7 @@ import { AnthropicJsonProvider, type AnthropicProviderOptions, type JsonModelPro
 import { EXTRACTION_JSON_SCHEMA } from './extraction-schema.ts';
 import type { Page } from './validate.ts';
 
-export const PROMPT_VERSION = 'g1-extract-2';
+export const PROMPT_VERSION = 'g1-extract-3';
 
 export interface StructuredExtractor {
   readonly provider: string;
@@ -40,6 +40,11 @@ Rules:
 - Medications: status only if the report states it (for example "stopped" or "as needed").
 - patient_name / patient_date_of_birth: only if the report explicitly prints them, quoted exactly; otherwise an empty value.
 - report_date: the report's own date (collection/report date) as written, if shown.
+- Written imaging reports (X-ray, ultrasound, CT, MRI and similar): you are reading the radiologist's WRITTEN report, never the image itself. Record:
+  - the examination as one encounter with encounter_type "imaging": its source_text is the line that names the examination or carries its date; give encounter_date only if that date is in that same source_text, and leave provider_name and facility_name empty unless they are in that same source_text;
+  - each finding and the impression/conclusion as an observation with category "imaging": test_name is the label or structure exactly as written (for example "Impression", "Findings", "Lung fields"), raw_value is the statement about it exactly as written, and source_text contains both; raw_unit and reference_range are empty strings unless printed;
+  - explicitly written normal or negative statements ("No significant abnormality detected") are findings: record them as written, as imaging observations. Never list them as conditions.
+  Record only statements the report makes. Do not summarise, combine sentences, or add findings, measurements or impressions that are not written.
 - confidence: how sure you are that the fact was read correctly (0 to 1). Use lower values for blurred, split or ambiguous text.
 - If the text is not a medical report or contains nothing to extract, return empty lists.`;
 

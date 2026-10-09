@@ -54,6 +54,37 @@ export interface EngineDb {
   completeDocument(runId: string, userId: string, payload: Record<string, unknown>): Promise<CompletionCounts>;
   failDocument(args: FailureArgs): Promise<void>;
   getAccountIdentity(userId: string): Promise<AccountIdentity>;
+  /** Counts-only diagnostics for a run (never content). */
+  recordRunDiagnostics(runId: string, userId: string, diagnostics: RunDiagnostics): Promise<void>;
+}
+
+/** What the model returned and what validation did with it — counts only. */
+export type RunDiagnostics = {
+  candidates: Record<string, number>;
+  accepted: number;
+  discarded: number;
+  rejected: Record<string, number>;
+};
+
+const FACT_KINDS = ['observations', 'medications', 'conditions', 'allergies', 'procedures', 'encounters'] as const;
+
+/** Rejections that say the report itself says "no" (a denied condition, no
+ * allergies) — correct outcomes, not a reading failure. */
+const SEMANTIC_REJECTIONS = new Set(['negated']);
+
+export function buildRunDiagnostics(extraction: StructuredExtraction, validation: { facts: unknown[]; discarded: number; rejected: { reason: string }[] }): RunDiagnostics {
+  const candidates: Record<string, number> = {};
+  for (const kind of FACT_KINDS) candidates[kind] = Array.isArray(extraction[kind]) ? extraction[kind].length : 0;
+  const rejected: Record<string, number> = {};
+  for (const { reason } of validation.rejected) rejected[reason] = (rejected[reason] ?? 0) + 1;
+  return { candidates, accepted: validation.facts.length, discarded: validation.discarded, rejected };
+}
+
+/** The model found facts but every one failed evidence/format checks: not "nothing in the report". */
+export function allCandidatesUnreadable(d: RunDiagnostics): boolean {
+  const total = Object.values(d.candidates).reduce((a, b) => a + b, 0);
+  const semantic = Object.entries(d.rejected).filter(([r]) => SEMANTIC_REJECTIONS.has(r)).reduce((a, [, n]) => a + n, 0);
+  return total > 0 && d.accepted === 0 && d.discarded === 0 && semantic === 0;
 }
 
 export interface EngineStorage {
@@ -84,6 +115,11 @@ export function rejectionCounts(rejected: { reason: string }[]): Record<string, 
   const counts: Record<string, number> = {};
   for (const { reason } of rejected) counts[`rejected_${reason}`] = (counts[`rejected_${reason}`] ?? 0) + 1;
   return counts;
+}
+
+/** `candidates_<kind>` counts for the log (numbers only). */
+function candidateCounts(d: RunDiagnostics): Record<string, number> {
+  return Object.fromEntries(Object.entries(d.candidates).map(([k, n]) => [`candidates_${k}`, n]));
 }
 
 /** Holds every fact for review (identity not established); evidence is kept as read. */
@@ -214,7 +250,18 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
     for (const chunk of chunks) {
       parts.push(assertExtractionShape(await ctx.extractor.extract(chunk)));
     }
-    const validation = validateExtraction(mergeExtractions(parts), pages, { today: ctx.today, reviewPages });
+    const merged = mergeExtractions(parts);
+    const validation = validateExtraction(merged, pages, { today: ctx.today, reviewPages });
+    const diagnostics = buildRunDiagnostics(merged, validation);
+    // Recorded for every run, so "0 facts" is never ambiguous afterwards. Best-effort.
+    await db.recordRunDiagnostics(runId, userId, diagnostics).catch(() => {
+      log.error({ event: 'run_diagnostics_write_failed', document_id: doc.id, run_id: runId });
+    });
+    if (allCandidatesUnreadable(diagnostics)) {
+      throw new EngineError('validation', 'all_candidates_rejected', USER_MESSAGES.notReadReliably, {
+        diagnostics: { facts_rejected: validation.rejected.length, ...rejectionCounts(validation.rejected), ...candidateCounts(diagnostics) },
+      });
+    }
 
     identityCheck = checkReportPerson(
       { patientName: validation.patientName, patientDateOfBirth: validation.patientDateOfBirth },
@@ -254,6 +301,7 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
       facts_duplicate: counts.facts_duplicate,
       facts_rejected: validation.rejected.length,
       ...rejectionCounts(validation.rejected),
+      ...candidateCounts(diagnostics),
       facts_discarded: validation.discarded,
       identity_check: identityCheck,
       facts_held_identity: trusted ? 0 : validation.facts.filter((f) => f.confidence_gate === 'passed').length,
