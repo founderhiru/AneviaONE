@@ -1,6 +1,6 @@
 import type { AuthError, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 
-import type { AuthProvider, LinkedIdentity, User } from '../../types';
+import type { AuthProvider, LinkedIdentity, OnboardingFlags, User } from '../../types';
 import { isNetworkError, ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { appleFullName, isApplePrivateRelayEmail, isValidEmail, maskEmail, normalizeEmail, normalizeMobileNumber } from './authInput';
@@ -28,6 +28,12 @@ const EMAIL_LINK_FAILED =
   'This sign-in link has expired, was already used, or was opened on a different device. Enter the 6-digit code from the email instead, or request a new one.';
 const APPLE_UNAVAILABLE = 'Sign in with Apple isn’t available on this device.';
 const GOOGLE_UNAVAILABLE = 'Sign in with Google isn’t available in this version of the app.';
+
+/** user_metadata keys for the one-time onboarding steps. */
+const ONBOARDING_FLAG_KEYS: Record<keyof OnboardingFlags, string> = {
+  identityOnboardingComplete: 'identity_onboarding_complete',
+  identityUploadPromptSeen: 'identity_upload_prompt_seen',
+};
 
 type ProfileRow = { onboarding_completed_at: string | null; display_name: string | null };
 
@@ -64,6 +70,10 @@ export function toDomainUser(supabaseUser: SupabaseUser, profile: ProfileRow | n
     // Source of truth is profiles.onboarding_completed_at; the user_metadata
     // mirror lets an offline cold start route correctly.
     onboardingComplete: Boolean(profile?.onboarding_completed_at) || Boolean(supabaseUser.user_metadata?.onboarding_complete),
+    // One-time UX steps, kept in the account's metadata (no schema change):
+    // they only decide whether a note is shown, never what is trusted.
+    identityOnboardingComplete: Boolean(supabaseUser.user_metadata?.[ONBOARDING_FLAG_KEYS.identityOnboardingComplete]),
+    identityUploadPromptSeen: Boolean(supabaseUser.user_metadata?.[ONBOARDING_FLAG_KEYS.identityUploadPromptSeen]),
     linkedIdentities,
   };
 }
@@ -148,6 +158,39 @@ function diagnose(stage: string, error: unknown) {
   if (!__DEV__) return;
   const e = (error ?? {}) as { name?: string; code?: string; status?: number; message?: string };
   console.warn(`[auth] ${stage} failed`, { diagnosticCode: oauthDiagnosticCode(error), name: e.name, code: e.code, status: e.status, message: e.message });
+}
+
+const SIGN_OUT_SERVER_TIMEOUT_MS = 3000;
+const GOOGLE_SIGN_OUT_TIMEOUT_MS = 2000;
+const TIMED_OUT = Symbol('timed out');
+
+/** Resolves with `promise`'s value, or TIMED_OUT after `ms` (the promise is left to settle on its own). */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Deletes this device's stored session directly from the auth client's own
+ * storage (the Keychain adapter in the app), without a network round-trip.
+ * supabase-js only clears it after reading the session — which, for an
+ * expired token, means refreshing it over the network first; offline, that
+ * fails and the session is left in place. The keys are the client's own
+ * (`storageKey`, plus its `-user` and `-code-verifier` companions).
+ */
+async function removeStoredSession(client: SupabaseClient): Promise<void> {
+  const auth = client.auth as unknown as { storageKey?: string; storage?: { removeItem(key: string): Promise<void> | void } };
+  if (!auth.storageKey || !auth.storage) return;
+  for (const key of [auth.storageKey, `${auth.storageKey}-user`, `${auth.storageKey}-code-verifier`]) {
+    try {
+      await auth.storage.removeItem(key);
+    } catch (error) {
+      diagnose('sign-out:clear', error);
+    }
+  }
 }
 
 /** The friendly OAuth failure, plus a safe code for diagnosing it. */
@@ -391,6 +434,21 @@ export const supabaseAuthService: AuthService = {
     await client.auth.updateUser({ data: { onboarding_complete: true } }).catch(() => undefined);
   },
 
+  async saveOnboardingFlags(flags) {
+    const client = getSupabaseClient();
+    if (!client) throw new ServiceError('not_configured', NOT_CONFIGURED);
+    const data: Record<string, true> = {};
+    for (const key of Object.keys(flags) as (keyof OnboardingFlags)[]) {
+      if (flags[key]) data[ONBOARDING_FLAG_KEYS[key]] = true;
+    }
+    if (Object.keys(data).length === 0) return;
+    // Merged into the existing metadata; nothing else about the account changes.
+    const { error } = await client.auth.updateUser({ data });
+    if (error) {
+      throw toServiceError(error, { code: 'save_failed', userMessage: 'We couldn’t save your progress. Please try again.', retryable: true });
+    }
+  },
+
   onSignedOut(listener) {
     const client = getSupabaseClient();
     if (!client) return () => undefined;
@@ -405,17 +463,26 @@ export const supabaseAuthService: AuthService = {
   async signOut() {
     const client = getSupabaseClient();
     if (!client) return;
-    // Even if the server can't be reached (or the call throws), always end
-    // the session on this device so the next sign-in starts clean.
+    // No background token refresh may write the session back mid-sign-out.
+    await client.auth.stopAutoRefresh();
     try {
-      const { error } = await client.auth.signOut();
-      if (error) throw error;
+      // Tell the server (revokes this session's refresh token). Best-effort
+      // and time-limited: on a lost network supabase-js first retries
+      // refreshing an expired token for ~30s, and a request that never
+      // answers would otherwise hold sign-out forever.
+      const result = await withTimeout(client.auth.signOut(), SIGN_OUT_SERVER_TIMEOUT_MS);
+      if (result === TIMED_OUT) diagnose('sign-out', new Error('sign-out timed out'));
+      else if (result.error) diagnose('sign-out', result.error);
     } catch (error) {
       diagnose('sign-out', error);
-      await client.auth.signOut({ scope: 'local' }).catch(() => undefined);
     }
-    // Also end Google's own sign-in on this device (best-effort), so the next
-    // Google sign-in can choose an account rather than silently reusing one.
-    await signOutOfGoogle();
+    // Whatever the server said, nothing of the session may remain on this
+    // device — otherwise the next launch silently signs the person back in.
+    await removeStoredSession(client);
+    // Also end Google's own sign-in on this device (best-effort, bounded), so
+    // the next Google sign-in can choose an account rather than reusing one.
+    await withTimeout(signOutOfGoogle(), GOOGLE_SIGN_OUT_TIMEOUT_MS);
+    // Token refresh resumes for whoever signs in next (nothing to refresh now).
+    await client.auth.startAutoRefresh();
   },
 };

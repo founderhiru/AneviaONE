@@ -18,3 +18,15 @@ import_map = "./functions/deno.json"
 [functions.ask-health]
 verify_jwt = true
 import_map = "./functions/deno.json"
+
+# Phase B: a person deletes one of their documents (ownership checked server-side).
+[functions.delete-document]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+# Email sign-in. The app's code screen (components/OtpInput.tsx) takes exactly
+# 6 digits — keep the emailed code the same length (docs/SUPABASE_SETUP.md §4).
+# Declared here so `supabase config diff` shows any drift; the mobile test
+# auth-email-config.test.ts fails if the two ever disagree.
+[auth.email]
+otp_length = 6

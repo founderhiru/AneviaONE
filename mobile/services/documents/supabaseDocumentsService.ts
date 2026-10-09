@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { DocumentStatus, PickedFile, StoredDocument, StoredDocumentSource, StoredDocumentType } from '../../types';
+import { invalidateHealthMemory } from '../health/healthMemoryApi';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { isListedStatus, hasStoredOriginal } from './documentStatus';
@@ -42,13 +43,14 @@ type DocumentRow = {
   status: DocumentStatus;
   processing_error: string | null;
   failure_kind?: string | null;
+  identity_check?: string | null;
   uploaded_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 const DOCUMENT_COLUMNS =
-  'id, user_id, source, document_type, original_filename, mime_type, file_size_bytes, storage_path, status, processing_error, failure_kind, uploaded_at, created_at, updated_at';
+  'id, user_id, source, document_type, original_filename, mime_type, file_size_bytes, storage_path, status, processing_error, failure_kind, identity_check, uploaded_at, created_at, updated_at';
 
 export function rowToStoredDocument(row: DocumentRow): StoredDocument {
   return {
@@ -63,6 +65,7 @@ export function rowToStoredDocument(row: DocumentRow): StoredDocument {
     status: row.status,
     processingError: row.processing_error,
     failureKind: row.failure_kind ?? null,
+    identityCheck: row.identity_check ?? null,
     uploadedAt: row.uploaded_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -129,9 +132,19 @@ async function withHealthInfo(client: SupabaseClient, documents: StoredDocument[
     const run = latest.get(d.id);
     if (!run) return d;
     const trusted = (run.facts_written ?? 0) - (run.facts_needs_review ?? 0) + (run.facts_duplicate ?? 0);
-    return { ...d, healthInfoCount: Math.max(0, trusted) };
+    return { ...d, healthInfoCount: Math.max(0, trusted), heldForReviewCount: Math.max(0, run.facts_needs_review ?? 0) };
   });
 }
+
+/** The delete-document function's HTTP status and error code, if the failure was an HTTP response. */
+async function httpError(error: unknown): Promise<{ status: number; code: string | null } | null> {
+  const response = (error as { context?: unknown })?.context;
+  if (!(response instanceof Response)) return null;
+  const body = await response.json().catch(() => null);
+  return { status: response.status, code: typeof body?.error === 'string' ? body.error : null };
+}
+
+const DELETE_FAILED = 'We couldn’t delete this report. It hasn’t been removed — please try again.';
 
 export const supabaseDocumentsService: DocumentsService = {
   async listDocuments() {
@@ -262,5 +275,26 @@ export const supabaseDocumentsService: DocumentsService = {
       throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t open the original. Please try again.', retryable: true });
     }
     return data.signedUrl;
+  },
+
+  async deleteDocument(id) {
+    if (!isStoredDocumentId(id)) throw new ServiceError('not_found', 'We couldn’t find this document.');
+    const client = requireClient();
+    await requireUserId(client);
+    // Server-side only: the function checks ownership and derives the file location itself.
+    const { error } = await client.functions.invoke('delete-document', { body: { document_id: id } });
+    if (!error) {
+      // Its health information is gone: Home, Health, Timeline and Ask reload.
+      invalidateHealthMemory();
+      return;
+    }
+    const http = await httpError(error);
+    if (http?.status === 401) throw new ServiceError('not_signed_in', 'Please sign in again to continue.');
+    if (http?.status === 404) throw new ServiceError('not_found', 'We couldn’t find this document.');
+    if (http?.status === 409 && http.code === 'document_busy') {
+      throw new ServiceError('not_available', 'This report is being read right now. Try deleting it again in a moment.', { retryable: true });
+    }
+    if (http) throw new ServiceError('unknown', DELETE_FAILED, { retryable: true });
+    throw toServiceError(error, { code: 'unknown', userMessage: DELETE_FAILED, retryable: true });
   },
 };

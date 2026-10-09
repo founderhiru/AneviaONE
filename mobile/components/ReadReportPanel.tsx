@@ -38,6 +38,10 @@ type Props = {
   onReadAgain?: () => void;
   /** Shown on "Ready" (e.g. open Health). */
   onViewResults?: () => void;
+  /** Where the screen already shows the report's status (the document page),
+   * "Ready" is shown without repeating the reading steps, and "may belong to
+   * someone else" isn't repeated at all. */
+  compactReady?: boolean;
 };
 
 /** The AI consent, shown once before anything is read. */
@@ -69,7 +73,7 @@ export function AiConsentCard({ onAllow, onDecline, title = AI_CONSENT_COPY.titl
  * report" button; "Read again" is a secondary recovery action only.
  * Wording only describes what the server has actually reported.
  */
-export function ReadReportPanel({ view, onAllow, onDecline, onRead, onReadAgain, onViewResults }: Props) {
+export function ReadReportPanel({ view, onAllow, onDecline, onRead, onReadAgain, onViewResults, compactReady = false }: Props) {
   const theme = useTheme();
   const body = [theme.typography.bodyMedium, { color: theme.colors.textSecondary }];
   const small = [theme.typography.bodySmall, { color: theme.colors.textTertiary }];
@@ -133,13 +137,15 @@ export function ReadReportPanel({ view, onAllow, onDecline, onRead, onReadAgain,
       }
       const lines = [
         `${state.resultsAdded} result${state.resultsAdded === 1 ? '' : 's'} added to your Health Memory`,
-        state.needsReview ? `${state.needsReview} held back until checked (not clear enough to use yet)` : null,
+        state.needsReview
+          ? `${state.needsReview} held back until checked (${state.identityUnconfirmed ? 'we couldn’t confirm this report is yours' : 'not clear enough to use yet'})`
+          : null,
         state.alreadyInMemory ? `${state.alreadyInMemory} already in your Health Memory` : null,
       ].filter((l): l is string => Boolean(l));
       return (
         <Card testID="read-report-ready">
           <View style={{ gap: theme.spacing.sm }}>
-            <ProcessingState title={READING_COPY.ready} steps={readingSteps('ready')} />
+            {compactReady ? null : <ProcessingState title={READING_COPY.ready} steps={readingSteps('ready')} />}
             {lines.map((line) => (
               <Text key={line} style={body}>
                 {line}
@@ -153,6 +159,8 @@ export function ReadReportPanel({ view, onAllow, onDecline, onRead, onReadAgain,
       );
     }
     case 'needs_review':
+      // The report page's status card already says this; don't repeat it.
+      if (compactReady) return null;
       return (
         <Card testID="read-report-needs-review">
           <View style={{ gap: theme.spacing.sm }}>

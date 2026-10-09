@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, ScreenHeader, SecondaryButton, StatusBadge } from '../../components';
 import { isDemoMode } from '../../config/appMode';
 import { useTheme } from '../../design/theme';
 import { useReadReport } from '../../hooks/useReadReport';
 import { loadDemoServices } from '../../services/demo/demoServices';
 import {
+  IDENTITY_UNCONFIRMED_PRESENTATION,
   presentDocumentStatus,
   documentsService,
   formatFileSize,
@@ -45,9 +46,12 @@ function StoredDocumentView({ id }: { id: string }) {
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [results, setResults] = useState<RecordedObservation[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // Uploaded PDFs and camera scans are both read on the server — straight
   // away (consent first if it isn't recorded); "Read again" is the only button.
-  const reading = useReadReport(document ? id : null, { autoStart: true });
+  // A document whose deletion didn't finish is never read again.
+  const reading = useReadReport(document && document.status !== 'deleting' ? id : null, { autoStart: true });
   const phase = reading.view.kind === 'state' ? reading.view.state.phase : null;
 
   const load = useCallback(
@@ -87,6 +91,43 @@ function StoredDocumentView({ id }: { id: string }) {
     } finally {
       setOpening(false);
     }
+  }
+
+  async function deleteDocument() {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      await documentsService.deleteDocument(id);
+      router.replace({ pathname: '/documents', params: { deleted: '1' } });
+    } catch (error) {
+      setDeleteError(error instanceof ServiceError ? error.userMessage : GENERIC_ERROR_MESSAGE);
+      setDeleting(false);
+      load(true); // the status may now read "Deletion not finished"
+    }
+  }
+
+  // Re-reading replaces this report's results in Health Memory, so it is
+  // never a single tap: the person confirms it first.
+  function confirmReadAgain() {
+    Alert.alert(
+      'Read this report again?',
+      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Read again', onPress: () => void reading.readAgain() },
+      ],
+    );
+  }
+
+  function confirmDelete() {
+    Alert.alert(
+      'Delete this health record?',
+      'This will remove the uploaded document and the health information extracted from it.\n\nThis action can’t be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: deleteDocument },
+      ],
+    );
   }
 
   if (loadError) {
@@ -134,6 +175,14 @@ function StoredDocumentView({ id }: { id: string }) {
         <View style={{ gap: theme.spacing.xs }}>
           <StatusBadge label={presentation.label} tone={presentation.tone} />
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{presentation.description}</Text>
+          {presentation === IDENTITY_UNCONFIRMED_PRESENTATION ? (
+            <>
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]} testID="identity-held-hint">
+                Adding your full name and date of birth helps us recognize your reports.
+              </Text>
+              <SecondaryButton label="Add identity details" onPress={() => router.push('/profile/identity')} testID="identity-held-add" />
+            </>
+          ) : null}
         </View>
       </Card>
 
@@ -144,7 +193,8 @@ function StoredDocumentView({ id }: { id: string }) {
           onAllow={reading.allow}
           onDecline={reading.decline}
           onRead={reading.read}
-          onReadAgain={reading.readAgain}
+          onReadAgain={confirmReadAgain}
+          compactReady
         />
       ) : null}
 
@@ -160,30 +210,17 @@ function StoredDocumentView({ id }: { id: string }) {
         </View>
       ) : null}
 
-      <Card>
-        <View
-          style={{
-            aspectRatio: 3 / 4,
-            borderRadius: theme.radius.sm,
-            backgroundColor: theme.colors.surfaceAlt,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: theme.spacing.xs,
-          }}
-          accessibilityLabel={`${document.originalFilename}, PDF`}
-        >
-          <Ionicons name="document-text-outline" size={40} color={theme.colors.textTertiary} />
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>PDF · stored privately</Text>
-        </View>
-      </Card>
 
       {hasStoredOriginal(document.status) ? (
         <Card onPress={opening ? undefined : () => openOriginal(document)} accessibilityLabel="View original document">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
             <Ionicons name="open-outline" size={18} color={theme.colors.brandPrimary} />
-            <Text style={[theme.typography.labelLarge, { color: theme.colors.brandPrimary }]}>
-              {opening ? 'Opening…' : 'View Original'}
-            </Text>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[theme.typography.labelLarge, { color: theme.colors.brandPrimary }]}>
+                {opening ? 'Opening…' : 'View Original'}
+              </Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>PDF · stored privately</Text>
+            </View>
           </View>
         </Card>
       ) : null}
@@ -192,6 +229,40 @@ function StoredDocumentView({ id }: { id: string }) {
           {openError}
         </Text>
       ) : null}
+
+      {/* Kept apart at the very end, behind a confirmation — never on the list. */}
+      <View style={{ marginTop: theme.spacing.md, gap: theme.spacing.xs }}>
+        <Pressable
+          onPress={deleting ? undefined : confirmDelete}
+          accessibilityRole="button"
+          accessibilityLabel="Delete document"
+          accessibilityState={{ disabled: deleting, busy: deleting }}
+          testID="delete-document"
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: theme.spacing.xs,
+            minHeight: theme.minTouchTarget,
+            borderRadius: theme.radius.md,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            opacity: pressed || deleting ? 0.7 : 1,
+          })}
+        >
+          {deleting ? (
+            <ActivityIndicator size="small" color={theme.colors.danger} />
+          ) : (
+            <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+          )}
+          <Text style={[theme.typography.labelLarge, { color: theme.colors.danger }]}>{deleting ? 'Deleting…' : 'Delete document'}</Text>
+        </Pressable>
+        {deleteError ? (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.danger }]} accessibilityLiveRegion="polite" testID="delete-error">
+            {deleteError}
+          </Text>
+        ) : null}
+      </View>
     </ScreenContainer>
   );
 }

@@ -1,4 +1,4 @@
-import type { AuthProvider, User } from '../../types';
+import type { AuthProvider, OnboardingFlags, User } from '../../types';
 
 export type SendOtpResult = { success: true } | { success: false; errorMessage: string };
 
@@ -54,6 +54,9 @@ export interface AuthService {
   getCurrentUser(): Promise<User | null>;
   /** Persists that the signed-in user has finished onboarding. */
   completeOnboarding(): Promise<void>;
+  /** Persists one-time onboarding steps (e.g. the optional identity step) as
+   * done, for this account on every device. Never stores identity values. */
+  saveOnboardingFlags(flags: OnboardingFlags): Promise<void>;
   /** Notifies when the session ends outside the app's control (expired or
    * revoked refresh token, sign-out elsewhere). Returns an unsubscribe fn. */
   onSignedOut(listener: () => void): () => void;

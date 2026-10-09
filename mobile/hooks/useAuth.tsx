@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { authService } from '../services/auth/authService';
-import type { User } from '../types';
+import type { OnboardingFlags, User } from '../types';
 
 /** Something the signed-out screens should explain to the person. */
 export type AuthNotice = 'session_expired';
@@ -20,6 +20,8 @@ export type AuthContextValue = {
   clearNotice: () => void;
   refreshUser: () => Promise<void>;
   completeOnboarding: () => void;
+  /** Marks one-time onboarding steps done now, and saves them for next time. */
+  markOnboardingFlags: (flags: OnboardingFlags) => void;
   signOut: () => Promise<void>;
 };
 
@@ -88,6 +90,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Like completeOnboarding: the app moves on at once; if saving fails the
+  // step is simply offered again on a later launch — it never blocks.
+  const markOnboardingFlags = useCallback((flags: OnboardingFlags) => {
+    setUser((prev) => (prev ? { ...prev, ...flags } : prev));
+    authService.saveOnboardingFlags(flags).catch((error) => {
+      if (__DEV__) console.warn('[auth] could not persist onboarding step', error);
+    });
+  }, []);
+
   const signOut = useCallback(async () => {
     signingOut.current = true;
     try {
@@ -105,8 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const value = useMemo(
-    () => ({ user, isLoading, notice, clearNotice, refreshUser: refreshAndClear, completeOnboarding, signOut }),
-    [user, isLoading, notice, clearNotice, refreshAndClear, completeOnboarding, signOut]
+    () => ({ user, isLoading, notice, clearNotice, refreshUser: refreshAndClear, completeOnboarding, markOnboardingFlags, signOut }),
+    [user, isLoading, notice, clearNotice, refreshAndClear, completeOnboarding, markOnboardingFlags, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

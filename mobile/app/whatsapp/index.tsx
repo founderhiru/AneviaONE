@@ -61,8 +61,7 @@ export default function WhatsAppScreen() {
           }}
         >
           <Text style={[theme.typography.bodySmall, { color: theme.colors.warning }]}>
-            Preview only — full WhatsApp messaging turns on once WhatsApp Business credentials are configured. The
-            screens and connection flow below already work end to end.
+            Preview only — sending reports through WhatsApp isn&rsquo;t switched on yet.
           </Text>
         </View>
       ) : null}
@@ -84,7 +83,6 @@ export default function WhatsAppScreen() {
             You can now send reports to your Health Memory from {connection.maskedNumber}.
           </Text>
           <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
-            <SecondaryButton label="How it works" onPress={() => {}} fullWidth={false} />
             <SecondaryButton label="Disconnect" onPress={handleDisconnect} fullWidth={false} />
           </View>
         </Card>

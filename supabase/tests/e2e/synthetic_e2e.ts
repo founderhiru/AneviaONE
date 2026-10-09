@@ -183,9 +183,13 @@ await guardAccount('E2E account A', A, PERSON_A.name);
 await guardAccount('E2E account B', B, PERSON_B.name);
 check('two distinct test users', A.id !== B.id);
 await A.client.from('profiles').update({ display_name: PERSON_A.name }).eq('id', A.id);
-await A.client.from('health_profiles').upsert({ date_of_birth: PERSON_A.dob });
 await B.client.from('profiles').update({ display_name: PERSON_B.name }).eq('id', B.id);
-await B.client.from('health_profiles').upsert({ date_of_birth: PERSON_B.dob });
+// Reports are matched against the identity each person ENTERED (Identity
+// details), saved through the app's own server function.
+for (const [user, person] of [[A, PERSON_A], [B, PERSON_B]] as const) {
+  const { error } = await user.client.rpc('set_my_identity', { p_full_name: person.name, p_date_of_birth: person.dob });
+  if (error) refuse('could not save the test persona\'s identity details');
+}
 
 console.log('\n== Gate 1: consent ==');
 await consent(A.client, false); // start from "not consented"

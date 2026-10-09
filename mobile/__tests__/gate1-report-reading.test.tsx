@@ -164,13 +164,17 @@ describe('production test results', () => {
         {
           id: 'o1', name_as_written: 'HbA1c', value_as_written: '5.8', unit_as_written: '%', reference_range_as_written: '4.0 - 5.6',
           effective_date: '2026-03-12', confidence_gate: 'passed', review_status: 'unreviewed', document_id: DOC_ID, document_page_id: 'p1', created_at: 'x',
+          // Server interpretation of the printed value/range; numerics may arrive as strings.
+          value_numeric: '5.8', reference_low: 4, reference_high: '5.6', category: 'laboratory', abnormal_flag_as_written: null,
         },
       ],
       error: null,
     });
     fake.respond('select', { data: [{ id: DOC_ID, original_filename: 'Sunrise lab report.pdf' }], error: null });
     fake.respond('select', { data: [{ id: 'p1', page_number: 1 }], error: null });
-    expect(await productionHealthService.getRecordedObservations()).toEqual([hba1c]);
+    expect(await productionHealthService.getRecordedObservations()).toEqual([
+      { ...hba1c, valueNumeric: 5.8, referenceLow: 4, referenceHigh: 5.6, category: 'laboratory', abnormalFlag: null },
+    ]);
     expect(fake.calls.map((c) => c.table)).toEqual(['current_observations', 'documents', 'document_pages']);
   });
 

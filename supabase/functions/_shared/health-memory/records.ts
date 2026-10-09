@@ -48,6 +48,8 @@ export type ObservationRecord = Base & {
   /** Canonical spelling of the unit (no conversion), null if unknown. */
   unitNormalized: string | null;
   referenceRange: string | null;
+  /** Kind of result as classified when the report was read (laboratory, urine, …), null if unknown. */
+  category: string | null;
 };
 export type ConditionRecord = Base & { kind: 'condition'; assertion: 'mentioned' | 'reported' | 'diagnosed' };
 export type MedicationRecord = Base & {
@@ -86,7 +88,7 @@ const VIEWS: Record<RecordKind, { view: string; nameColumn: string; columns: str
   observation: {
     view: 'current_observations',
     nameColumn: 'name_as_written',
-    columns: 'name_as_written, value_as_written, unit_as_written, reference_range_as_written, effective_date, value_numeric, unit_normalized',
+    columns: 'name_as_written, value_as_written, unit_as_written, reference_range_as_written, effective_date, value_numeric, unit_normalized, category',
   },
   condition: { view: 'current_conditions', nameColumn: 'name_as_written', columns: 'name_as_written, assertion, recorded_date, onset_date' },
   medication: {
@@ -182,6 +184,7 @@ function toRecord(
         valueNumeric: num(row.value_numeric),
         unitNormalized: str(row.unit_normalized),
         referenceRange: str(row.reference_range_as_written),
+        category: str(row.category),
       };
     case 'condition':
       return { ...base(String(row.name_as_written), str(row.onset_date) ?? str(row.recorded_date)), kind, assertion: (str(row.assertion) ?? 'mentioned') as ConditionRecord['assertion'] };

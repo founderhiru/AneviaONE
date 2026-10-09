@@ -81,9 +81,12 @@ export function supabaseEngineDb(admin: SupabaseClient): EngineDb {
       );
     },
     async getAccountIdentity(userId): Promise<AccountIdentity> {
-      const profile = ensure(await admin.from('profiles').select('display_name').eq('id', userId).maybeSingle(), 'profile');
-      const health = ensure(await admin.from('health_profiles').select('date_of_birth').eq('user_id', userId).maybeSingle(), 'health_profile');
-      return { displayName: profile?.display_name ?? null, dateOfBirth: health?.date_of_birth ?? null };
+      // The identity the person entered (Identity details), read server-side
+      // only — never the sign-in provider's name.
+      const identity = ensure(await admin.rpc('engine_account_identity', { p_user_id: userId }), 'identity') as
+        | { full_name: string | null; date_of_birth: string | null }
+        | null;
+      return { fullName: identity?.full_name ?? null, dateOfBirth: identity?.date_of_birth ?? null };
     },
   };
 }

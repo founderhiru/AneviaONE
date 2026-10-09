@@ -194,11 +194,9 @@ describe('Onboarding screen', () => {
       fireEvent.press(screen.getByText('Continue'));
     });
 
-    expect(screen.getByText('Your health records can start here.')).toBeTruthy();
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('onboarding-skip-whatsapp'));
-    });
-
+    // No WhatsApp step: the intro goes straight to the first record.
+    expect(screen.queryByText('Your health records can start here.')).toBeNull();
+    expect(screen.queryByText(/WhatsApp/)).toBeNull();
     expect(screen.getByText('Start with your first health record.')).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByTestId('onboarding-skip-record'));

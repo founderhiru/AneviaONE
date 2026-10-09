@@ -56,16 +56,14 @@ describe('Timeline event detail screen', () => {
 });
 
 describe('Add Record screen', () => {
-  it('offers PDF, photo, scan and WhatsApp entry points, and WhatsApp navigates directly', async () => {
+  it('offers PDF, photo and scan — nothing that is not available yet', async () => {
     await renderWithAuth(<AddRecordScreen />);
     expect(screen.getByLabelText('Scan Document')).toBeTruthy();
     expect(screen.getByLabelText('Upload PDF')).toBeTruthy();
-    expect(screen.getByLabelText('Add manually')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.press(screen.getByLabelText('Send via WhatsApp'));
-    });
-    expect(router.replace).toHaveBeenCalledWith('/whatsapp');
+    // WhatsApp capture and manual entry aren't implemented: not offered.
+    expect(screen.queryByText('More ways')).toBeNull();
+    expect(screen.queryByLabelText('Send via WhatsApp')).toBeNull();
+    expect(screen.queryByLabelText('Add manually')).toBeNull();
   });
 });
 

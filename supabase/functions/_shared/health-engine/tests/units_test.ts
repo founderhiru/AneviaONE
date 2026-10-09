@@ -4,7 +4,7 @@ import { assertEquals, assertNotEquals, assertRejects, assertThrows } from '@std
 import { chunkPages } from '../chunking.ts';
 import { EngineError } from '../errors.ts';
 import { factFingerprint, sha256Hex } from '../fingerprint.ts';
-import { checkReportPerson } from '../identity.ts';
+import { checkReportPerson, identityAllowsTrust } from '../identity.ts';
 import { redact } from '../log.ts';
 import { UnpdfPageTextProvider, detectTextLayer } from '../pages.ts';
 import { MALFORMED_PDF, NOT_A_PDF, REPORT_A, SYNTHETIC_PATIENT, buildImageOnlyPdf, buildTextPdf } from './fixtures.ts';
@@ -50,15 +50,36 @@ Deno.test('chunking: deterministic, whole pages, never truncated', () => {
 });
 
 Deno.test('report-person check: explicit identifiers only, no fuzzy matching', () => {
-  const account = { displayName: SYNTHETIC_PATIENT.name, dateOfBirth: SYNTHETIC_PATIENT.dateOfBirth };
+  const account = { fullName: SYNTHETIC_PATIENT.name, dateOfBirth: SYNTHETIC_PATIENT.dateOfBirth };
   assertEquals(checkReportPerson({ patientName: null, patientDateOfBirth: null }, account), 'no_identifiers');
   assertEquals(checkReportPerson({ patientName: 'Mrs. ASHA VERMA', patientDateOfBirth: '14/08/1985' }, account), 'consistent');
   assertEquals(checkReportPerson({ patientName: 'Rahul Mehta', patientDateOfBirth: null }, account), 'mismatch');
   assertEquals(checkReportPerson({ patientName: 'Asha Verma', patientDateOfBirth: '01/01/1970' }, account), 'mismatch');
-  assertEquals(checkReportPerson({ patientName: 'A. Verma', patientDateOfBirth: null }, account), 'consistent'); // shares a word
-  assertEquals(checkReportPerson({ patientName: 'Rahul Mehta', patientDateOfBirth: null }, { displayName: null, dateOfBirth: null }), 'unverifiable');
+  assertEquals(checkReportPerson({ patientName: 'Rahul Mehta', patientDateOfBirth: null }, { fullName: null, dateOfBirth: null }), 'unverifiable');
   // An ambiguous DOB (05/06/…) is not compared rather than guessed.
   assertEquals(checkReportPerson({ patientName: null, patientDateOfBirth: '05/06/1985' }, account), 'unverifiable');
+});
+
+Deno.test('report-person check: only strong evidence is "consistent"', () => {
+  const account = { fullName: SYNTHETIC_PATIENT.name, dateOfBirth: SYNTHETIC_PATIENT.dateOfBirth };
+  // Full name alone, or the exact date of birth alone, is strong.
+  assertEquals(checkReportPerson({ patientName: 'verma asha', patientDateOfBirth: null }, account), 'consistent');
+  assertEquals(checkReportPerson({ patientName: null, patientDateOfBirth: '14/08/1985' }, account), 'consistent');
+  assertEquals(checkReportPerson({ patientName: 'Asha Rani Verma', patientDateOfBirth: null }, account), 'consistent');
+  // One shared word or an initial is weak: identifiers exist but don't establish ownership.
+  assertEquals(checkReportPerson({ patientName: 'A. Verma', patientDateOfBirth: null }, account), 'unverifiable');
+  assertEquals(checkReportPerson({ patientName: 'Asha Sharma', patientDateOfBirth: null }, account), 'unverifiable');
+  // A conflict anywhere wins over a match elsewhere.
+  assertEquals(checkReportPerson({ patientName: 'Asha Verma', patientDateOfBirth: '15/08/1985' }, account), 'mismatch');
+  // Nothing entered by the person: nothing to establish ownership with.
+  assertEquals(checkReportPerson({ patientName: 'Asha Verma', patientDateOfBirth: '14/08/1985' }, { fullName: null, dateOfBirth: null }), 'unverifiable');
+  // Only the name entered, report only has a DOB: can't compare.
+  assertEquals(checkReportPerson({ patientName: null, patientDateOfBirth: '14/08/1985' }, { fullName: 'Asha Verma', dateOfBirth: null }), 'unverifiable');
+});
+
+Deno.test('trust needs strong identity evidence', () => {
+  assertEquals(identityAllowsTrust('consistent'), true);
+  for (const check of ['no_identifiers', 'unverifiable', 'mismatch'] as const) assertEquals(identityAllowsTrust(check), false);
 });
 
 Deno.test('fingerprints: same report → same fingerprint; any identity change → different', async () => {

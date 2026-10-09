@@ -19,7 +19,7 @@ describe('Home screen', () => {
   it('loads and shows What Changed, trends, and Ask entry point', async () => {
     await renderWithAuth(<HomeScreen />);
     await waitFor(() => expect(screen.getByText(/What Changed/)).toBeTruthy());
-    expect(screen.getByText('Ask about your health...')).toBeTruthy();
+    expect(screen.getByText('Ask about your health records')).toBeTruthy();
   });
 
   it('navigates to the timeline tab from the health story section', async () => {
@@ -75,7 +75,7 @@ describe('Ask My Health screen', () => {
 });
 
 describe('Me screen', () => {
-  it('loads the profile and links to Privacy, Data Sharing and WhatsApp', async () => {
+  it('loads the profile and links to Privacy; unfinished entries are not offered', async () => {
     await renderWithAuth(<MeScreen />);
     await waitFor(() => expect(screen.getByText('Privacy & Security')).toBeTruthy());
 
@@ -84,15 +84,11 @@ describe('Me screen', () => {
     });
     expect(router.push).toHaveBeenCalledWith('/privacy');
 
-    await act(async () => {
-      fireEvent.press(screen.getByText('Data Sharing'));
-    });
-    expect(router.push).toHaveBeenCalledWith('/privacy/data-sharing');
+    // No working settings yet: not offered on Me (the screen stays parked).
+    expect(screen.queryByText('Data Sharing')).toBeNull();
 
-    await act(async () => {
-      fireEvent.press(screen.getByText('WhatsApp — Connected Services'));
-    });
-    expect(router.push).toHaveBeenCalledWith('/whatsapp');
+    // Unfinished: not offered on Me (the /whatsapp screen stays parked).
+    expect(screen.queryByText('WhatsApp — Connected Services')).toBeNull();
   });
 
   it('signs out on pressing Sign out', async () => {

@@ -32,6 +32,8 @@ const signedInUser: User = {
   email: 'priya@example.com',
   createdAt: '2026-10-05T10:00:00Z',
   onboardingComplete: true,
+  identityOnboardingComplete: true,
+  identityUploadPromptSeen: true,
   linkedIdentities: [],
 };
 

@@ -12,6 +12,9 @@ import { router, type Href } from 'expo-router';
 export const AUTH_ROUTE = '/(auth)/welcome' as const;
 const METHOD_ROUTE = '/(auth)/login' as const;
 
+/** The optional, one-time "Set up your health profile" step after first sign-in. */
+export const PROFILE_SETUP_ROUTE = '/profile/setup' as const;
+
 export type AuthMethod = 'google' | 'apple' | 'email';
 
 export function authHref(method?: AuthMethod): Href {

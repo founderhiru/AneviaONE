@@ -10,7 +10,7 @@ import { APP_MODE, isDemoMode } from '../config/appMode';
 import { useTheme } from '../design/theme';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { markLaunchSplashDone } from '../hooks/useLaunchSplash';
-import { AUTH_ROUTE } from '../navigation/authRoutes';
+import { AUTH_ROUTE, PROFILE_SETUP_ROUTE } from '../navigation/authRoutes';
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
@@ -44,6 +44,16 @@ function RootNavigator() {
       return;
     }
 
+    // First stop after the first sign-in: the optional "Set up your health
+    // profile" step, once per account. Continue and Skip both mark it done,
+    // which lands back here and moves on — it is never shown again, and an
+    // account that has done it never passes through it.
+    const atProfileSetup = segmentList[0] === 'profile' && segmentList[1] === 'setup';
+    if (user && !user.identityOnboardingComplete) {
+      if (!atProfileSetup) router.replace(PROFILE_SETUP_ROUTE);
+      return;
+    }
+
     if (user && !user.onboardingComplete && segmentList[1] !== 'onboarding') {
       router.replace('/(auth)/onboarding');
       return;
@@ -51,7 +61,7 @@ function RootNavigator() {
 
     // Once signed in (e.g. via "Make it yours"), the sample gives way to the
     // person's own Health Memory.
-    if (user && user.onboardingComplete && (inAuthGroup || inExplore || atEntry)) {
+    if (user && user.onboardingComplete && (inAuthGroup || inExplore || atEntry || atProfileSetup)) {
       router.replace('/(tabs)/home');
     }
   }, [user, isLoading, segments, router]);
@@ -62,6 +72,8 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
         {/* Home is the root of the signed-in app: no swipe back into sign-in. */}
         <Stack.Screen name="(tabs)" options={{ animation: 'fade', gestureEnabled: false }} />
+        {/* Reached only by redirect after sign-in; Continue / Skip move on. */}
+        <Stack.Screen name="profile/setup" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="explore" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>

@@ -1,20 +1,18 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.isolateModules needs require() to load fresh module instances */
 /**
- * Home's health summary and the redesigned Welcome.
+ * Home's summary helpers and the redesigned Welcome.
  *
- * Home: every snapshot figure is derived from the person's own data through
- * the production services (fake backend here) — counts are list lengths,
- * dates are record dates, and anything unsupported shows a neutral state.
+ * Home: every summary figure is derived from the person's own data — counts
+ * are list lengths, dates are record dates, and anything unsupported is null.
  * Welcome: Mobile leads, Google is always offered, and Apple/Email appear
  * only when the project has them switched on.
  */
 import React from 'react';
 import { AccessibilityInfo, Animated, StyleSheet } from 'react-native';
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 
-import HomeScreen from '../app/(tabs)/home';
 import LoginScreen from '../app/(auth)/login';
 import OtpScreen from '../app/(auth)/otp';
 import WelcomeScreen from '../app/(auth)/welcome';
@@ -22,10 +20,7 @@ import { BRAND } from '../config/brand';
 import { LEGAL_LINKS } from '../config/legal';
 import { markLaunchSplashDone } from '../hooks/useLaunchSplash';
 import { useSignInMethods } from '../hooks/useSignInMethods';
-import { documentsService } from '../services/documents/documentsService';
-import { invalidateHealthMemory } from '../services/health/healthMemoryApi';
 import { monthYear, summarizeHome, visibleYears } from '../services/health/homeSummary';
-import { getSupabaseClient } from '../services/supabaseClient';
 import type { HealthEvent, Medication, StoredDocument, Trend } from '../types';
 import { renderWithAuth } from './testUtils';
 
@@ -58,68 +53,6 @@ function doc(id: string): StoredDocument {
     createdAt: at,
     updatedAt: at,
   };
-}
-
-const evidence = (documentId: string) => ({ documentId, documentName: 'Report', reportDate: null, pageNumber: 1 });
-const point = (date: string, value: number) => ({ date, value, recordIds: [], evidence: evidence('d1') });
-const memoryItem = (key: string, name: string) => ({ key, name, detail: null, firstRecorded: '2026-03-12', lastRecorded: '2026-06-10', recordIds: [], sources: [evidence('d1')] });
-const event = (id: string, type: string, date: string | null) => ({ id, type, date, title: id, summary: '', documentId: 'd1', recordIds: [] });
-
-/** A person with real records: three years of reports, two medications,
- * one measure with two results (and one with only one), one change, and a
- * follow-up visit dated in the future. */
-function richSnapshot() {
-  return {
-    version: 'g2.0',
-    memory: {
-      conditions: [],
-      medications: [memoryItem('amlodipine', 'Amlodipine'), memoryItem('metformin', 'Metformin')],
-      allergies: [],
-      procedures: [],
-      vaccinations: [],
-      encounters: [],
-      latestResults: [],
-      counts: { records: 12, reports: 3 },
-    },
-    timeline: [
-      event('r2019', 'report', '2019-05-02'),
-      event('r2023', 'report', '2023-08-20'),
-      event('r2026', 'report', '2026-06-10'),
-      event('visit', 'encounter', '2099-03-15'),
-    ],
-    trends: [
-      {
-        id: 't-ldl', name: 'LDL Cholesterol', nameKey: 'ldlcholesterol', unit: 'mg/dL',
-        points: [point('2026-03-12', 120), point('2026-06-10', 135)],
-        direction: 'increased', latest: { date: '2026-06-10', value: 135 }, summary: 'LDL Cholesterol went from 120 to 135 mg/dL.',
-        referenceRange: '< 100', otherUnits: [],
-      },
-      {
-        id: 't-glu', name: 'Fasting Glucose', nameKey: 'fastingglucose', unit: 'mmol/L',
-        points: [point('2026-06-10', 5.4)],
-        direction: 'insufficient_data', latest: { date: '2026-06-10', value: 5.4 }, summary: 'One result so far.',
-        referenceRange: null, otherUnits: [],
-      },
-    ],
-    changes: {
-      status: 'ok',
-      changes: [
-        {
-          id: 'c-ldl', type: 'value_change', name: 'LDL Cholesterol', summary: 'LDL Cholesterol went from 120 to 135 mg/dL.',
-          previousValue: '120', currentValue: '135', unit: 'mg/dL', date: '2026-06-10', comparedWithDate: '2026-03-12',
-          sources: [{ recordId: 'o2', role: 'current', evidence: evidence('d2') }, { recordId: 'o1', role: 'previous', evidence: evidence('d1') }],
-        },
-      ],
-    },
-  };
-}
-
-function useBackend(snapshot: object) {
-  invalidateHealthMemory();
-  const { createFakeSupabase } = jest.requireActual('../test-support/fakeSupabase');
-  const fake = createFakeSupabase();
-  fake.functions.invoke.mockResolvedValue({ data: snapshot, error: null });
-  (getSupabaseClient as jest.Mock).mockReturnValue(fake);
 }
 
 beforeEach(() => {
@@ -163,65 +96,8 @@ describe('Home summary — derived only from real data', () => {
   });
 });
 
-describe('Home — data-rich account', () => {
-  beforeEach(() => useBackend(richSnapshot()));
-
-  it('shows the greeting, timeline years, snapshot, latest change and Ask — all from the records', async () => {
-    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([doc('d1'), doc('d2'), doc('d3')]);
-    await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByTestId('home-snapshot')).toBeTruthy());
-
-    expect(screen.getByText('Your health story continues.')).toBeTruthy();
-    for (const year of ['2019', '2023', '2026']) expect(screen.getByText(year)).toBeTruthy();
-    expect(screen.getByText('Latest record Jun 2026')).toBeTruthy();
-
-    expect(screen.getByLabelText('All Records: 3 documents')).toBeTruthy();
-    expect(screen.getByLabelText('Trends: 1 measure')).toBeTruthy();
-    expect(screen.getByLabelText('Medications: 2 recorded')).toBeTruthy();
-    expect(screen.getByLabelText('Next Checkup: Mar 2099')).toBeTruthy();
-
-    expect(screen.getAllByText('LDL Cholesterol').length).toBeGreaterThan(0);
-    expect(screen.queryByTestId('home-no-change')).toBeNull();
-    expect(screen.getByText('Ask about your health...')).toBeTruthy();
-  });
-
-  it('snapshot cards, Ask and the profile open the existing screens', async () => {
-    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([doc('d1')]);
-    await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByTestId('home-snapshot')).toBeTruthy());
-    for (const [id, route] of [
-      ['snapshot-records', '/documents'],
-      ['snapshot-trends', '/(tabs)/health'],
-      ['snapshot-medications', '/medications'],
-      ['home-ask', '/(tabs)/ask'],
-      ['home-profile', '/(tabs)/me'],
-    ]) {
-      await act(async () => {
-        fireEvent.press(screen.getByTestId(id));
-      });
-      expect(router.push).toHaveBeenCalledWith(route);
-    }
-  });
-});
-
-describe('Home — records but nothing to compare yet', () => {
-  it('shows neutral states, never invented trends, medications, check-ups or changes', async () => {
-    const snapshot = { ...richSnapshot() } as ReturnType<typeof richSnapshot>;
-    snapshot.trends = [];
-    snapshot.changes = { status: 'insufficient_data', changes: [] };
-    snapshot.memory = { ...snapshot.memory, medications: [] };
-    snapshot.timeline = [event('r2026', 'report', '2026-06-10')];
-    useBackend(snapshot);
-    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([doc('d1')]);
-    await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByTestId('home-snapshot')).toBeTruthy());
-    expect(screen.getByLabelText('All Records: 1 document')).toBeTruthy();
-    expect(screen.getByLabelText('Trends: Not enough yet')).toBeTruthy();
-    expect(screen.getByLabelText('Medications: None recorded')).toBeTruthy();
-    expect(screen.getByLabelText('Next Checkup: None on record')).toBeTruthy();
-    expect(screen.getByTestId('home-no-change')).toBeTruthy();
-  });
-});
+// Home's rendered dashboard (stages, results, signals, history, changes) is
+// covered in home-dashboard-v2.test.tsx.
 
 // --------------------------------------------------------------- Welcome --
 

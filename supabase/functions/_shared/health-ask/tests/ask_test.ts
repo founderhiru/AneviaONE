@@ -96,7 +96,7 @@ Deno.test('trend question: deterministic trend, cited records, filtered retrieva
 Deno.test('timeline, last test, changes, first-recorded and source questions', async () => {
   const d = () => deps({ model: null });
   assertEquals((await answerQuestion('When was my last blood test?', d())).sentences[0].text.startsWith('Your most recent recorded test results are from 15 Sep 2026 (Report C.pdf): '), true);
-  assertEquals((await answerQuestion('Show my recent health history', d())).sentences[1].text, '15 Sep 2026 — Report C.pdf: 3 test results · 2 medications · 1 allergy · 1 procedure.');
+  assertEquals((await answerQuestion('Show my recent health history', d())).sentences[1].text, '15 Sep 2026 — Health report: 3 test results · 2 medications · 1 allergy · 1 procedure.');
   const changes = await answerQuestion('What changed between my two latest reports?', d());
   assertEquals(changes.sentences[1].text, 'Recorded HbA1c decreased from 6.1% (10 Jun 2026) to 5.9% (15 Sep 2026).');
   assertEquals((await answerQuestion('When was hypertension first recorded?', d())).answer, 'Hypertension was first recorded on 10 Jun 2026 (recorded as diagnosed, Report B.pdf, page 2).');

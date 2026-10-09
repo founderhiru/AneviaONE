@@ -4,6 +4,7 @@
  * the report's text, or images of its pages for photos and scans.
  */
 import React from 'react';
+import { Alert, type AlertButton } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -107,30 +108,55 @@ describe('Read again', () => {
     return screen.findByTestId('read-report-again');
   }
 
-  it('a completed report offers Read again, which asks the server to reprocess it', async () => {
+  /** The confirmation shown before a re-read; answers it with `choice`. */
+  const confirmWith = (choice: 'Cancel' | 'Read again') =>
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons?: AlertButton[]) => {
+      buttons?.find((b) => b.text === choice)?.onPress?.();
+    });
+
+  it('a completed report offers Read again — confirmed first, then the server re-reads it', async () => {
+    const alert = confirmWith('Read again');
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
     const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
     await fireEvent.press(await openCompleted());
-    expect(start).toHaveBeenCalledWith(DOC_ID, { retry: false, reprocess: true });
+    expect(alert).toHaveBeenCalledWith(
+      'Read this report again?',
+      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading.',
+      [expect.objectContaining({ text: 'Cancel', style: 'cancel' }), expect.objectContaining({ text: 'Read again' })],
+    );
+    await waitFor(() => expect(start).toHaveBeenCalledWith(DOC_ID, { retry: false, reprocess: true }));
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it('a single tap is not enough: Cancel on the confirmation re-reads nothing', async () => {
+    confirmWith('Cancel');
+    jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
+    const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
+    await fireEvent.press(await openCompleted());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(start).not.toHaveBeenCalled();
   });
 
   it('without current consent, Read again asks first — and Allow then re-reads (not just reopens)', async () => {
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue({ granted: false, version: null, recordedAt: null });
     jest.spyOn(consentService, 'grantAiConsent').mockResolvedValue();
     const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
+    confirmWith('Read again');
     await fireEvent.press(await openCompleted());
     expect(start).not.toHaveBeenCalled();
     await fireEvent.press(await screen.findByText(AI_CONSENT_COPY.allow));
     expect(start).toHaveBeenCalledWith(DOC_ID, { retry: false, reprocess: true });
   });
 
-  it('the request carries reprocess only when asked', async () => {
+  it('the request names a re-read only when asked', async () => {
     const fake = createFakeSupabase();
     fake.functions.invoke.mockResolvedValue({ data: { status: 'processing' }, error: null });
     (getSupabaseClient as jest.Mock).mockReturnValue(fake);
     await supabaseProcessingService.start(DOC_ID, { reprocess: true });
     await supabaseProcessingService.start(DOC_ID);
-    expect(fake.functions.invoke).toHaveBeenNthCalledWith(1, 'process-document', { body: { document_id: DOC_ID, reprocess: true } });
+    expect(fake.functions.invoke).toHaveBeenNthCalledWith(1, 'process-document', { body: { document_id: DOC_ID, operation: 'reread', reprocess: true } });
     expect(fake.functions.invoke).toHaveBeenNthCalledWith(2, 'process-document', { body: { document_id: DOC_ID } });
   });
 });

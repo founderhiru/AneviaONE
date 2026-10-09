@@ -9,7 +9,8 @@
  *   → consent re-check immediately before any AI call (OCR included)
  *   → deterministic chunks → StructuredExtractor
  *   → deterministic validation + normalization + confidence gate
- *   → report-person check (mismatch → review, nothing ingested)
+ *   → report-person check (mismatch → review, nothing ingested; anything
+ *     short of strong identity evidence → every fact held for review)
  *   → one atomic database write → document completed
  *   any failure → classified, user-safe failure (retryable or not)
  */
@@ -18,7 +19,7 @@ import { chunkPages } from './chunking.ts';
 import { EngineError, USER_MESSAGES, isEngineError, type FailureKind } from './errors.ts';
 import type { StructuredExtractor } from './extractor.ts';
 import { factFingerprint, sha256Hex } from './fingerprint.ts';
-import { checkReportPerson, type AccountIdentity, type IdentityCheck } from './identity.ts';
+import { checkReportPerson, identityAllowsTrust, type AccountIdentity, type IdentityCheck } from './identity.ts';
 import type { Logger } from './log.ts';
 import { OCR_PASS_LEGIBILITY, type OcrProvider } from './ocr.ts';
 import type { PageTextProvider } from './pages.ts';
@@ -83,6 +84,11 @@ export function rejectionCounts(rejected: { reason: string }[]): Record<string, 
   const counts: Record<string, number> = {};
   for (const { reason } of rejected) counts[`rejected_${reason}`] = (counts[`rejected_${reason}`] ?? 0) + 1;
   return counts;
+}
+
+/** Holds every fact for review (identity not established); evidence is kept as read. */
+export function holdForIdentity(facts: ValidatedFact[]): ValidatedFact[] {
+  return facts.map((f) => (f.confidence_gate === 'needs_review' ? f : { ...f, confidence_gate: 'needs_review' }));
 }
 
 /** Merges per-chunk extractions into one (identity / report date: first evidence-backed value wins). */
@@ -218,8 +224,14 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
       throw new EngineError('identity_mismatch', 'identity_mismatch', USER_MESSAGES.identity);
     }
 
+    // Extraction is not proof of ownership: without strong identity evidence
+    // every fact is stored with its evidence but held for review — none of
+    // it reaches trusted Health Memory (current_* views) on its own.
+    const trusted = identityAllowsTrust(identityCheck);
+    const facts = trusted ? validation.facts : holdForIdentity(validation.facts);
+
     const payload = await buildCompletionPayload({
-      facts: validation.facts,
+      facts,
       pages,
       contentSha256,
       reportDate: validation.reportDate,
@@ -244,6 +256,7 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
       ...rejectionCounts(validation.rejected),
       facts_discarded: validation.discarded,
       identity_check: identityCheck,
+      facts_held_identity: trusted ? 0 : validation.facts.filter((f) => f.confidence_gate === 'passed').length,
       duration_ms: Date.now() - started,
     });
     return { status: 'completed', ...counts, facts_rejected: validation.rejected.length, facts_discarded: validation.discarded };

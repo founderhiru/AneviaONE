@@ -34,6 +34,8 @@ function buildUser(identity: { provider: AuthProvider; displayValue: string; mob
     createdAt: new Date().toISOString(),
     linkedIdentities: [{ provider: identity.provider, displayValue: identity.displayValue, linkedAt: new Date().toISOString() }],
     onboardingComplete: false,
+    identityOnboardingComplete: false,
+    identityUploadPromptSeen: false,
   };
 }
 
@@ -140,6 +142,11 @@ export const mockAuthService: AuthService = {
   async completeOnboarding(): Promise<void> {
     const existing = await secureSession.load();
     if (existing) await secureSession.save({ ...existing, onboardingComplete: true });
+  },
+
+  async saveOnboardingFlags(flags): Promise<void> {
+    const existing = await secureSession.load();
+    if (existing) await secureSession.save({ ...existing, ...flags });
   },
 
   onSignedOut() {

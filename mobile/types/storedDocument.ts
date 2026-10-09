@@ -14,7 +14,9 @@ export type DocumentStatus =
   | 'extracted'
   | 'validated'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  /** Deletion started on the server but hasn't finished (retryable). */
+  | 'deleting';
 
 /** Mirrors `public.document_type`. */
 export type StoredDocumentType = 'unclassified' | 'blood_test' | 'other';
@@ -37,10 +39,17 @@ export type StoredDocument = {
   processingError: string | null;
   /** Why reading failed (server-set); 'identity_mismatch' means the report needs the person's review. */
   failureKind?: string | null;
+  /** Whether the report could be matched to the identity the person entered
+   * (server-set): 'consistent' lets its results be trusted; 'no_identifiers' /
+   * 'unverifiable' hold them for review; 'mismatch' adds nothing. */
+  identityCheck?: string | null;
   /** Results this report contributes to Health Memory (its latest successful
    * read: facts that passed, plus ones already there). 0 = read, nothing
    * found; undefined/null = not read yet or unknown. */
   healthInfoCount?: number | null;
+  /** Results from that same read held for review (not in Health Memory yet);
+   * undefined/null = unknown. */
+  heldForReviewCount?: number | null;
   uploadedAt: string | null;
   createdAt: string;
   updatedAt: string;

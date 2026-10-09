@@ -9,7 +9,7 @@
     "strict": true
   },
   "tasks": {
-    "check": "deno check process-document/index.ts health-memory/index.ts ask-health/index.ts _shared/",
+    "check": "deno check process-document/index.ts health-memory/index.ts ask-health/index.ts delete-document/index.ts _shared/",
     "test": "deno test --allow-read --allow-env _shared/"
   }
 }

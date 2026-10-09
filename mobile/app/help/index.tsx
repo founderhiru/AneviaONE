@@ -9,7 +9,7 @@ import { FAQ_TOPICS, isFaqTopic, mobileFaq, type ResolvedFaqEntry } from '../../
 import { useTheme } from '../../design/theme';
 
 /**
- * Me → Help & FAQ (and Me → Data & Security, via `?topic=data-security`).
+ * Me → Help & FAQ. The data & security topic (`?topic=data-security`) is no longer linked from Me.
  *
  * The questions and answers come from the shared FAQ (shared/faq.ts, also
  * used by the website) — only entries marked `mobileVisible`. Each question is

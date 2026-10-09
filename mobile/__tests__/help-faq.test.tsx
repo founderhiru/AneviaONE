@@ -82,7 +82,7 @@ describe('shared FAQ content', () => {
 });
 
 describe('Me screen → Help & legal', () => {
-  it('links to Help & FAQ, Privacy & Security, Data & Security and Terms', async () => {
+  it('links to Help & FAQ, Privacy & Security and Terms — one privacy entry, no duplicate', async () => {
     await renderWithAuth(<MeScreen />);
     await waitFor(() => expect(screen.getByText('Help & FAQ')).toBeTruthy());
 
@@ -91,10 +91,8 @@ describe('Me screen → Help & legal', () => {
     });
     expect(router.push).toHaveBeenCalledWith('/help');
 
-    await act(async () => {
-      fireEvent.press(screen.getByText('Data & Security'));
-    });
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/help', params: { topic: 'data-security' } });
+    // "Data & Security" duplicated Privacy & Security; Me lists only the canonical entry.
+    expect(screen.queryByText('Data & Security')).toBeNull();
 
     await act(async () => {
       fireEvent.press(screen.getByText('Terms of Service'));

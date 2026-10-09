@@ -18,7 +18,7 @@ function formatDate(iso?: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-const ITEM_TITLES: Record<Exclude<ChangeType, 'value_change'>, string> = {
+export const ITEM_TITLES: Record<Exclude<ChangeType, 'value_change'>, string> = {
   new_medication: 'New medication',
   stopped_medication: 'Medication stopped',
   medication_not_in_latest: 'Not in the latest report',

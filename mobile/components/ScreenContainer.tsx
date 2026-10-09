@@ -37,7 +37,17 @@ export function ScreenContainer({
   return (
     <SafeAreaView edges={edges} style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={[{ padding: theme.spacing.lg, gap: theme.spacing.lg }, contentStyle]}
+        // Fills the screen and always scrolls vertically; the extra bottom
+        // space keeps the last control (e.g. Sign out on Me) clear of the tab
+        // bar so it can always be scrolled fully into view on small screens.
+        style={styles.flex}
+        contentContainerStyle={[
+          { padding: theme.spacing.lg, paddingBottom: theme.spacing.huge, gap: theme.spacing.lg, flexGrow: 1 },
+          contentStyle,
+        ]}
+        alwaysBounceVertical
+        showsVerticalScrollIndicator
+        testID="screen-scroll"
         keyboardShouldPersistTaps="handled"
         refreshControl={
           onRefresh ? (
