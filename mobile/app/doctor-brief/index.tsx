@@ -1,7 +1,7 @@
 import React from 'react';
-import { Share, Text } from 'react-native';
+import { Text } from 'react-native';
 
-import { Button, Card, ScreenContainer, ScreenHeader, SecondaryButton, StatusBadge } from '../../components';
+import { Button, Card, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 
@@ -13,10 +13,6 @@ import { useTheme } from '../../design/theme';
 export default function DoctorBriefScreen() {
   const theme = useTheme();
 
-  async function handleShare() {
-    await Share.share({ message: `${PRODUCT_TERMS.doctorBrief} — preview, generation coming soon.` });
-  }
-
   return (
     <ScreenContainer>
       <ScreenHeader title={PRODUCT_TERMS.doctorBrief} />
@@ -26,12 +22,11 @@ export default function DoctorBriefScreen() {
       </Text>
       <Card>
         <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-          This feature isn&rsquo;t built yet — it&rsquo;s a placeholder so the navigation and architecture are ready
-          for it.
+          Generating a Doctor Brief from your Health Memory isn&rsquo;t available yet. It will appear here when it
+          is.
         </Text>
       </Card>
       <Button label="Generate Doctor Brief" onPress={() => {}} disabled />
-      <SecondaryButton label="Share" onPress={handleShare} />
     </ScreenContainer>
   );
 }

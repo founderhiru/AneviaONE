@@ -163,15 +163,7 @@ export default function MeScreen() {
         ]}
       />
 
-      <RowList
-        rows={[
-          { label: 'Notifications', onPress: () => {} },
-          { label: 'Language', onPress: () => {} },
-          { label: 'About', onPress: () => {} },
-        ]}
-      />
-
-      <RowList rows={[{ label: 'Sign out', onPress: signOut, danger: true }]} />
+      <RowList rows={[{ label: 'Sign out', onPress: signOut, danger: true, testID: 'me-sign-out' }]} />
     </ScreenContainer>
   );
 }

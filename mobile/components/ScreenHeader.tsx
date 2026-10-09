@@ -17,6 +17,14 @@ export type ScreenHeaderProps = {
  * its own header content. Uses the platform-appropriate back affordance
  * (chevron on iOS, arrow on Android) and respects Android hardware back via
  * `router.back()` already being the default gesture handler. */
+
+/** Back, or Home when there is nothing to go back to (e.g. the screen was
+ * opened by a deep link) — `router.back()` alone would do nothing. */
+export function goBackOrHome() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/(tabs)/home');
+}
+
 export function ScreenHeader({ title, onBack, rightLabel, onRightPress }: ScreenHeaderProps) {
   const theme = useTheme();
   const backIcon = Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back';
@@ -24,7 +32,7 @@ export function ScreenHeader({ title, onBack, rightLabel, onRightPress }: Screen
   return (
     <View style={styles.row}>
       <Pressable
-        onPress={onBack ?? (() => router.back())}
+        onPress={onBack ?? goBackOrHome}
         accessibilityRole="button"
         accessibilityLabel="Go back"
         hitSlop={12}

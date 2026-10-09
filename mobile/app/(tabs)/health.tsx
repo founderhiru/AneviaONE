@@ -126,7 +126,11 @@ export default function HealthScreen() {
       </View>
 
       <View style={{ gap: theme.spacing.sm }}>
-        <SectionHeader title="Medications" actionLabel="View All" onActionPress={() => router.push('/medications')} />
+        <SectionHeader
+          title="Medications"
+          actionLabel={data.medications.length ? 'View All' : undefined}
+          onActionPress={data.medications.length ? () => router.push('/medications') : undefined}
+        />
         {data.medications.length === 0 ? (
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None on file.</Text>
         ) : (

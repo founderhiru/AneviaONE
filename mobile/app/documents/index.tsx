@@ -35,7 +35,7 @@ export default function MyDocumentsScreen() {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="My documents" onBack={() => router.back()} />
+      <ScreenHeader title="My documents" />
 
       {deleted === '1' ? (
         <View

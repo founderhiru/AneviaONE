@@ -25,10 +25,16 @@ function HistoricalChart({ trend, color }: { trend: Trend; color: string }) {
   const usableHeight = CHART_HEIGHT - padding * 2;
   const stepX = trend.points.length > 1 ? usableWidth / (trend.points.length - 1) : 0;
 
+  // Points within one year are told apart by day and month ("15 Aug"), otherwise by month and year.
+  const sameYear = new Set(trend.points.map((p) => p.date.slice(0, 4))).size === 1;
+  const axisLabel = (iso: string) =>
+    new Date(`${iso.slice(0, 10)}T00:00:00`)
+      .toLocaleDateString('en-GB', sameYear ? { day: '2-digit', month: 'short' } : { month: 'short', year: 'numeric' })
+      .replace('Sept', 'Sep');
   const coords = trend.points.map((p, i) => ({
     x: padding + i * stepX,
     y: padding + usableHeight - ((p.value - min) / range) * usableHeight,
-    year: new Date(p.date).getFullYear(),
+    label: axisLabel(p.date),
   }));
 
   return (
@@ -50,7 +56,7 @@ function HistoricalChart({ trend, color }: { trend: Trend; color: string }) {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: padding - 12 }}>
         {coords.map((c, i) => (
           <Text key={i} style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
-            {c.year}
+            {c.label}
           </Text>
         ))}
       </View>
@@ -156,7 +162,7 @@ export default function TrendDetailScreen() {
         {trend.points.map((point, index) => (
           <View
             key={index}
-            style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: theme.spacing.xxs }}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: theme.spacing.xxs }}
           >
             <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
               {new Date(point.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
