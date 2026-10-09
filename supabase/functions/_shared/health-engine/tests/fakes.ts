@@ -33,7 +33,7 @@ type Fact = { kind: string; document_id: string; run_id: string; fingerprint: st
 export class FakeDb implements EngineDb {
   docs = new Map<string, Doc>();
   consent = new Map<string, string>(); // user → version with both consents granted
-  identity = { displayName: SYNTHETIC_PATIENT.name as string | null, dateOfBirth: SYNTHETIC_PATIENT.dateOfBirth as string | null };
+  identity = { fullName: SYNTHETIC_PATIENT.name as string | null, dateOfBirth: SYNTHETIC_PATIENT.dateOfBirth as string | null };
   runs: { id: string; document_id: string; status: string; consent_version: string }[] = [];
   facts: Fact[] = [];
   failures: FailureArgs[] = [];

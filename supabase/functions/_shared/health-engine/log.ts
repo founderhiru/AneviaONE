@@ -23,6 +23,7 @@ const ALLOWED_KEYS = new Set([
   'facts_duplicate',
   'facts_rejected',
   'facts_removed',
+  'facts_held_identity',
   'facts_kept',
   'duration_ms',
   'model',

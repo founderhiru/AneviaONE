@@ -242,3 +242,47 @@ Deno.test('low confidence: stored for review, kept out of trusted (current) resu
   assertEquals(outcome.status === 'completed' && [outcome.facts_written, outcome.facts_needs_review], [2, 1]);
   assertEquals(values(env), [['HbA1c', 5.8, '%', '2026-03-12']]);
 });
+
+// ------------------------------------- extraction is not proof of ownership --
+// Only strong identity evidence lets a report's facts into trusted Health
+// Memory. Anything weaker keeps every fact, with its evidence, held for review.
+
+Deno.test('no identity entered by the person: facts stored with evidence, all held, none trusted', async () => {
+  const env = makeContext();
+  env.db.identity = { fullName: null, dateOfBirth: null };
+  const outcome = await upload(env, DOC_A, buildTextPdf(REPORT_A));
+  assertEquals(outcome.status, 'completed');
+  assertEquals(env.db.liveObservations().length, 0);
+  assertEquals(env.db.facts.length > 0, true);
+  for (const f of env.db.facts) {
+    assertEquals(f.gate, 'needs_review');
+    assertEquals(typeof f.row.source_text, 'string');
+    assertEquals(f.row.page_number, 1);
+  }
+  assertEquals(env.db.docs.get(DOC_A)!.identity_check, 'unverifiable');
+});
+
+Deno.test('weak identity (one shared word): all held for review, none trusted', async () => {
+  const env = makeContext();
+  env.db.identity = { fullName: 'Asha Sharma', dateOfBirth: null };
+  assertEquals((await upload(env, DOC_A, buildTextPdf(REPORT_A))).status, 'completed');
+  assertEquals(env.db.liveObservations().length, 0);
+  assertEquals(env.db.facts.every((f) => f.gate === 'needs_review'), true);
+  assertEquals(env.db.docs.get(DOC_A)!.identity_check, 'unverifiable');
+});
+
+Deno.test('a report that names no one: all held for review, none trusted', async () => {
+  const env = makeContext();
+  const anonymous = REPORT_A.map((page) => page.filter((line) => !/Patient:|DOB/i.test(line)));
+  assertEquals((await upload(env, DOC_A, buildTextPdf(anonymous))).status, 'completed');
+  assertEquals(env.db.liveObservations().length, 0);
+  assertEquals(env.db.facts.length > 0 && env.db.facts.every((f) => f.gate === 'needs_review'), true);
+  assertEquals(env.db.docs.get(DOC_A)!.identity_check, 'no_identifiers');
+});
+
+Deno.test('strong identity (full name and date of birth match): facts enter trusted Health Memory', async () => {
+  const env = makeContext();
+  assertEquals((await upload(env, DOC_A, buildTextPdf(REPORT_A))).status, 'completed');
+  assertEquals(env.db.docs.get(DOC_A)!.identity_check, 'consistent');
+  assertEquals(env.db.liveObservations().length, 2);
+});
