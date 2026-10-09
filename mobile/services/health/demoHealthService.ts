@@ -27,6 +27,7 @@ function toRecorded(o: Observation): RecordedObservation {
     referenceRange: o.referenceRange ?? null,
     date: o.date,
     needsReview: false,
+    category: o.category,
     source: { documentId: o.sourceDocumentId ?? '', documentName: getDocumentById(o.sourceDocumentId ?? '')?.title ?? 'Sample report', pageNumber: null },
   };
 }

@@ -68,7 +68,7 @@ describe('Home — recent health records', () => {
   it('shows the person’s uploaded documents, newest first, with when they were added', async () => {
     const list = jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([BLOOD, REPORT]);
     await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText('Recent Health Records')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Recent reports')).toBeTruthy());
     expect(screen.getByText('Blood Test.pdf')).toBeTruthy();
     expect(screen.getByText('Medical Report.pdf')).toBeTruthy();
     expect(screen.getAllByText(/Uploaded today/)).toHaveLength(2);

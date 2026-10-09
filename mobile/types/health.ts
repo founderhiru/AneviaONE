@@ -160,5 +160,14 @@ export type RecordedObservation = {
   date: string | null;
   /** Read with lower confidence or ambiguity — not yet used for trends. */
   needsReview: boolean;
+  /** The value as a plain number, when it is one ("<0.5" and "Nil" are not). */
+  valueNumeric?: number | null;
+  /** Bounds of the range printed on the report, parsed by the server. */
+  referenceLow?: number | null;
+  referenceHigh?: number | null;
+  /** The kind of result as classified when the report was read. */
+  category?: string | null;
+  /** A flag printed next to the result on the report (e.g. "H"), as written. */
+  abnormalFlag?: string | null;
   source: { documentId: string; documentName: string; pageNumber: number | null };
 };

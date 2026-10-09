@@ -64,6 +64,11 @@ type ObservationRow = {
   value_as_written: string;
   unit_as_written: string | null;
   reference_range_as_written: string | null;
+  abnormal_flag_as_written: string | null;
+  value_numeric: number | string | null;
+  reference_low: number | string | null;
+  reference_high: number | string | null;
+  category: string | null;
   effective_date: string | null;
   confidence_gate: 'passed' | 'needs_review';
   review_status: string;
@@ -73,7 +78,14 @@ type ObservationRow = {
 };
 
 const OBSERVATION_COLUMNS =
-  'id, name_as_written, value_as_written, unit_as_written, reference_range_as_written, effective_date, confidence_gate, review_status, document_id, document_page_id, created_at';
+  'id, name_as_written, value_as_written, unit_as_written, reference_range_as_written, abnormal_flag_as_written, value_numeric, reference_low, reference_high, category, effective_date, confidence_gate, review_status, document_id, document_page_id, created_at';
+
+/** Postgres numerics may arrive as strings; anything unreadable is null, never 0. */
+const numeric = (v: number | string | null | undefined): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
 const LOAD_ERROR = { code: 'unknown' as const, userMessage: 'We couldn’t load your test results. Please try again.', retryable: true };
 
@@ -118,6 +130,11 @@ async function loadObservations(filter: { documentId?: string }): Promise<Record
       referenceRange: r.reference_range_as_written,
       date: r.effective_date,
       needsReview: r.confidence_gate === 'needs_review' && r.review_status !== 'confirmed',
+      valueNumeric: numeric(r.value_numeric),
+      referenceLow: numeric(r.reference_low),
+      referenceHigh: numeric(r.reference_high),
+      category: r.category ?? null,
+      abnormalFlag: r.abnormal_flag_as_written ?? null,
       source: {
         documentId: r.document_id as string,
         documentName: names.get(r.document_id as string) ?? 'Your report',
