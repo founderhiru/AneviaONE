@@ -147,3 +147,77 @@ Deno.test('dates are still strict: a date not on the page, or impossible, still 
   assertEquals(run('16/09/2026 10:45 AM'), ['invalid_date']); // not on the page
   assertEquals(run('15/09/2026 10:45 AM'), []); // on the page, parsed
 });
+
+// ------------------------------------------------------------------------
+// Regression (9 Oct 2026): photographed lab reports print date-times as
+// "07/Oct/2026 10:45am" — a month NAME between slashes. That form wasn't
+// recognised, so every result was undated and held for review instead of
+// carrying its collection date. Synthetic content; real date-time shapes.
+// ------------------------------------------------------------------------
+
+const SLASH_MONTH_LINES = [
+  'CITY CARE DIAGNOSTICS PVT. LTD.',
+  'Patient Name : Ms. ASHA VERMA            Age/Sex : 41 Y / F',
+  'DOB : 14/08/1985                          Ref. By : Dr. Self',
+  'Collected : 07/Oct/2026 10:45am   Received : 07/Oct/2026 11:02am   Reported : 07/Oct/2026 06:12pm',
+  'Test Name                 Result     Unit          Bio. Ref. Interval',
+  'Haemoglobin               13.5       g/dL          12.0 - 15.0',
+  'Glucose (Fasting)         112        mg/dL         70 - 100',
+];
+
+Deno.test('date forms seen on photographed reports are read as dates', async () => {
+  const { parseDateAsWritten } = await import('../normalize.ts');
+  for (const [written, iso] of [
+    ['07/Oct/2026 10:45am', '2026-10-07'],
+    ['07/Oct/2026 10:45AM', '2026-10-07'],
+    ['07/oct/2026 10:45 am', '2026-10-07'],
+    ['07/Oct/2026', '2026-10-07'],
+    ['07/Sept/2026', '2026-09-07'],
+    ['Oct/07/2026', '2026-10-07'],
+    ['Oct 07, 2026, 10:45 am', '2026-10-07'],
+  ] as const) {
+    assertEquals(parseDateAsWritten(written, TODAY_SLASH), { kind: 'date', iso }, written);
+  }
+  // Still never guessed: an all-numeric date with no proof of order stays ambiguous.
+  assertEquals(parseDateAsWritten('07/09/2026 10:45 AM', TODAY_SLASH), { kind: 'ambiguous' });
+});
+
+const TODAY_SLASH = new Date('2026-10-09T12:00:00Z');
+
+Deno.test('a photographed lab page dated "07/Oct/2026 10:45am" yields dated, trusted facts', async () => {
+  const env = makeContext();
+  env.db.addDoc(DOC);
+  env.storage.files.set(`${USER}/${DOC}.pdf`, buildImageOnlyPdf());
+  const transcription = SLASH_MONTH_LINES.map((l) => l.replace(/ {2,}/g, '  ')).join('\n');
+  const ocr: OcrProvider = {
+    name: 'scripted',
+    promptVersion: 'test-ocr',
+    recognize: () => Promise.resolve({ pages: [{ page_number: 1, text: transcription }], legibility: new Map([[1, 0.95]]) }),
+  };
+  const row = (name: string, value: string, unit: string, range: string) => ({
+    test_name: name, raw_value: value, raw_unit: unit, reference_range: range,
+    observation_date: '07/Oct/2026 10:45am', // as printed
+    category: 'laboratory', page: 1,
+    source_text: transcription.split('\n').find((l) => l.startsWith(name))!,
+    confidence: 0.95,
+  });
+  env.extractor.respond = () => ({
+    patient_name: { value: 'ASHA VERMA', page: 1, source_text: 'Patient Name : Ms. ASHA VERMA' },
+    patient_date_of_birth: { value: '14/08/1985', page: 1, source_text: 'DOB : 14/08/1985' },
+    report_date: { value: '07/Oct/2026 06:12pm', page: 1, source_text: 'Reported : 07/Oct/2026 06:12pm' },
+    observations: [row('Haemoglobin', '13.5', 'g/dL', '12.0 - 15.0'), row('Glucose (Fasting)', '112', 'mg/dL', '70 - 100')],
+    medications: [], conditions: [], allergies: [], procedures: [], encounters: [],
+  });
+  const claimed = await env.db.claimDocument(DOC, USER, false, 3);
+  const out = await processClaimedDocument({ ...env.ctx, ocr, today: TODAY_SLASH }, claimed!, USER);
+
+  assertEquals(out.status, 'completed');
+  assertEquals(out.status === 'completed' && out.facts_rejected, 0);
+  assertEquals(out.status === 'completed' && out.facts_written, 2);
+  assertEquals(out.status === 'completed' && out.facts_needs_review, 0);
+  assertEquals(live(env), [
+    ['Haemoglobin', '13.5', 'g/dL', '2026-10-07'],
+    ['Glucose (Fasting)', '112', 'mg/dL', '2026-10-07'],
+  ]);
+  assertEquals(env.db.docs.get(DOC)!.report_date, '2026-10-07');
+});

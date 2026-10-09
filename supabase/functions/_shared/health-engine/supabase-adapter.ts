@@ -80,6 +80,9 @@ export function supabaseEngineDb(admin: SupabaseClient): EngineDb {
         'fail',
       );
     },
+    async recordRunDiagnostics(runId, userId, diagnostics) {
+      ensure(await admin.rpc('engine_record_run_diagnostics', { p_run_id: runId, p_user_id: userId, p_diagnostics: diagnostics }), 'diagnostics');
+    },
     async getAccountIdentity(userId): Promise<AccountIdentity> {
       // The identity the person entered (Identity details), read server-side
       // only — never the sign-in provider's name.

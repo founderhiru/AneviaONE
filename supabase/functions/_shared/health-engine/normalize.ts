@@ -221,10 +221,10 @@ export function parseDateAsWritten(
     return first > 12 && second > 12 ? { kind: 'invalid' } : { kind: 'ambiguous' };
   }
 
-  m = /^(\d{1,2})[-\s.]([A-Za-z]{3,9})\.?[-\s.](\d{2}|\d{4})$/.exec(text); // 12 Mar 2026 / 12-Mar-26 / 12 Sept. 2026
+  m = /^(\d{1,2})[-\s./]([A-Za-z]{3,9})\.?[-\s./](\d{2}|\d{4})$/.exec(text); // 12 Mar 2026 / 12-Mar-26 / 12/Mar/2026 / 12 Sept. 2026
   if (m && MONTHS[m[2].toLowerCase()]) return toIso(fullYear(m[3], today), MONTHS[m[2].toLowerCase()], Number(m[1]), today);
 
-  m = /^([A-Za-z]{3,9})\.?[-\s.](\d{1,2})[-\s.](\d{2}|\d{4})$/.exec(text); // March 12 2026 / Mar-12-26
+  m = /^([A-Za-z]{3,9})\.?[-\s./](\d{1,2})[-\s./](\d{2}|\d{4})$/.exec(text); // March 12 2026 / Mar-12-26 / Mar/12/2026
   if (m && MONTHS[m[1].toLowerCase()]) return toIso(fullYear(m[3], today), MONTHS[m[1].toLowerCase()], Number(m[2]), today);
 
   // Not a form we know — that says nothing about whether the date is right.

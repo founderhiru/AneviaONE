@@ -101,9 +101,15 @@ Deno.test('values the transcription marked illegible are never accepted', async 
     encounters: [],
   });
   const out = await processScan(env, scan(blurred, 0.9));
-  assertEquals(out.status === 'completed' && out.facts_written, 0);
-  assertEquals(out.status === 'completed' && out.facts_rejected, 2);
+  // Nothing accepted — and not passed off as "no health information": the
+  // read fails clearly, with what was rejected and why recorded (counts only).
+  assertEquals(out, { status: 'failed', failure_kind: 'validation', error_code: 'all_candidates_rejected' });
   assertEquals(passed(env), []);
+  assertEquals(env.db.facts.length, 0);
+  const [d] = [...env.db.diagnostics.values()];
+  assertEquals(d.candidates.observations, 2);
+  assertEquals(d.accepted, 0);
+  assertEquals(d.rejected, { illegible: 1, quote_not_on_page: 1 });
 });
 
 Deno.test('an unreadable scan fails safely: no extraction call, no facts, an honest message', async () => {
