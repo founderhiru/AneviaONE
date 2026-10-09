@@ -2,7 +2,13 @@
  * process-document HTTP handler (steps 1–6 of the Gate 1 spec), with every
  * dependency injected.
  *
- *   POST { "document_id": "<uuid>", "reprocess"?: boolean }
+ *   POST { "document_id": "<uuid>", "operation"?: "read" | "reread" }
+ *
+ *   A completed document is read again ONLY for operation "reread" — the
+ *   person's explicit, confirmed request. Any other request for a completed
+ *   document (an ordinary read, a screen being viewed, an automatic sweep, or
+ *   an older app's bare `reprocess: true`) starts nothing and answers
+ *   "completed": viewing a report must never change Health Memory.
  *   Authorization: Bearer <the signed-in person's Supabase JWT>
  *
  *   202 { document_id, status: "processing" }   claimed; processing continues in the background
@@ -38,7 +44,7 @@ export function createProcessDocumentHandler(deps: HandlerDeps) {
     const userId = token ? await deps.authenticate(token).catch(() => null) : null;
     if (!userId) return json(401, { error: 'unauthenticated' });
 
-    let body: { document_id?: unknown; reprocess?: unknown };
+    let body: { document_id?: unknown; operation?: unknown; reprocess?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -46,14 +52,20 @@ export function createProcessDocumentHandler(deps: HandlerDeps) {
     }
     const documentId = typeof body.document_id === 'string' && UUID.test(body.document_id) ? body.document_id : null;
     if (!documentId) return json(400, { error: 'invalid_request' });
-    const reprocess = body.reprocess === true;
+    if (body.operation !== undefined && body.operation !== 'read' && body.operation !== 'reread') {
+      return json(400, { error: 'invalid_request' });
+    }
+    const reprocess = body.operation === 'reread';
 
     // 4. Ownership (another person's document looks exactly like a missing one).
     const owned = await deps.db.getOwnedDocument(documentId, userId);
     if (!owned) return json(404, { error: 'not_found' });
 
-    // Idempotent: refreshing never re-runs a completed document.
-    if (owned.status === 'completed' && !reprocess) return json(200, { document_id: documentId, status: 'completed' });
+    // Idempotent and read-only: nothing but an explicit re-read re-runs a completed document.
+    if (owned.status === 'completed' && !reprocess) {
+      if (body.reprocess === true) deps.log.info({ event: 'reread_not_explicit', document_id: documentId, status: 'completed' });
+      return json(200, { document_id: documentId, status: 'completed' });
+    }
     if (owned.status === 'pending_upload') return json(409, { error: 'not_eligible' });
     if (owned.status === 'failed' && owned.failure_kind && NOT_RETRYABLE.has(owned.failure_kind)) {
       return json(409, { error: 'not_retryable', failure_kind: owned.failure_kind });

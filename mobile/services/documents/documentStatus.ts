@@ -77,15 +77,25 @@ export const NO_HEALTH_INFO_PRESENTATION: DocumentStatusPresentation = {
   tone: 'neutral',
 };
 
-/** Presentation for one document, including the "Needs review" case. */
+/** A completed report whose results were all held for review — read, but nothing added yet. */
+export const HELD_FOR_REVIEW_PRESENTATION: DocumentStatusPresentation = {
+  label: 'Needs review',
+  description: 'Results were read from this report but are waiting to be checked, so they aren’t in your Health Memory yet. Your original is stored safely.',
+  tone: 'warning',
+};
+
+/** Presentation for one document, including the "Needs review" cases. */
 export function presentDocumentStatus(document: {
   status: DocumentStatus;
   failureKind?: string | null;
   healthInfoCount?: number | null;
+  heldForReviewCount?: number | null;
 }): DocumentStatusPresentation {
   if (document.status === 'failed' && document.failureKind === 'identity_mismatch') return NEEDS_REVIEW_PRESENTATION;
   if (document.status === 'completed' && typeof document.healthInfoCount === 'number') {
-    return document.healthInfoCount > 0 ? ADDED_PRESENTATION : NO_HEALTH_INFO_PRESENTATION;
+    if (document.healthInfoCount > 0) return ADDED_PRESENTATION;
+    // Never "nothing found" when results were found but are held for review.
+    return (document.heldForReviewCount ?? 0) > 0 ? HELD_FOR_REVIEW_PRESENTATION : NO_HEALTH_INFO_PRESENTATION;
   }
   return DOCUMENT_STATUS_PRESENTATION[document.status];
 }

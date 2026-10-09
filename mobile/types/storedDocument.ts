@@ -43,6 +43,9 @@ export type StoredDocument = {
    * read: facts that passed, plus ones already there). 0 = read, nothing
    * found; undefined/null = not read yet or unknown. */
   healthInfoCount?: number | null;
+  /** Results from that same read held for review (not in Health Memory yet);
+   * undefined/null = unknown. */
+  heldForReviewCount?: number | null;
   uploadedAt: string | null;
   createdAt: string;
   updatedAt: string;

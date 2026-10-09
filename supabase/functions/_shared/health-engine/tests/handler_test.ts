@@ -90,6 +90,65 @@ Deno.test('409 for pending uploads and non-retryable failures; retryable failure
   assertEquals((await call({ document_id: DOC })).status, 202);
 });
 
+// ------------------------------------- a completed report is never re-read --
+// Viewing, refreshing or an automatic sweep must not change Health Memory:
+// only the person's explicit re-read ("operation": "reread") re-reads it.
+
+async function completedReport() {
+  const ctx = setup();
+  await ctx.call({ document_id: DOC });
+  await Promise.all(ctx.tasks);
+  ctx.tasks.length = 0;
+  ctx.env.db.calls.length = 0;
+  return ctx;
+}
+
+Deno.test('completed report: an ordinary request starts nothing (no claim, no run, no AI call)', async () => {
+  const { call, env, tasks } = await completedReport();
+  const runsBefore = env.db.runs.length;
+  const sent = env.extractor.sent.length;
+  for (const body of [{ document_id: DOC }, { document_id: DOC, operation: 'read' }]) {
+    assertEquals(await call(body), { status: 200, body: { document_id: DOC, status: 'completed' }, text: '' });
+  }
+  assertEquals(env.db.calls.includes('claimDocument'), false);
+  assertEquals([tasks.length, env.db.runs.length - runsBefore, env.extractor.sent.length - sent], [0, 0, 0]);
+  assertEquals(env.db.docs.get(DOC)!.status, 'completed');
+});
+
+Deno.test('completed report: an older app\'s bare "reprocess": true is ignored safely (not an explicit re-read)', async () => {
+  const { call, env, tasks } = await completedReport();
+  const runsBefore = env.db.runs.length;
+  for (let i = 0; i < 3; i++) {
+    assertEquals((await call({ document_id: DOC, reprocess: true })).body, { document_id: DOC, status: 'completed' });
+  }
+  assertEquals([tasks.length, env.db.runs.length - runsBefore], [0, 0]);
+  assertEquals(env.db.calls.includes('claimDocument'), false);
+});
+
+Deno.test('completed report: the explicit re-read still works — once, even if asked twice at the same moment', async () => {
+  const { call, env, tasks } = await completedReport();
+  const [a, b] = await Promise.all([call({ document_id: DOC, operation: 'reread' }), call({ document_id: DOC, operation: 'reread' })]);
+  assertEquals([a.status, b.status].sort(), [202, 409]);
+  await Promise.all(tasks);
+  assertEquals(tasks.length, 1);
+  assertEquals(env.db.docs.get(DOC)!.status, 'completed');
+});
+
+Deno.test('an unknown operation is refused before anything is touched', async () => {
+  const { call, env } = await completedReport();
+  assertEquals((await call({ document_id: DOC, operation: 'force' })).status, 400);
+  assertEquals(env.db.calls, []);
+});
+
+Deno.test('a new upload is still read on an ordinary request; a retryable failure still retries', async () => {
+  const { call, env } = setup();
+  assertEquals((await call({ document_id: DOC })).status, 202);
+  const OTHER = 'bbbbbbbb-0000-4000-8000-000000000009';
+  env.db.addDoc(OTHER, USER, 'failed');
+  Object.assign(env.db.docs.get(OTHER)!, { failure_kind: 'transient', processing_attempts: 1 });
+  assertEquals((await call({ document_id: OTHER })).status, 202);
+});
+
 Deno.test('responses never echo report text, health data or secrets', async () => {
   const { call, tasks } = setup();
   const bodies: unknown[] = [];

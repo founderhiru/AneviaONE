@@ -104,7 +104,9 @@ export function useReadReport(documentId: string | null, options: { autoStart?: 
         poll(documentId, Date.now());
         return;
       }
-      if (state.phase === 'not_started' && autoStart) {
+      // Only a report that has never been read (`uploaded`) starts on its own.
+      // Viewing a completed, failed or otherwise settled report never sends anything.
+      if (state.phase === 'not_started' && state.awaitingRead !== false && autoStart) {
         const consent = await consentService.getAiConsent();
         if (!mounted.current) return;
         if (consent.granted) await begin(documentId);

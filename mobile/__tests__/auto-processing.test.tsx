@@ -20,7 +20,6 @@ import { readLocalFile } from '../services/documents/fileAccess';
 import { onHealthMemoryChanged } from '../services/health/healthMemoryApi';
 import { allowAndReadWaitingDocuments, getAutoReadStatus, readWaitingDocuments, resetAutoReadForTests } from '../services/processing/autoRead';
 import {
-  EARLIER_READING_BEFORE,
   MAX_ATTEMPTS,
   POLL_INTERVAL_MS,
   processingService,
@@ -176,7 +175,7 @@ describe('2. missing consent is asked for before anything is read', () => {
   });
 
   it('waiting documents at app open: no request without consent; Allow records it, then reads', async () => {
-    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID, reprocess: false }]);
+    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID }]);
     const consent = jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(NO_CONSENT);
     const grant = jest.spyOn(consentService, 'grantAiConsent').mockImplementation(async () => {
       consent.mockResolvedValue(CONSENTED);
@@ -189,12 +188,12 @@ describe('2. missing consent is asked for before anything is read', () => {
 
     await allowAndReadWaitingDocuments();
     expect(grant).toHaveBeenCalledTimes(1);
-    expect(start).toHaveBeenCalledWith(PDF_ID, { reprocess: false });
+    expect(start).toHaveBeenCalledWith(PDF_ID, {});
     expect(getAutoReadStatus()).toMatchObject({ waitingForConsent: 0, reading: 1 });
   });
 
   it('Home shows the consent once for waiting reports; "Not now" sends nothing and is not asked again this session', async () => {
-    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID, reprocess: false }]);
+    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID }]);
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(NO_CONSENT);
     const start = jest.spyOn(processingService, 'start');
 
@@ -220,7 +219,7 @@ describe('2. missing consent is asked for before anything is read', () => {
     jest.spyOn(consentService, 'grantAiConsent').mockImplementation(async () => {
       consent.mockResolvedValue(CONSENTED);
     });
-    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID, reprocess: false }]);
+    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID }]);
     const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
     jest.spyOn(processingService, 'getState').mockResolvedValue({ phase: 'ready', resultsAdded: 1, needsReview: 0, alreadyInMemory: 0 });
     const refreshed = jest.fn();
@@ -232,7 +231,7 @@ describe('2. missing consent is asked for before anything is read', () => {
       fireEvent.press(screen.getByText('Allow and read report'));
     });
     await waitFor(() => expect(screen.getByTestId('home-reading')).toBeTruthy());
-    expect(start).toHaveBeenCalledWith(PDF_ID, { reprocess: false });
+    expect(start).toHaveBeenCalledWith(PDF_ID, {});
     expect(screen.getByText('Reading your report…')).toBeTruthy();
 
     await waitFor(() => expect(screen.getByTestId('home-report-ready')).toBeTruthy(), { timeout: 5000 });
@@ -270,7 +269,7 @@ describe('3. a document already being read is not started again', () => {
 
   it('overlapping app-open sweeps share one pass; a document being watched is not started again', async () => {
     jest.useFakeTimers();
-    const list = jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID, reprocess: false }]);
+    const list = jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID }]);
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
     const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
     jest.spyOn(processingService, 'getState').mockResolvedValue({ phase: 'processing' });
@@ -295,65 +294,59 @@ describe('3. a document already being read is not started again', () => {
   });
 });
 
-// -------------------------------------- 4. completed: not read again --
+// -------------------------------- 4. completed: never read again by itself --
+// Viewing a report, opening or resuming the app, refreshing — none of these
+// may re-read a completed report: a re-read replaces its results in Health
+// Memory. Only the person's confirmed "Read again" does.
 
-describe('4. completed documents are not read again on every launch', () => {
+describe('4. completed documents are never read again automatically', () => {
   it('only documents waiting to be read are picked', () => {
-    const reads = selectAutoReads(
-      [
-        doc('a', 'uploaded'),
-        doc('b', 'processing'),
-        doc('c', 'completed'),
-        doc('d', 'failed', { failure_kind: 'provider', processing_attempts: 1 }),
-        doc('e', 'failed', { failure_kind: 'unsupported' }),
-        doc('f', 'failed', { failure_kind: 'identity_mismatch' }),
-        doc('g', 'failed', { failure_kind: 'consent_required', processing_attempts: 1 }),
-        doc('h', 'failed', { failure_kind: 'consent_required', processing_attempts: MAX_ATTEMPTS }),
-      ],
-      [run('c', { written: 4 }, '2026-10-06T09:00:00Z', '2026-10-06T09:01:00Z')]
-    );
+    const reads = selectAutoReads([
+      doc('a', 'uploaded'),
+      doc('b', 'processing'),
+      doc('c', 'completed'),
+      doc('d', 'failed', { failure_kind: 'provider', processing_attempts: 1 }),
+      doc('e', 'failed', { failure_kind: 'unsupported' }),
+      doc('f', 'failed', { failure_kind: 'identity_mismatch' }),
+      doc('g', 'failed', { failure_kind: 'consent_required', processing_attempts: 1 }),
+      doc('h', 'failed', { failure_kind: 'consent_required', processing_attempts: MAX_ATTEMPTS }),
+      doc('i', 'deleting'),
+    ]);
     // Uploaded, and a read that stopped only for consent (tries left). No
     // other failure is retried automatically — that stays a manual Retry.
-    expect(reads).toEqual([
-      { documentId: 'a', reprocess: false },
-      { documentId: 'g', reprocess: false },
-    ]);
+    expect(reads).toEqual([{ documentId: 'a' }, { documentId: 'g' }]);
   });
 
-  it('a completed report that read nothing NOW (current reading) is not re-read', () => {
-    const now = run('c', {}, '2026-10-07T18:00:00Z', '2026-10-07T18:01:00Z');
-    expect(Date.parse(now.completed_at) > Date.parse(EARLIER_READING_BEFORE)).toBe(true);
-    expect(selectAutoReads([doc('c', 'completed')], [now])).toEqual([]);
+  it('a completed report is never picked — not even one that once read nothing', () => {
+    expect(selectAutoReads([doc(OLD_ID, 'completed')])).toEqual([]);
+    expect(selectAutoReads([doc(PDF_ID, 'completed'), doc(OLD_ID, 'completed')])).toEqual([]);
   });
 
-  it('launching again and again sends nothing for completed documents', async () => {
+  it('launching and resuming again and again sends nothing for completed documents', async () => {
     const fake = createFakeSupabase();
     (getSupabaseClient as jest.Mock).mockReturnValue(fake);
     jest.spyOn(processingService, 'listAutoReads').mockImplementation(() => supabaseProcessingService.listAutoReads());
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
     const start = jest.spyOn(processingService, 'start');
     for (let launch = 0; launch < 3; launch++) {
-      fake.respond('select', { data: [doc(PDF_ID, 'completed')], error: null });
-      fake.respond('select', { data: [run(PDF_ID, { written: 5 }, '2026-10-07T18:00:00Z', '2026-10-07T18:01:00Z')], error: null });
+      // Completed documents aren't even asked for: the server returns none.
+      fake.respond('select', { data: [], error: null });
       await readWaitingDocuments();
     }
     expect(start).not.toHaveBeenCalled();
+    expect(fake.functions.invoke).not.toHaveBeenCalled();
   });
 
-  it('asks only for the signed-in person’s rows (RLS) — no user id is sent', async () => {
+  it('asks only for the signed-in person’s unread or consent-blocked rows (RLS) — no user id, no run history', async () => {
     const fake = createFakeSupabase();
     (getSupabaseClient as jest.Mock).mockReturnValue(fake);
-    fake.respond('select', { data: [doc(PDF_ID, 'uploaded'), doc(OLD_ID, 'completed')], error: null });
-    fake.respond('select', { data: [OLD_EMPTY_RUN], error: null });
-    await expect(supabaseProcessingService.listAutoReads()).resolves.toEqual([
-      { documentId: PDF_ID, reprocess: false },
-      { documentId: OLD_ID, reprocess: true },
-    ]);
+    fake.respond('select', { data: [doc(PDF_ID, 'uploaded')], error: null });
+    await expect(supabaseProcessingService.listAutoReads()).resolves.toEqual([{ documentId: PDF_ID }]);
     expect(JSON.stringify(fake.calls)).not.toMatch(/user_id/);
-    expect(fake.calls.map((c) => c.table)).toEqual(['documents', 'extraction_runs']);
+    expect(fake.calls.map((c) => [c.table, c.filters])).toEqual([['documents', [['in', 'status', ['uploaded', 'failed']]]]]);
   });
 
-  it('opening an already-read report does not reload Health Memory', async () => {
+  it('opening an already-read report does not reload Health Memory or read anything', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: PDF_ID });
     jest.spyOn(documentsService, 'getDocument').mockResolvedValue(stored({ status: 'completed' }));
     const start = jest.spyOn(processingService, 'start');
@@ -364,61 +357,40 @@ describe('4. completed documents are not read again on every launch', () => {
     await waitFor(() => expect(screen.getByTestId('read-report-ready')).toBeTruthy());
     expect(start).not.toHaveBeenCalled();
     expect(refreshed).not.toHaveBeenCalled();
-    // "Read again" stays, as a secondary recovery action.
+    // "Read again" stays, as a secondary, confirmed recovery action.
     expect(screen.getByTestId('read-report-again')).toBeTruthy();
     unsubscribe();
   });
 });
 
-// ------------------------------ 5. the old empty read: one re-read only --
+// ------------------------- 5. a re-read is explicit, and named as one --
 
-describe('5. the completed text PDF with 0 results gets one controlled re-read', () => {
-  it('is picked once, as a re-read', () => {
-    expect(selectAutoReads([doc(OLD_ID, 'completed')], [OLD_EMPTY_RUN])).toEqual([{ documentId: OLD_ID, reprocess: true }]);
-  });
-
-  it('after its re-read (a newer run) it is never picked again — whatever that run found', () => {
-    const reread = (counts: { written?: number }) => run(OLD_ID, counts, '2026-10-08T09:00:00Z', '2026-10-08T09:01:00Z');
-    expect(selectAutoReads([doc(OLD_ID, 'completed')], [OLD_EMPTY_RUN, reread({ written: 6 })])).toEqual([]);
-    expect(selectAutoReads([doc(OLD_ID, 'completed')], [OLD_EMPTY_RUN, reread({})])).toEqual([]);
-    // A re-read that failed leaves the document failed — not retried automatically.
-    expect(selectAutoReads([doc(OLD_ID, 'failed', { failure_kind: 'provider' })], [OLD_EMPTY_RUN])).toEqual([]);
-  });
-
-  it('a report that came back with results held for review or already known is not re-read', () => {
-    expect(selectAutoReads([doc(OLD_ID, 'completed')], [run(OLD_ID, { review: 2 }, '2026-10-06T09:00:00Z', '2026-10-06T09:01:00Z')])).toEqual([]);
-    expect(selectAutoReads([doc(OLD_ID, 'completed')], [run(OLD_ID, { duplicate: 3 }, '2026-10-06T09:00:00Z', '2026-10-06T09:01:00Z')])).toEqual([]);
-  });
-
-  it('end to end over launches: one re-read request, then none', async () => {
-    const fake = createFakeSupabase();
-    (getSupabaseClient as jest.Mock).mockReturnValue(fake);
-    jest.spyOn(processingService, 'listAutoReads').mockImplementation(() => supabaseProcessingService.listAutoReads());
-    jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
-    const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
-    jest.spyOn(processingService, 'getState').mockResolvedValue({ phase: 'processing' });
-
-    fake.respond('select', { data: [doc(OLD_ID, 'completed')], error: null });
-    fake.respond('select', { data: [OLD_EMPTY_RUN], error: null });
-    await readWaitingDocuments();
-    expect(start).toHaveBeenCalledWith(OLD_ID, { reprocess: true });
-    resetAutoReadForTests();
-
-    // Later launches: the re-read finished (newer run, 6 results).
-    for (let launch = 0; launch < 2; launch++) {
-      fake.respond('select', { data: [doc(OLD_ID, 'completed')], error: null });
-      fake.respond('select', { data: [OLD_EMPTY_RUN, run(OLD_ID, { written: 6 }, '2026-10-08T09:00:00Z', '2026-10-08T09:01:00Z')], error: null });
-      await readWaitingDocuments();
-    }
-    expect(start).toHaveBeenCalledTimes(1);
-  });
-
-  it('the re-read goes through the server’s reprocess path (fingerprinted)', async () => {
+describe('5. a re-read is only ever the person’s explicit request', () => {
+  it('the request names the re-read explicitly (and still carries the older flag)', async () => {
     const fake = createFakeSupabase();
     fake.functions.invoke.mockResolvedValue({ data: { status: 'processing' }, error: null });
     (getSupabaseClient as jest.Mock).mockReturnValue(fake);
     await supabaseProcessingService.start(OLD_ID, { reprocess: true });
-    expect(fake.functions.invoke).toHaveBeenCalledWith('process-document', { body: { document_id: OLD_ID, reprocess: true } });
+    expect(fake.functions.invoke).toHaveBeenCalledWith('process-document', { body: { document_id: OLD_ID, operation: 'reread', reprocess: true } });
+  });
+
+  it('an ordinary read never carries a re-read', async () => {
+    const fake = createFakeSupabase();
+    fake.functions.invoke.mockResolvedValue({ data: { status: 'processing' }, error: null });
+    (getSupabaseClient as jest.Mock).mockReturnValue(fake);
+    await supabaseProcessingService.start(PDF_ID);
+    await supabaseProcessingService.start(PDF_ID, { retry: true });
+    for (const call of fake.functions.invoke.mock.calls) expect(call[1]).toEqual({ body: { document_id: PDF_ID } });
+  });
+
+  it('a status that isn\'t "uploaded" is never a reason to start reading', () => {
+    for (const status of ['pending_upload', 'deleting', 'something_new']) {
+      expect(toProcessingState({ status, failure_kind: null, processing_error: null, processing_attempts: 0 }, null)).toEqual({
+        phase: 'not_started',
+        awaitingRead: false,
+      });
+    }
+    expect(toProcessingState({ status: 'uploaded', failure_kind: null, processing_error: null, processing_attempts: 0 }, null)).toEqual({ phase: 'not_started' });
   });
 });
 
@@ -450,7 +422,7 @@ describe('6. uploaded scans are read automatically', () => {
 
   it('a scan waiting at app open is read by the sweep and Health Memory refreshes when it is ready', async () => {
     jest.useFakeTimers();
-    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: SCAN_ID, reprocess: false }]);
+    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: SCAN_ID }]);
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
     const start = jest.spyOn(processingService, 'start').mockResolvedValue('processing');
     jest
@@ -461,7 +433,7 @@ describe('6. uploaded scans are read automatically', () => {
     const unsubscribe = onHealthMemoryChanged(refreshed);
 
     await readWaitingDocuments();
-    expect(start).toHaveBeenCalledWith(SCAN_ID, { reprocess: false });
+    expect(start).toHaveBeenCalledWith(SCAN_ID, {});
     await act(async () => {
       await jest.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     });
@@ -480,7 +452,7 @@ describe('6. uploaded scans are read automatically', () => {
 describe('7. duplicate facts are prevented', () => {
   it('upload screen + app-open sweep on the same new document: one read request, so one set of results', async () => {
     jest.spyOn(consentService, 'getAiConsent').mockResolvedValue(CONSENTED);
-    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID, reprocess: false }]);
+    jest.spyOn(processingService, 'listAutoReads').mockResolvedValue([{ documentId: PDF_ID }]);
     let finish: (v: 'processing') => void = () => {};
     const start = jest
       .spyOn(processingService, 'start')
@@ -509,8 +481,8 @@ describe('7. duplicate facts are prevented', () => {
         { facts_written: 0, facts_needs_review: 0, facts_duplicate: 4 }
       )
     ).toEqual({ phase: 'ready', resultsAdded: 0, needsReview: 0, alreadyInMemory: 4 });
-    // …and a report whose results were all duplicates is never re-read for having "0 added".
-    expect(selectAutoReads([doc(PDF_ID, 'completed')], [run(PDF_ID, { duplicate: 4 }, '2026-10-06T09:00:00Z', '2026-10-06T09:01:00Z')])).toEqual([]);
+    // …and a completed report is never re-read for having "0 added".
+    expect(selectAutoReads([doc(PDF_ID, 'completed')])).toEqual([]);
   });
 
   it('the app never writes results itself — only the server (process-document) does', async () => {

@@ -130,7 +130,7 @@ async function withHealthInfo(client: SupabaseClient, documents: StoredDocument[
     const run = latest.get(d.id);
     if (!run) return d;
     const trusted = (run.facts_written ?? 0) - (run.facts_needs_review ?? 0) + (run.facts_duplicate ?? 0);
-    return { ...d, healthInfoCount: Math.max(0, trusted) };
+    return { ...d, healthInfoCount: Math.max(0, trusted), heldForReviewCount: Math.max(0, run.facts_needs_review ?? 0) };
   });
 }
 

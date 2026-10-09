@@ -105,6 +105,19 @@ function StoredDocumentView({ id }: { id: string }) {
     }
   }
 
+  // Re-reading replaces this report's results in Health Memory, so it is
+  // never a single tap: the person confirms it first.
+  function confirmReadAgain() {
+    Alert.alert(
+      'Read this report again?',
+      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Read again', onPress: () => void reading.readAgain() },
+      ],
+    );
+  }
+
   function confirmDelete() {
     Alert.alert(
       'Delete this health record?',
@@ -171,7 +184,8 @@ function StoredDocumentView({ id }: { id: string }) {
           onAllow={reading.allow}
           onDecline={reading.decline}
           onRead={reading.read}
-          onReadAgain={reading.readAgain}
+          onReadAgain={confirmReadAgain}
+          compactReady
         />
       ) : null}
 
@@ -187,30 +201,17 @@ function StoredDocumentView({ id }: { id: string }) {
         </View>
       ) : null}
 
-      <Card>
-        <View
-          style={{
-            aspectRatio: 3 / 4,
-            borderRadius: theme.radius.sm,
-            backgroundColor: theme.colors.surfaceAlt,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: theme.spacing.xs,
-          }}
-          accessibilityLabel={`${document.originalFilename}, PDF`}
-        >
-          <Ionicons name="document-text-outline" size={40} color={theme.colors.textTertiary} />
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>PDF · stored privately</Text>
-        </View>
-      </Card>
 
       {hasStoredOriginal(document.status) ? (
         <Card onPress={opening ? undefined : () => openOriginal(document)} accessibilityLabel="View original document">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
             <Ionicons name="open-outline" size={18} color={theme.colors.brandPrimary} />
-            <Text style={[theme.typography.labelLarge, { color: theme.colors.brandPrimary }]}>
-              {opening ? 'Opening…' : 'View Original'}
-            </Text>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[theme.typography.labelLarge, { color: theme.colors.brandPrimary }]}>
+                {opening ? 'Opening…' : 'View Original'}
+              </Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>PDF · stored privately</Text>
+            </View>
           </View>
         </Card>
       ) : null}

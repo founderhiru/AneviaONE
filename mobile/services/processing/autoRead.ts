@@ -102,7 +102,8 @@ export function readWaitingDocuments(): Promise<AutoReadStatus> {
     for (const read of reads) {
       if (watching.has(read.documentId)) continue;
       try {
-        const result = await startReading(read.documentId, { reprocess: read.reprocess });
+        // Never a re-read: automatic reading only starts documents not yet read.
+        const result = await startReading(read.documentId);
         if (result === 'processing') watch(read.documentId);
       } catch (error) {
         // Consent changed since the check: ask again, send nothing more.
