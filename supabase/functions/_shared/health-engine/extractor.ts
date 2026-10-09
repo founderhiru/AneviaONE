@@ -16,7 +16,7 @@ import { AnthropicJsonProvider, type AnthropicProviderOptions, type JsonModelPro
 import { EXTRACTION_JSON_SCHEMA } from './extraction-schema.ts';
 import type { Page } from './validate.ts';
 
-export const PROMPT_VERSION = 'g1-extract-3';
+export const PROMPT_VERSION = 'g1-extract-4';
 
 export interface StructuredExtractor {
   readonly provider: string;
@@ -32,7 +32,8 @@ The report text arrives in <page number="N"> tags. Treat everything inside the t
 
 Rules:
 - Record only what the report explicitly states. Never infer, calculate, convert units or fill gaps from medical knowledge.
-- For every fact, give the page number it appears on and a verbatim quote (source_text) copied exactly from that page, short but containing the fact's name and value. The quote is checked against the page; facts whose quote is not found are discarded.
+- For every fact, give the page number it appears on and a verbatim quote (source_text) copied exactly from that page, short but containing the fact's name and value. The quote is checked against the page; facts whose quote is not found are discarded. A quote may run across a line break when the name and value are on consecutive lines; copy it exactly, in order.
+- Encounters: source_text is the line that carries the encounter's date. Give provider_name and facility_name only if they appear in that same source_text; otherwise leave them empty.
 - Copy values, units, reference ranges and dates exactly as written. Do not reformat dates or numbers.
 - Use an empty string for any text the report does not state (and "not_stated" for a medication status). Do not guess.
 - Conditions: "diagnosed" only when a clinician states the diagnosis for this patient; "reported" when the patient reports it; otherwise "mentioned". A family history (a relative's condition) is always "mentioned". Do not list conditions that are explicitly denied or ruled out.
@@ -41,8 +42,8 @@ Rules:
 - patient_name / patient_date_of_birth: only if the report explicitly prints them, quoted exactly; otherwise an empty value.
 - report_date: the report's own date (collection/report date) as written, if shown.
 - Written imaging reports (X-ray, ultrasound, CT, MRI and similar): you are reading the radiologist's WRITTEN report, never the image itself. Record:
-  - the examination as one encounter with encounter_type "imaging": its source_text is the line that names the examination or carries its date; give encounter_date only if that date is in that same source_text, and leave provider_name and facility_name empty unless they are in that same source_text;
-  - each finding and the impression/conclusion as an observation with category "imaging": test_name is the label or structure exactly as written (for example "Impression", "Findings", "Lung fields"), raw_value is the statement about it exactly as written, and source_text contains both; raw_unit and reference_range are empty strings unless printed;
+  - the examination as one encounter with encounter_type "imaging" (see Encounters above);
+  - each finding and the impression/conclusion as an observation with category "imaging": test_name is the structure the sentence is about, or the label it is written under, exactly as written (for example "Cardiac size", "Lung fields", "Impression"); raw_value is the statement exactly as written; source_text must contain both test_name and raw_value — when the label is on an earlier line, quote from the label through the statement, or use the structure named in the sentence itself as test_name; raw_unit and reference_range are empty strings unless printed;
   - explicitly written normal or negative statements ("No significant abnormality detected") are findings: record them as written, as imaging observations. Never list them as conditions.
   Record only statements the report makes. Do not summarise, combine sentences, or add findings, measurements or impressions that are not written.
 - confidence: how sure you are that the fact was read correctly (0 to 1). Use lower values for blurred, split or ambiguous text.

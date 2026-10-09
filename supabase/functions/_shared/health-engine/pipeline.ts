@@ -64,6 +64,8 @@ export type RunDiagnostics = {
   accepted: number;
   discarded: number;
   rejected: Record<string, number>;
+  /** The same rejections per fact kind ({ "encounters": { "value_not_in_quote": 1 } }). */
+  rejected_by_kind: Record<string, Record<string, number>>;
 };
 
 const FACT_KINDS = ['observations', 'medications', 'conditions', 'allergies', 'procedures', 'encounters'] as const;
@@ -72,12 +74,20 @@ const FACT_KINDS = ['observations', 'medications', 'conditions', 'allergies', 'p
  * allergies) — correct outcomes, not a reading failure. */
 const SEMANTIC_REJECTIONS = new Set(['negated']);
 
-export function buildRunDiagnostics(extraction: StructuredExtraction, validation: { facts: unknown[]; discarded: number; rejected: { reason: string }[] }): RunDiagnostics {
+export function buildRunDiagnostics(
+  extraction: StructuredExtraction,
+  validation: { facts: unknown[]; discarded: number; rejected: { kind: string; reason: string }[] },
+): RunDiagnostics {
   const candidates: Record<string, number> = {};
   for (const kind of FACT_KINDS) candidates[kind] = Array.isArray(extraction[kind]) ? extraction[kind].length : 0;
   const rejected: Record<string, number> = {};
-  for (const { reason } of validation.rejected) rejected[reason] = (rejected[reason] ?? 0) + 1;
-  return { candidates, accepted: validation.facts.length, discarded: validation.discarded, rejected };
+  const rejectedByKind: Record<string, Record<string, number>> = {};
+  for (const { kind, reason } of validation.rejected) {
+    rejected[reason] = (rejected[reason] ?? 0) + 1;
+    const byKind = (rejectedByKind[kind] ??= {});
+    byKind[reason] = (byKind[reason] ?? 0) + 1;
+  }
+  return { candidates, accepted: validation.facts.length, discarded: validation.discarded, rejected, rejected_by_kind: rejectedByKind };
 }
 
 /** The model found facts but every one failed evidence/format checks: not "nothing in the report". */
