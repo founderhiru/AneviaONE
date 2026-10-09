@@ -22,9 +22,10 @@ beforeEach(() => {
 });
 
 describe('What Changed screen', () => {
-  it('loads and lists changes with evidence links', async () => {
+  it('loads with its title and introduction', async () => {
     await renderWithAuth(<WhatChangedScreen />);
-    await waitFor(() => expect(screen.getByText('What Changed?')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('What changed?')).toBeTruthy());
+    expect(screen.getByText('See how your key health results have changed over time across your reports.')).toBeTruthy();
   });
 });
 

@@ -8,15 +8,16 @@ import {
   Avatar,
   Card,
   EmptyState,
-  ErrorState,
   LoadingState,
   ProcessingState,
   READING_COPY,
   readingSteps,
   ScreenContainer,
 } from '../../components';
-import { AskRow, AttentionList, ChangeRow, HealthAtAGlance, HomeSection, ReportRows, SnapshotList, TimelineRow } from '../../components/home/HomeDashboard';
-import { BRAND, PRODUCT_TERMS, wordmarkParts } from '../../config/brand';
+import { HomeSection } from '../../components/home/HomeDashboard';
+import { DocumentRows, FilterChips, ResultRows, ReviewCard, SummaryTiles, WhatChangedHero } from '../../components/home/WhatChangedUI';
+import { BRAND, wordmarkParts } from '../../config/brand';
+import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { useAutoRead } from '../../hooks/useAutoRead';
@@ -24,27 +25,22 @@ import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { documentsService } from '../../services/documents/documentsService';
 import { isProcessing } from '../../services/documents/documentStatus';
 import { healthService } from '../../services/health/healthService';
+import { healthSnapshot, homeStage, trustedResults } from '../../services/health/homeDashboard';
 import {
-  SIGNAL_COPY,
-  healthSignals,
-  healthSnapshot,
-  homeStage,
-  latestActivity,
-  pickChange,
-  resultPosition,
-  summarizeDashboard,
-  trustedResults,
-} from '../../services/health/homeDashboard';
-import { visibleYears } from '../../services/health/homeSummary';
-import type { HealthChange, HealthEvent, Medication, RecordedObservation, StoredDocument, Trend } from '../../types';
+  buildComparisons,
+  couldNotRead,
+  homeCounts,
+  inGroup,
+  needsReview,
+  resultGroup,
+  type GroupFilter,
+} from '../../services/health/whatChanged';
+import type { RecordedObservation, StoredDocument } from '../../types';
 
-/** How many of the person's newest records Home shows. */
-const RECENT_RECORDS = 3;
-/** Home previews; the Health screen has everything. */
-const MAX_SIGNALS = 3;
+/** How many of the person's newest documents Home shows. */
+const RECENT_DOCUMENTS = 3;
+/** Snapshot rows on Home; the Health screen has everything. */
 const MAX_SNAPSHOT = 4;
-/** No single health area fills Home. */
-const MAX_PER_AREA = 2;
 
 const [wordLead, wordAccent] = wordmarkParts();
 
@@ -55,39 +51,33 @@ function greeting(): string {
   return 'Good evening';
 }
 
+const IDENTITY_HELD = new Set(['no_identifiers', 'unverifiable']);
+
 /**
- * Home: the person's health at a glance, as slim rows rather than a stack of
- * cards. In order — what AneviaONE knows (reports, results, areas,
- * medications), anything worth their attention, a snapshot of their latest
- * results across areas (never repeating an attention item), their timeline,
- * what changed, a way to ask, and their recent reports. Every figure, result and signal is
- * derived from their own trusted records through the existing services
- * (services/health/homeDashboard.ts); anything the records don't support
- * shows an honest state, and an account with nothing yet sees a calm start.
+ * Home: "Your health, over time." — what the person has (reports, results,
+ * anything awaiting review), what changed between their reports, their
+ * latest results by kind, and their newest documents. Every count, result and
+ * comparison is derived from their own TRUSTED records (current, never
+ * superseded or held) and their documents' latest state, through the existing
+ * services (services/health/whatChanged.ts). Nothing is invented: with too
+ * little history, Home says so.
  */
 export default function HomeScreen() {
   const theme = useTheme();
   const { user } = useAuth();
-  const [changes, setChanges] = useState<HealthChange[] | null>(null);
-  const [trends, setTrends] = useState<Trend[] | null>(null);
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [timeline, setTimeline] = useState<HealthEvent[]>([]);
-  const [storyYears, setStoryYears] = useState<string[]>([]);
   const [results, setResults] = useState<RecordedObservation[] | null>(null);
   const [resultsError, setResultsError] = useState(false);
   const [documents, setDocuments] = useState<StoredDocument[] | null>(null);
   const [documentsError, setDocumentsError] = useState(false);
-  const [error, setError] = useState(false);
+  const [filter, setFilter] = useState<GroupFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
   // Reports waiting to be read are read automatically (consent once).
   const autoRead = useAutoRead();
 
-  // The person's own uploaded records, newest first — the same
-  // `documentsService` as My documents (RLS: only their rows).
+  // The person's own documents, newest first — the same service as My documents (RLS: their rows only).
   const loadDocuments = useCallback(async () => {
     try {
-      const list = await documentsService.listDocuments();
-      setDocuments(list);
+      setDocuments(await documentsService.listDocuments());
       setDocumentsError(false);
     } catch {
       setDocumentsError(true);
@@ -95,8 +85,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // Trusted test results (the same source as the Health screen). If they
-  // can't be loaded the rest of Home still shows, with a way to retry.
+  // Trusted current results (the same source as the Health screen).
   const loadResults = useCallback(async () => {
     try {
       setResults(await healthService.getRecordedObservations());
@@ -108,26 +97,7 @@ export default function HomeScreen() {
   }, []);
 
   const load = useCallback(async () => {
-    setError(false);
-    try {
-      // One Health Memory snapshot backs all of these (cached in the service).
-      const [c, t, y, m, e] = await Promise.all([
-        healthService.getWhatChanged(),
-        healthService.getTrends(),
-        healthService.getHealthStoryYears(),
-        healthService.getMedications(),
-        healthService.getTimeline(),
-        loadDocuments(),
-        loadResults(),
-      ]);
-      setChanges(c);
-      setTrends(t);
-      setStoryYears(y);
-      setMedications(m);
-      setTimeline(e);
-    } catch {
-      setError(true);
-    }
+    await Promise.all([loadDocuments(), loadResults()]);
   }, [loadDocuments, loadResults]);
 
   useEffect(() => {
@@ -145,7 +115,7 @@ export default function HomeScreen() {
   // A report finished reading: its records are now in Health Memory.
   useHealthMemoryUpdates(load);
 
-  // A read started or stopped: the records list shows each one's status.
+  // A read started or stopped: the documents list shows each one's status.
   const readingCount = useRef(autoRead.reading);
   useEffect(() => {
     if (readingCount.current === autoRead.reading) return;
@@ -174,11 +144,7 @@ export default function HomeScreen() {
     </View>
   ) : autoRead.reading > 0 ? (
     <Card testID="home-reading">
-      <ProcessingState
-        title={READING_COPY.title}
-        description={READING_COPY.description}
-        steps={readingSteps('reading')}
-      />
+      <ProcessingState title={READING_COPY.title} description={READING_COPY.description} steps={readingSteps('reading')} />
     </Card>
   ) : autoRead.justFinished ? (
     <Card testID="home-report-ready">
@@ -189,28 +155,34 @@ export default function HomeScreen() {
     </Card>
   ) : null;
 
-
-  const isLoading = (changes === null && trends === null && !error) || documents === null || results === null;
+  const isLoading = documents === null || results === null;
   const docs = documents ?? [];
   const allResults = results ?? [];
-  const stage = homeStage({ documents: docs, results: allResults, timeline, trends: trends ?? [] });
+  const stage = homeStage({ documents: docs, results: allResults, timeline: [], trends: [] });
   const isEmpty = stage === 'new' && !documentsError && !resultsError;
-  const summary = summarizeDashboard({ documents: docs, results: allResults, medications });
-  const signals = healthSignals(allResults);
-  const shownSignals = signals.slice(0, MAX_SIGNALS);
-  // "Nothing flagged" is said only when at least one result could be checked against its report's range.
-  const anyCheckable = trustedResults(allResults).some((r) => resultPosition(r) !== null);
-  const snapshot = healthSnapshot(allResults, { exclude: shownSignals.map((s) => s.id), max: MAX_SNAPSHOT, perArea: MAX_PER_AREA });
+  const counts = homeCounts(docs, allResults);
+  const comparisons = buildComparisons(allResults).numeric;
+
+  // Snapshot: latest result per test; chip counts cover every test, rows show a few.
+  const latestPerTest = healthSnapshot(allResults, { max: Number.MAX_SAFE_INTEGER, perArea: Number.MAX_SAFE_INTEGER });
+  const groupCount = (g: GroupFilter) => latestPerTest.filter(inGroup(g)).length;
+  const snapshot =
+    filter === 'all'
+      ? healthSnapshot(allResults, { max: MAX_SNAPSHOT, perArea: 2 })
+      : healthSnapshot(allResults.filter((r) => resultGroup(r) === filter), { max: MAX_SNAPSHOT, perArea: MAX_SNAPSHOT });
   const hasTrusted = trustedResults(allResults).length > 0;
-  const activity = latestActivity(timeline);
-  const change = pickChange(changes ?? []);
-  const recent = docs.slice(0, RECENT_RECORDS);
+
+  const reviewDocs = docs.filter((d) => needsReview(d) || couldNotRead(d));
+  const identityHint = docs.some((d) => needsReview(d) && IDENTITY_HELD.has(d.identityCheck ?? ''));
+  const openReview = () => (reviewDocs.length === 1 ? router.push(`/documents/${reviewDocs[0].id}`) : router.push('/documents'));
+  const recent = docs.slice(0, RECENT_DOCUMENTS);
   const stillReading = autoRead.reading > 0 || docs.some((d) => d.status === 'uploaded' || isProcessing(d.status));
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
+  const quiet = [theme.typography.bodySmall, { color: theme.colors.textTertiary }];
 
   const header = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }} testID="home-header">
-      <Text style={[theme.typography.headingMedium, { flex: 1, color: theme.colors.textPrimary, fontWeight: '500' }]} accessibilityRole="header">
+      <Text style={[theme.typography.headingMedium, { flex: 1, color: theme.colors.textPrimary, fontWeight: '500' }]} accessibilityRole="header" numberOfLines={1}>
         {wordLead}
         <Text style={{ color: theme.colors.accent, fontWeight: '700' }}>{wordAccent}</Text>
       </Text>
@@ -227,12 +199,12 @@ export default function HomeScreen() {
           minHeight: 36,
           paddingHorizontal: theme.spacing.sm,
           borderRadius: theme.radius.pill,
-          backgroundColor: theme.colors.brandPrimary,
+          backgroundColor: FOREST.field,
           opacity: pressed ? 0.85 : 1,
         })}
       >
-        <Ionicons name="add" size={18} color={theme.colors.textOnDark} />
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.textOnDark }]}>Add</Text>
+        <Ionicons name="add" size={18} color={FOREST.text} />
+        <Text style={[theme.typography.labelMedium, { color: FOREST.text }]}>Add</Text>
       </Pressable>
       <Pressable
         onPress={() => router.push('/(tabs)/me')}
@@ -242,36 +214,21 @@ export default function HomeScreen() {
         hitSlop={8}
         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       >
-        {user?.fullName ? (
-          <Avatar name={user.fullName} size={36} />
-        ) : (
-          <Ionicons name="person-circle-outline" size={36} color={theme.colors.brandPrimary} />
-        )}
+        {user?.fullName ? <Avatar name={user.fullName} size={36} /> : <Ionicons name="person-circle-outline" size={36} color={theme.colors.brandPrimary} />}
       </Pressable>
     </View>
   );
-
-  if (error) {
-    return (
-      <ScreenContainer>
-        {header}
-        <ErrorState onRetry={load} />
-      </ScreenContainer>
-    );
-  }
-
-  const quiet = [theme.typography.bodySmall, { color: theme.colors.textTertiary }];
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
       {header}
 
       <View testID="home-greeting" style={{ gap: 2 }}>
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>
-          {firstName ? `${greeting()}, ${firstName}` : greeting()}
-        </Text>
+        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>{firstName ? `${greeting()}, ${firstName}` : greeting()}</Text>
         {isLoading || isEmpty ? null : (
-          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]}>Your health at a glance.</Text>
+          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
+            Your health, over time.
+          </Text>
         )}
       </View>
 
@@ -288,79 +245,57 @@ export default function HomeScreen() {
         />
       ) : (
         <>
-          <HealthAtAGlance
-            summary={summary}
-            onReports={() => router.push('/documents')}
-            onResults={() => router.push('/(tabs)/health')}
-            onMedications={() => router.push('/medications')}
-          />
+          <SummaryTiles counts={counts} onReports={() => router.push('/documents')} onResults={() => router.push('/(tabs)/health')} onReview={openReview} />
 
-          {shownSignals.length ? (
-            <HomeSection
-              title="Worth your attention"
-              actionLabel={signals.length > MAX_SIGNALS ? `${signals.length - MAX_SIGNALS} more` : undefined}
-              onActionPress={() => router.push('/(tabs)/health')}
-              testID="home-signals"
-            >
-              <AttentionList signals={shownSignals} onPressSignal={(sig) => router.push(`/documents/${sig.sourceDocumentId}`)} />
-            </HomeSection>
-          ) : anyCheckable ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }} testID="home-no-signals">
-              <Ionicons name="checkmark-circle-outline" size={16} color={theme.colors.textTertiary} />
-              <Text style={quiet}>{SIGNAL_COPY.none}</Text>
-            </View>
-          ) : null}
+          <WhatChangedHero comparisons={comparisons} onOpen={() => router.push('/changes')} />
 
           <HomeSection
             title="Latest health snapshot"
-            actionLabel={hasTrusted ? 'View all results' : undefined}
+            actionLabel={hasTrusted ? 'View all' : undefined}
             onActionPress={() => router.push('/(tabs)/health')}
             testID="home-latest-results"
           >
-            {snapshot.length ? (
-              <SnapshotList items={snapshot} onPressResult={(r) => router.push(`/documents/${r.source.documentId}`)} />
-            ) : hasTrusted ? null : resultsError ? (
+            {hasTrusted ? (
+              <View style={{ gap: theme.spacing.sm }}>
+                <FilterChips
+                  options={[
+                    { key: 'all' as GroupFilter, label: 'All', count: latestPerTest.length },
+                    { key: 'lab' as GroupFilter, label: 'Lab', count: groupCount('lab') },
+                    { key: 'imaging' as GroupFilter, label: 'Imaging', count: groupCount('imaging') },
+                    { key: 'other' as GroupFilter, label: 'Other', count: groupCount('other') },
+                  ]}
+                  selected={filter}
+                  onSelect={setFilter}
+                  testID="home-snapshot-filter"
+                />
+                {snapshot.length ? (
+                  <ResultRows items={snapshot} onPress={(r) => router.push(`/documents/${r.source.documentId}`)} testID="home-snapshot" />
+                ) : (
+                  <Text style={quiet} testID="home-snapshot-empty">No results of this kind yet.</Text>
+                )}
+              </View>
+            ) : resultsError ? (
               <Pressable onPress={loadResults} accessibilityRole="button" testID="home-results-retry">
                 <Text style={quiet}>We couldn&rsquo;t load your results. Tap to try again.</Text>
               </Pressable>
             ) : (
               <Text style={quiet} testID="home-no-results">
-                {stillReading
-                  ? 'Your results appear here once your report has been read.'
-                  : 'No test results have been added to your Health Memory yet.'}
+                {stillReading ? 'Your results appear here once your report has been read.' : 'No test results have been added to your Health Memory yet.'}
               </Text>
             )}
           </HomeSection>
 
-          <HomeSection title={PRODUCT_TERMS.healthTimeline} actionLabel="View Timeline" onActionPress={() => router.push('/(tabs)/timeline')} testID="home-timeline">
-            <TimelineRow years={visibleYears(storyYears)} latest={activity} onPress={() => router.push('/(tabs)/timeline')} />
-          </HomeSection>
+          <ReviewCard needsReview={counts.needsReview} couldNotRead={counts.couldNotRead} identityHint={identityHint} onPress={openReview} />
 
-          <HomeSection
-            title={PRODUCT_TERMS.whatChanged}
-            actionLabel={change ? 'View Changes' : undefined}
-            onActionPress={() => router.push('/changes')}
-            testID="home-what-changed"
-          >
-            <ChangeRow change={change} onViewTrend={change ? () => router.push(`/trends/${encodeURIComponent(change.metricOrItemName)}`) : undefined} />
-          </HomeSection>
-
-          <AskRow title={PRODUCT_TERMS.askMyHealth} onPress={() => router.push('/(tabs)/ask')} />
-
-          <HomeSection
-            title="Recent reports"
-            actionLabel={recent.length ? 'View all' : undefined}
-            onActionPress={() => router.push('/documents')}
-            testID="home-recent-records"
-          >
+          <HomeSection title="Recent documents" actionLabel={recent.length ? 'View all' : undefined} onActionPress={() => router.push('/documents')} testID="home-recent-records">
             {documentsError ? (
               <Pressable onPress={loadDocuments} accessibilityRole="button" testID="home-records-retry">
-                <Text style={quiet}>We couldn&rsquo;t load your records. Tap to try again.</Text>
+                <Text style={quiet}>We couldn&rsquo;t load your documents. Tap to try again.</Text>
               </Pressable>
             ) : recent.length === 0 ? (
-              <Text style={quiet}>Records you add appear here.</Text>
+              <Text style={quiet}>Documents you add appear here.</Text>
             ) : (
-              <ReportRows documents={recent} onPressDocument={(d) => router.push(`/documents/${d.id}`)} />
+              <DocumentRows documents={recent} onPress={(d) => router.push(`/documents/${d.id}`)} />
             )}
           </HomeSection>
         </>

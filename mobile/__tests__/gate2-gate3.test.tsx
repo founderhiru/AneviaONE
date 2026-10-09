@@ -4,7 +4,7 @@
  * change text, Ask My Health answers with their sources, and "Needs review".
  */
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import AskScreen from '../app/(tabs)/ask';
@@ -129,13 +129,20 @@ describe('production Gate 2 mapping', () => {
 });
 
 describe('Gate 2 screens with real data', () => {
-  it('What Changed shows neutral sentences and links to evidence', async () => {
-    jest.spyOn(healthService, 'getWhatChanged').mockResolvedValue([toChange(change), toChange(newMed)]);
+  it('What changed? compares the person’s trusted results with neutral wording and evidence links', async () => {
+    const r = (id: string, date: string, value: number, documentId: string) => ({
+      id, name: 'HbA1c', value: String(value), unit: '%', referenceRange: '4.0 - 5.6', date, needsReview: false,
+      valueNumeric: value, category: 'laboratory', source: { documentId, documentName: `${documentId}.pdf`, pageNumber: 1 },
+    });
+    jest.spyOn(healthService, 'getRecordedObservations').mockResolvedValue([r('a', '2026-03-12', 5.4, 'march'), r('b', '2026-09-15', 6.1, 'sept')]);
     await renderWithAuth(<ChangesScreen />);
-    await waitFor(() => expect(screen.getByText(change.summary)).toBeTruthy());
-    expect(screen.getByText('New medication')).toBeTruthy();
-    expect(screen.getByText(newMed.summary)).toBeTruthy();
-    expect(screen.queryByText(/worse|better|improv/i)).toBeNull();
+    const card = await screen.findByTestId('comparison-lab|hba1c|%');
+    expect(within(card).getByText('Higher than on 12 Mar 2026. Now above the range printed on its report.')).toBeTruthy();
+    expect(screen.queryByText(/worse|better|improv|diagnos/i)).toBeNull();
+    await act(async () => {
+      fireEvent.press(card);
+    });
+    expect(router.push).toHaveBeenCalledWith('/documents/sept');
   });
 
   it('a trend shows the printed range and the separate-unit note', async () => {

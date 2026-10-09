@@ -63,6 +63,9 @@ export type ColorTokens = {
   warningSubtle: string;
   danger: string;
   dangerSubtle: string;
+  /** Calm informational blue (e.g. a "Results" summary tile). */
+  info: string;
+  infoSubtle: string;
   trendUp: string;
   trendDown: string;
   trendFlat: string;
@@ -97,6 +100,8 @@ export const lightColors: ColorTokens = {
   warningSubtle: palette.amber100,
   danger: palette.rose600,
   dangerSubtle: palette.rose100,
+  info: palette.navy600,
+  infoSubtle: '#E4EBF6',
 
   // Trend-specific (neutral, not diagnostic)
   trendUp: palette.amber600,
@@ -133,6 +138,8 @@ export const darkColors: ColorTokens = {
   warningSubtle: '#3D3120',
   danger: '#E08277',
   dangerSubtle: '#3D2521',
+  info: '#9DB4DD',
+  infoSubtle: '#26395C',
 
   trendUp: '#E0A857',
   trendDown: '#5FC2B6',
