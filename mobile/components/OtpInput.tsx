@@ -15,7 +15,10 @@ export type OtpInputProps = {
 
 /** A row of single-digit boxes backed by one hidden input for reliable
  * autofill/paste behavior on both iOS and Android. */
-export function OtpInput({ length = 6, value, onChange, errorText, appearance = 'default' }: OtpInputProps) {
+/** Digits in a sign-in code. Must match the project's emailed code length (supabase/config.toml). */
+export const OTP_LENGTH = 6;
+
+export function OtpInput({ length = OTP_LENGTH, value, onChange, errorText, appearance = 'default' }: OtpInputProps) {
   const theme = useTheme();
   const onBrand = appearance === 'onBrand';
   const c = onBrand
