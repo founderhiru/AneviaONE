@@ -60,7 +60,9 @@ describe('Welcome is the sign-in screen', () => {
     expect(screen.getByTestId('brand-wordmark')).toBeTruthy();
     expect(screen.getByLabelText(BRAND.welcomeTagline)).toBeTruthy();
     const sheet = screen.getByTestId('welcome-sheet');
-    expect(within(sheet).getByText(`Welcome to ${BRAND.wordmark}`)).toBeTruthy();
+    // The sheet starts directly with the form: no welcome title or subtitle.
+    expect(within(sheet).queryByText(`Welcome to ${BRAND.wordmark}`)).toBeNull();
+    expect(within(sheet).queryByText('Your health story, connected over time.')).toBeNull();
     expect(within(sheet).getByText('Log in or sign up')).toBeTruthy();
     expect(within(sheet).getByTestId('phone-country')).toBeTruthy();
     expect(within(sheet).getByTestId('phone-dial-code').props.children).toBe('+91');

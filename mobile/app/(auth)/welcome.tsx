@@ -104,11 +104,6 @@ export default function WelcomeScreen() {
               {SESSION_EXPIRED_MESSAGE}
             </Text>
           ) : null}
-          <Text style={styles.title} accessibilityRole="header">
-            {`Welcome to ${BRAND.wordmark}`}
-          </Text>
-          <Text style={styles.subtitle}>Your health story, connected over time.</Text>
-
           <MobileSignInForm />
 
           <View style={styles.legal}>
@@ -201,8 +196,6 @@ const styles = StyleSheet.create({
   },
   sheetInner: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 12, gap: 12 },
   notice: { ...BRAND_TYPE.fine, fontSize: 14, color: SHEET.link, textAlign: 'center' },
-  title: { ...BRAND_TYPE.title, fontSize: 24, lineHeight: 30, color: SHEET.ink, textAlign: 'center' },
-  subtitle: { ...BRAND_TYPE.body, fontSize: 15, lineHeight: 21, color: SHEET.textMuted, textAlign: 'center', marginTop: -8, marginBottom: 6 },
   // Skip: a quiet text link into the sample history, not a button.
   skip: { position: 'absolute', right: 12 },
   explore: { minHeight: 44, minWidth: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, paddingHorizontal: 8 },

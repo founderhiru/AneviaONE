@@ -104,8 +104,7 @@ describe('Home summary — derived only from real data', () => {
 describe('Welcome — honest ways in', () => {
   it('the mobile number leads; Google, Apple and Email follow when switched on', async () => {
     await renderWithAuth(<WelcomeScreen />);
-    expect(screen.getByText(`Welcome to ${BRAND.wordmark}`)).toBeTruthy();
-    expect(screen.getByText('Your health story, connected over time.')).toBeTruthy();
+    expect(screen.getByText('Log in or sign up')).toBeTruthy();
     expect(screen.getByTestId('mobile-number-input')).toBeTruthy();
     expect(screen.getByTestId('continue-with-google')).toBeTruthy();
     expect(await screen.findByTestId('continue-with-apple')).toBeTruthy();
@@ -209,24 +208,26 @@ describe('Welcome — story hero motion', () => {
     });
   }
 
-  it('with Reduce Motion: a stable first scene, nothing looping', async () => {
+  it('with Reduce Motion: the settled Connect scene only, nothing looping', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     const loop = jest.spyOn(Animated, 'loop');
     markLaunchSplashDone();
     await renderHero();
+    expect(opacityOf('hero-scene-collect')).toBe(0);
     expect(opacityOf('hero-scene-connect')).toBe(1);
     expect(opacityOf('hero-scene-understand')).toBe(0);
-    expect(opacityOf('hero-scene-inform')).toBe(0);
     expect(loop).not.toHaveBeenCalled();
   });
 
-  it('without Reduce Motion: the three scenes loop once the splash has gone', async () => {
+  it('without Reduce Motion: Collect → Connect → Understand loop once the splash has gone', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     const loop = jest.spyOn(Animated, 'loop');
     markLaunchSplashDone();
     await renderHero();
     expect(loop).toHaveBeenCalledTimes(1);
-    expect(opacityOf('hero-scene-connect')).toBe(1);
+    // The loop starts at 0 s: Collect fading in, the other scenes hidden.
+    expect(opacityOf('hero-scene-connect')).toBe(0);
+    expect(opacityOf('hero-scene-understand')).toBe(0);
   });
 
   it('is decorative: hidden from screen readers', async () => {

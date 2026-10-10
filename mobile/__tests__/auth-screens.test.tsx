@@ -33,7 +33,7 @@ describe('Welcome screen', () => {
   it('shows the brand-neutral name/tagline and the entry points', async () => {
     await renderWithAuth(<WelcomeScreen />);
     expect(screen.getByText(BRAND.wordmark)).toBeTruthy();
-    expect(screen.getByText(`Welcome to ${BRAND.wordmark}`)).toBeTruthy();
+    expect(screen.getByText('Log in or sign up')).toBeTruthy();
     expect(screen.getByTestId('mobile-number-input')).toBeTruthy();
     expect(screen.getByTestId('continue-with-google')).toBeTruthy();
     expect(await screen.findByTestId('continue-with-email')).toBeTruthy();
