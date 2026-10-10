@@ -16,19 +16,19 @@ import TimelineScreen from '../app/(tabs)/timeline';
 import { renderWithAuth } from './testUtils';
 
 describe('Home screen', () => {
-  it('loads and shows What Changed, trends, and Ask entry point', async () => {
+  it('loads and shows "Your health, over time." with the What changed? card', async () => {
     await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText(/What Changed/)).toBeTruthy());
-    expect(screen.getByText('Ask about your health records')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('What changed?')).toBeTruthy());
+    expect(screen.getByText('Your health, over time.')).toBeTruthy();
   });
 
-  it('navigates to the timeline tab from the health story section', async () => {
+  it('opens What changed? from its card', async () => {
     await renderWithAuth(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText('View Timeline')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('home-what-changed-open')).toBeTruthy());
     await act(async () => {
-      fireEvent.press(screen.getByText('View Timeline'));
+      fireEvent.press(screen.getByTestId('home-what-changed-open'));
     });
-    expect(router.push).toHaveBeenCalledWith('/(tabs)/timeline');
+    expect(router.push).toHaveBeenCalledWith('/changes');
   });
 });
 

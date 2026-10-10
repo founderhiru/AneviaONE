@@ -334,86 +334,73 @@ describe('summary, stage, latest results and changes', () => {
 // ------------------------------------------------------------------ screen --
 
 describe('Home — A. new user', () => {
-  it('a calm start: no statistics, results, signals, history or sample data', async () => {
+  it('a calm start: no statistics, results, comparisons or sample data', async () => {
     await renderHome({ snapshot: snapshot(), documents: [], results: [] });
     await waitFor(() => expect(screen.getByText('Your health story starts here.')).toBeTruthy());
     expect(screen.getByText('Add your first health report and AneviaONE will begin connecting the pieces over time.')).toBeTruthy();
     expect(screen.getByText('Add health record')).toBeTruthy();
-    for (const id of ['home-glance', 'home-signals', 'home-latest-results', 'home-timeline', 'home-what-changed']) {
+    for (const id of ['home-summary', 'home-what-changed', 'home-latest-results', 'home-review-card']) {
       expect(screen.queryByTestId(id)).toBeNull();
     }
-    expect(screen.queryByText('Your health at a glance.')).toBeNull();
+    expect(screen.queryByText('Your health, over time.')).toBeNull();
     expect(screen.queryByText(/^\d+$/)).toBeNull();
-    expect(screen.queryByText(/12 Records|4 Health Areas|3 Years|HbA1c/)).toBeNull();
   });
 });
 
 describe('Home — B. early user (one report)', () => {
   beforeEach(() => renderHome({ snapshot: early(), documents: [doc('urine', 'Urine report.pdf')], results: URINE }));
 
-  it('the summary is derived from the real report', async () => {
-    await waitFor(() => expect(screen.getByTestId('home-glance')).toBeTruthy());
-    expect(screen.getByText('Your health at a glance.')).toBeTruthy();
+  it('heading and three summary cards from the real report — no Medications, no Areas', async () => {
+    await waitFor(() => expect(screen.getByTestId('home-summary')).toBeTruthy());
+    expect(screen.getByText('Your health, over time.')).toBeTruthy();
     expect(screen.getByLabelText('1 Report')).toBeTruthy();
     expect(screen.getByLabelText('6 Results')).toBeTruthy();
-    expect(screen.getByLabelText('0 Medications')).toBeTruthy();
-    // No ambiguous "Areas" figure on Home.
-    expect(screen.queryByTestId('glance-areas')).toBeNull();
+    expect(screen.getByLabelText('0 Needs review')).toBeTruthy();
+    expect(screen.queryByText(/Medications?/)).toBeNull();
     expect(screen.queryByText(/^Areas?$/)).toBeNull();
   });
 
-  it('worth your attention: the result below its printed range, with follow-up wording only', async () => {
-    const section = await screen.findByTestId('home-signals');
-    const card = within(section).getByTestId('signal-sg');
-    expect(within(card).getByText('Specific Gravity')).toBeTruthy();
-    expect(within(card).getByText('1.005')).toBeTruthy();
-    expect(within(card).getByText('Below the reported range')).toBeTruthy();
-    expect(within(card).getByText('Reported range: 1.010–1.030')).toBeTruthy();
-    // One shared follow-up line for the section, not one per result.
-    expect(within(section).getByTestId('home-signals-advice')).toHaveTextContent('Consider discussing these results with your doctor.');
-    expect(within(section).getAllByText(/doctor/)).toHaveLength(1);
-    expect(within(section).queryAllByText(UNSAFE)).toHaveLength(0);
-    expect(within(section).queryByTestId('signal-ph')).toBeNull();
+  it('"What changed?" with one report: an honest invitation, no chart, percentage or trend', async () => {
+    const hero = await screen.findByTestId('home-what-changed');
+    expect(within(hero).getByText('What changed?')).toBeTruthy();
+    expect(within(hero).getByText('Your health story is taking shape.')).toBeTruthy();
+    expect(within(hero).getByText('Add another report to start comparing results over time.')).toBeTruthy();
+    expect(within(hero).queryByTestId('sparkline', { includeHiddenElements: true })).toBeNull();
+    expect(within(hero).queryByText(/%|→/)).toBeNull();
     await act(async () => {
-      fireEvent.press(card);
+      fireEvent.press(within(hero).getByTestId('home-what-changed-open'));
     });
-    expect(router.push).toHaveBeenCalledWith('/documents/urine');
+    expect(router.push).toHaveBeenCalledWith('/changes');
   });
 
-  it('the snapshot shows real results compactly, never repeating an attention item', async () => {
+  it('the snapshot shows real results compactly, with filter chips counting real tests', async () => {
     const section = await screen.findByTestId('home-latest-results');
-    expect(within(section).getByText('pH')).toBeTruthy();
-    expect(within(section).getByText('7.0')).toBeTruthy();
-    expect(within(section).getByText('Range 4.5 - 8.0')).toBeTruthy();
-    expect(within(section).getAllByText('06 Oct 2026 · Urine tests').length).toBe(2);
-    expect(within(section).queryByText('Specific Gravity')).toBeNull(); // already under Worth your attention
-    expect(within(section).queryByText('Sugar')).toBeNull(); // at most two from one area
+    expect(within(section).getByText('Latest health snapshot')).toBeTruthy();
+    expect(within(section).getByLabelText('All (6)')).toBeTruthy();
+    expect(within(section).getByLabelText('Lab (6)')).toBeTruthy(); // urine results are lab tests
+    expect(within(section).getByLabelText('Imaging (0)')).toBeTruthy();
+    expect(within(section).getByLabelText('Other (0)')).toBeTruthy();
+    expect(within(section).getAllByText('06 Oct 2026 · Lab test').length).toBeGreaterThan(0);
     await act(async () => {
-      fireEvent.press(within(section).getByText('View all results'));
+      fireEvent.press(within(section).getByText('View all'));
     });
     expect(router.push).toHaveBeenCalledWith('/(tabs)/health');
   });
 
-  it('health history is the real report; What Changed invites, never claims a trend', async () => {
-    const history = await screen.findByTestId('home-timeline');
-    expect(within(history).getByText('2026')).toBeTruthy();
-    expect(within(history).getByText('Latest: 06 Oct · Urine report · 6 results')).toBeTruthy();
-
-    const changed = screen.getByTestId('home-what-changed');
-    expect(within(changed).getByText('Your history is just getting started. Add another report to see changes over time.')).toBeTruthy();
-    expect(within(changed).queryByText(/Increased|Decreased|View trend/)).toBeNull();
-    expect(screen.queryByText(/Nothing to compare yet/)).toBeNull();
+  it('no pending-review card when nothing awaits review', async () => {
+    await waitFor(() => expect(screen.getByTestId('home-summary')).toBeTruthy());
+    expect(screen.queryByTestId('home-review-card')).toBeNull();
+    expect(screen.queryByText(/need your review|needs your review/)).toBeNull();
   });
 
-  it('Add, profile, Ask, Timeline, summary and recent reports open the existing screens', async () => {
-    await waitFor(() => expect(screen.getByTestId('home-glance')).toBeTruthy());
+  it('Add, profile, summary cards, snapshot rows and recent documents open the existing screens', async () => {
+    await waitFor(() => expect(screen.getByTestId('home-summary')).toBeTruthy());
     for (const [id, route] of [
       ['home-add-record', '/add'],
       ['home-profile', '/(tabs)/me'],
-      ['home-ask', '/(tabs)/ask'],
-      ['glance-reports', '/documents'],
-      ['glance-results', '/(tabs)/health'],
-      ['glance-medications', '/medications'],
+      ['summary-reports', '/documents'],
+      ['summary-results', '/(tabs)/health'],
+      ['result-row-ph', '/documents/urine'],
       ['stored-document-urine', '/documents/urine'],
     ]) {
       await act(async () => {
@@ -421,76 +408,65 @@ describe('Home — B. early user (one report)', () => {
       });
       expect(router.push).toHaveBeenCalledWith(route);
     }
-    await act(async () => {
-      fireEvent.press(screen.getByText('View Timeline'));
-    });
-    expect(router.push).toHaveBeenCalledWith('/(tabs)/timeline');
-    expect(screen.getByText('Ask about your health records')).toBeTruthy();
+    expect(within(screen.getByTestId('home-recent-records')).getByText('Recent documents')).toBeTruthy();
     expect(screen.getByText('Added to Health Memory')).toBeTruthy();
-    // No review flow exists yet, so no "waiting for your review" call to action.
-    expect(screen.queryByText(/waiting for your review/i)).toBeNull();
   });
 });
 
 describe('Home — C. established user', () => {
   const history = [
-    ...URINE,
-    result('ph-old', 'pH', '6.5', '4.5 - 8.0', { date: '2025-03-01', documentId: 'march' }),
-    result('sg-old', 'Specific Gravity', '1.004', '1.010 - 1.030', { date: '2025-03-01', documentId: 'march' }),
+    ...URINE.map((r) => (r.id === 'ph' ? { ...r, valueNumeric: 7 } : r)),
+    result('ph-old', 'pH', '6.5', '4.5 - 8.0', { date: '2025-03-01', documentId: 'march', valueNumeric: 6.5 }),
   ];
 
-  it('shows the change, the history across years and the repeated pattern', async () => {
+  it('the hero previews a real comparison: values, dates, chart and a percentage from two numbers', async () => {
     await renderHome({ snapshot: established(), documents: [doc('urine'), doc('march')], results: history });
-    await waitFor(() => expect(screen.getByTestId('home-change')).toBeTruthy());
+    const hero = await screen.findByTestId('home-what-changed');
     expect(screen.getByLabelText('2 Reports')).toBeTruthy();
-    expect(screen.getByLabelText('8 Results')).toBeTruthy();
-
-    const changed = screen.getByTestId('home-what-changed');
-    expect(within(changed).getByText('pH')).toBeTruthy();
-    expect(within(changed).getByText('Increased since your previous report.')).toBeTruthy();
-    await act(async () => {
-      fireEvent.press(within(changed).getByTestId('home-view-trend'));
-    });
-    expect(router.push).toHaveBeenCalledWith('/trends/pH');
-
-    expect(within(screen.getByTestId('home-timeline')).getByText('2025 – 2026')).toBeTruthy();
-
-    const signal = within(screen.getByTestId('home-signals')).getByTestId('signal-sg');
-    expect(within(signal).getByText('This result has remained outside the reported range across 2 reports.')).toBeTruthy();
-    expect(screen.getByTestId('home-signals-advice')).toHaveTextContent('Consider discussing these results with your doctor.');
+    expect(screen.getByLabelText('7 Results')).toBeTruthy();
+    expect(within(hero).getByText('pH')).toBeTruthy();
+    expect(within(hero).getByText('6.5 → 7.0')).toBeTruthy();
+    expect(within(hero).getByText('+8%')).toBeTruthy(); // (7 − 6.5) / 6.5
+    expect(within(hero).getByText('01 Mar 2025')).toBeTruthy();
+    expect(within(hero).getByText('06 Oct 2026')).toBeTruthy();
+    // Decorative (hidden from screen readers — the card's label carries the values and dates).
+    expect(within(hero).getByTestId('sparkline', { includeHiddenElements: true })).toBeTruthy();
+    expect(within(hero).queryByText(UNSAFE)).toBeNull();
   });
 });
 
-describe('Home — two areas and held results', () => {
-  it('no Areas figure or area names even with several areas; held-only reports say Needs review', async () => {
+describe('Home — review and trust states', () => {
+  it('held results: never counted as results; a review card computed from real documents', async () => {
     const blood = [result('hb', 'Haemoglobin', '13.1', '12 - 15', { category: 'laboratory', documentId: 'blood' })];
-    const heldReport = { ...doc('scan', 'Scanned document.pdf'), healthInfoCount: 0, heldForReviewCount: 36 };
-    await renderHome({ snapshot: early(), documents: [doc('urine'), heldReport], results: [...URINE, ...blood] });
-    await waitFor(() => expect(screen.getByTestId('home-glance')).toBeTruthy());
-    expect(screen.queryByTestId('glance-areas')).toBeNull();
-    expect(screen.queryByTestId('glance-area-names')).toBeNull();
-    expect(screen.queryByLabelText(/Areas?$/)).toBeNull();
+    const heldA = { ...doc('scan', 'Scanned document.pdf'), healthInfoCount: 0, heldForReviewCount: 36, identityCheck: 'unverifiable' };
+    const heldB = { ...doc('scan2'), healthInfoCount: 0, heldForReviewCount: 2 };
+    const mismatch = { ...doc('other'), status: 'failed' as const, failureKind: 'identity_mismatch', healthInfoCount: null };
+    await renderHome({ snapshot: early(), documents: [doc('urine'), heldA, heldB, mismatch], results: [...URINE, ...blood, { ...URINE[0], id: 'held-1', needsReview: true }] });
+    await waitFor(() => expect(screen.getByTestId('home-summary')).toBeTruthy());
+    expect(screen.getByLabelText('4 Reports')).toBeTruthy();
+    expect(screen.getByLabelText('7 Results')).toBeTruthy(); // the held result is not counted
+    expect(screen.getByLabelText('3 Needs review')).toBeTruthy();
+    const card = screen.getByTestId('home-review-card');
+    expect(within(card).getByText('3 reports need your review')).toBeTruthy();
+    expect(within(card).getByText(/Adding your name and date of birth helps us recognise your reports\./)).toBeTruthy();
+    expect(screen.queryByText('No results currently flagged for attention.')).toBeNull();
+    await act(async () => {
+      fireEvent.press(card);
+    });
+    expect(router.push).toHaveBeenCalledWith('/documents');
     expect(within(screen.getByTestId('stored-document-scan')).getByText('Needs review')).toBeTruthy();
-    expect(screen.queryByText('No health information found')).toBeNull();
-  });
-});
-
-describe('Home — signals stay honest', () => {
-  it('nothing outside its range: a quiet note, no warning card', async () => {
-    const normal = URINE.filter((r) => r.id !== 'sg');
-    await renderHome({ snapshot: early(), documents: [doc('urine')], results: normal });
-    await waitFor(() => expect(screen.getByTestId('home-no-signals')).toBeTruthy());
-    expect(screen.getByText('No results currently flagged for attention.')).toBeTruthy();
-    expect(screen.queryByTestId('home-signals')).toBeNull();
   });
 
-  it('a low-confidence result is neither flagged, counted nor shown', async () => {
-    const held = [URINE[0], { ...URINE[1], needsReview: true }];
-    await renderHome({ snapshot: early(), documents: [doc('urine')], results: held });
-    await waitFor(() => expect(screen.getByTestId('home-glance')).toBeTruthy());
-    expect(screen.queryByTestId('home-signals')).toBeNull();
-    expect(screen.queryByText('Specific Gravity')).toBeNull();
-    expect(screen.getByLabelText('1 Result')).toBeTruthy();
+  it('a single report to review opens that report; a failed read is told apart from review', async () => {
+    const failed = { ...doc('blurry'), status: 'failed' as const, failureKind: 'validation', healthInfoCount: null };
+    await renderHome({ snapshot: early(), documents: [doc('urine'), failed], results: URINE });
+    const card = await screen.findByTestId('home-review-card');
+    expect(within(card).getByText('1 report couldn’t be read')).toBeTruthy();
+    expect(screen.getByLabelText('0 Needs review')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(card);
+    });
+    expect(router.push).toHaveBeenCalledWith('/documents/blurry');
   });
 
   it('a report still being read: honest empty results, no figures invented', async () => {
@@ -498,8 +474,47 @@ describe('Home — signals stay honest', () => {
     await waitFor(() => expect(screen.getByTestId('home-no-results')).toBeTruthy());
     expect(screen.getByText('Your results appear here once your report has been read.')).toBeTruthy();
     expect(screen.getByLabelText('0 Results')).toBeTruthy();
-    expect(screen.queryByTestId('home-signals')).toBeNull();
-    expect(screen.queryByTestId('home-no-signals')).toBeNull();
+    expect(screen.queryByTestId('home-review-card')).toBeNull();
     expect(screen.getByText('Reading report')).toBeTruthy();
+  });
+
+  it('results that fail to load: a retry, the rest of Home still works', async () => {
+    invalidateHealthMemory();
+    const { createFakeSupabase } = jest.requireActual('../test-support/fakeSupabase');
+    (getSupabaseClient as jest.Mock).mockReturnValue(createFakeSupabase());
+    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([doc('urine')]);
+    jest.spyOn(productionHealthService, 'getRecordedObservations').mockRejectedValue(new Error('offline'));
+    await renderWithAuth(<HomeScreen />);
+    await waitFor(() => expect(screen.getByTestId('home-results-retry')).toBeTruthy());
+    expect(screen.getByLabelText('1 Report')).toBeTruthy();
+  });
+});
+
+describe('Home — snapshot filters and long findings', () => {
+  const xray = result('xr', 'Impression', 'No significant abnormality is seen in the lung fields, cardiac silhouette, costophrenic angles or the bony thorax on this view.', null, {
+    category: 'imaging',
+    documentId: 'xray',
+    date: '2026-09-25',
+  });
+
+  it('filters change the rows; long imaging findings are clamped to two lines (full text kept)', async () => {
+    await renderHome({ snapshot: early(), documents: [doc('urine'), doc('xray')], results: [...URINE, xray] });
+    const section = await screen.findByTestId('home-latest-results');
+    await act(async () => {
+      fireEvent.press(within(section).getByTestId('home-snapshot-filter-imaging'));
+    });
+    expect(within(section).getByText('Impression')).toBeTruthy();
+    expect(within(section).queryByText('pH')).toBeNull();
+    const value = within(section).getByTestId('result-value-xr');
+    expect(value.props.numberOfLines).toBe(2);
+    expect(value).toHaveTextContent(xray.value);
+    await act(async () => {
+      fireEvent.press(within(section).getByTestId('home-snapshot-filter-other'));
+    });
+    expect(within(section).getByTestId('home-snapshot-empty')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(within(section).getByTestId('home-snapshot-filter-lab'));
+    });
+    expect(within(section).queryByText('Impression')).toBeNull();
   });
 });

@@ -40,15 +40,12 @@ export function HomeSection({
   return (
     <View style={{ gap: theme.spacing.xs }} testID={testID}>
       <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 24 }}>
-        <Text
-          style={[theme.typography.labelSmall, { flex: 1, color: theme.colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1 }]}
-          accessibilityRole="header"
-        >
+        <Text style={[theme.typography.headingSmall, { flex: 1, color: theme.colors.textPrimary }]} accessibilityRole="header">
           {title}
         </Text>
         {actionLabel ? (
           <Pressable onPress={onActionPress} accessibilityRole="button" hitSlop={10}>
-            <Text style={[theme.typography.labelMedium, { color: theme.colors.brandPrimary }]}>{actionLabel}</Text>
+            <Text style={[theme.typography.labelMedium, { color: theme.colors.accent }]}>{actionLabel}</Text>
           </Pressable>
         ) : null}
       </View>
