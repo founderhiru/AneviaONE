@@ -7,15 +7,15 @@ export function EvidenceAnswer() {
     <div className="chat" role="group" aria-label="Example answer with sources (sample data)">
       <div className="chat__msg chat__msg--user">
         <span className="chat__who">You</span>
-        <p>How has my cholesterol changed over the last five years?</p>
+        <p>How has my cholesterol changed over time?</p>
       </div>
       <div className="chat__msg chat__msg--ai">
         <span className="chat__who">
           <span className="badge badge--brand">Sample answer</span>
         </span>
         <p>
-          Your LDL cholesterol has increased from <b>118 mg/dL in 2022</b> to <b>146 mg/dL in 2026</b>. The largest
-          increase occurred between 2024 and 2026.
+          Your LDL cholesterol has increased from <b>112 mg/dL in 2019</b> to <b>146 mg/dL in 2026</b>. It rose to 131
+          mg/dL by 2024, then by 15 mg/dL more over the next two years.
         </p>
         <div className="chat__sources">
           <p className="chat__sources-h">Sources</p>

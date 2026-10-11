@@ -59,20 +59,23 @@ export const WORDMARK = (() => {
   return m ? { lead: m[1], accent: m[2] } : { lead: BRAND.name, accent: '' };
 })();
 
-/** Anchor on the home page where the store buttons live (final CTA). */
-export const DOWNLOAD_ANCHOR = '/#get-started';
-
 /** True once at least one store listing URL is configured. */
 export const STORES_LIVE = Boolean(LINKS.appStore || LINKS.googlePlay);
 
+/** The Download App page: store links when they are live, an honest status until then. */
+export const DOWNLOAD_PATH = '/download';
+
+/** Primary call to action — Download App, everywhere. Goes to /download. */
+export const PRIMARY_CTA = { label: 'Download App', href: DOWNLOAD_PATH } as const;
+
 /**
- * Primary call to action. While the store buttons still read "Soon" it is
- * "Get Started"; it becomes "Download App" automatically once a store URL is
- * set (NEXT_PUBLIC_APP_STORE_URL / NEXT_PUBLIC_GOOGLE_PLAY_URL).
+ * Sign In. Sign-in happens in the app; until NEXT_PUBLIC_SIGN_IN_URL names a
+ * real web sign-in, the link goes to /download#sign-in, which explains how.
  */
-export const PRIMARY_CTA = {
-  label: STORES_LIVE ? 'Download App' : 'Get Started',
-  href: DOWNLOAD_ANCHOR,
+export const SIGN_IN = {
+  label: 'Sign In',
+  href: LINKS.signIn ?? `${DOWNLOAD_PATH}#sign-in`,
+  external: Boolean(LINKS.signIn),
 } as const;
 
 /** Secondary call to action, used alongside the primary one in the hero. */

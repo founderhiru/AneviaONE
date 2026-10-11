@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { Icon } from './Icon';
 import { Logo } from './Logo';
-import { BRAND, DOWNLOAD_ANCHOR, STORES_LIVE } from '@/lib/config';
+import { BRAND, PRIMARY_CTA } from '@/lib/config';
 import { FOOTER_LINKS } from '@/lib/nav';
 
 /** Splits the two-sentence positioning so each sentence sits on its own line. */
@@ -39,8 +39,8 @@ export function Footer() {
                 ))}
               </ul>
             </nav>
-            <Link href={DOWNLOAD_ANCHOR} className="footer__download">
-              {STORES_LIVE ? 'Download the App' : 'Get Started'} <Icon name="arrow" size={18} />
+            <Link href={PRIMARY_CTA.href} className="footer__download">
+              {PRIMARY_CTA.label} <Icon name="arrow" size={18} />
             </Link>
           </div>
         </div>

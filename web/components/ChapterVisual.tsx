@@ -1,5 +1,5 @@
+import { ChangeCard } from './ChangeCard';
 import { EvidenceAnswer } from './EvidenceAnswer';
-import { PatternCard } from './PatternCard';
 import { TrendCard } from './TrendCard';
 import { CHANGES, LDL_SERIES, RECORD_CHIPS, TIMELINE_EVENTS } from '@/lib/sample';
 
@@ -39,7 +39,7 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
       return (
         <div className="cv-extract" role="img" aria-label="A report turned into structured values (sample)">
           <div className="cv-extract__doc" aria-hidden="true">
-            <span className="cv-extract__doc-h">Blood Test · Mar 2026</span>
+            <span className="cv-extract__doc-h">Full Checkup · Mar 2026</span>
             {[88, 72, 94, 60, 80, 66].map((w, i) => (
               <span key={i} className="cv-extract__line" style={{ width: `${w}%` }} />
             ))}
@@ -97,7 +97,7 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
           <p className="cv-ask__q">When was my last HbA1c test, and how did it compare?</p>
           <p className="cv-ask__a">
             <span className="badge badge--brand">Sample answer</span>
-            Your most recent HbA1c was in 2026 — 0.6% lower than in 2025.
+            Your most recent HbA1c was 5.9% in March 2026 — lower than 6.2% in March 2024.
           </p>
         </div>
       );
@@ -118,7 +118,7 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
               <tr key={p.label}>
                 <td>{p.label}</td>
                 <td className="cv-ledger__val">{p.value}</td>
-                <td>Blood Test</td>
+                <td>{p.source}</td>
               </tr>
             ))}
           </tbody>
@@ -138,7 +138,7 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
     case 'context':
       return (
         <div className="dark-panel on-dark">
-          <PatternCard />
+          <ChangeCard />
         </div>
       );
 
@@ -146,9 +146,9 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
       return (
         <ul className="cv-prompts" aria-label="Example questions (sample)">
           {[
-            'How has my LDL changed since 2022?',
-            'What changed in my latest blood test?',
-            'Which records mention my vitamin D?',
+            'How has my LDL changed since 2019?',
+            'What changed in my latest full checkup?',
+            'Which reports include my HbA1c?',
           ].map((q) => (
             <li key={q}>{q}</li>
           ))}

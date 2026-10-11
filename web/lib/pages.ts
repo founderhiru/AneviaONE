@@ -1,6 +1,6 @@
 import type { ChapterVisualKey } from '@/components/ChapterVisual';
 import type { IconName } from '@/components/Icon';
-import { BRAND } from '@/lib/config';
+import { BRAND, STORES_LIVE } from '@/lib/config';
 
 /**
  * Content for the secondary pages, as data. `ContentPage` renders these.
@@ -415,6 +415,39 @@ export const PAGES: Record<string, PageDef> = {
     accent: 'answered.',
     lede: `Straight answers about what ${BRAND.name} does today, what’s coming next, and what it doesn’t do.`,
     blocks: [],
+  },
+
+  download: {
+    slug: 'download',
+    title: 'Download App',
+    description: `Get the ${BRAND.name} app: where it is available and how to sign in.`,
+    eyebrow: 'Download App',
+    headline: `Get the ${BRAND.name}`,
+    accent: 'app.',
+    lede: 'Add your health reports and keep them together in private storage, on your phone.',
+    blocks: [
+      {
+        type: 'notice',
+        id: 'availability',
+        tone: 'info',
+        title: STORES_LIVE ? 'Available in the app stores' : 'Not in the App Store or Google Play yet',
+        text: STORES_LIVE
+          ? `Download ${BRAND.name} from the App Store or Google Play using the links below.`
+          : `${BRAND.name} is being built for iPhone and Android. Its store listings are not public yet — the official App Store and Google Play links will appear on this page when they are.`,
+      },
+      {
+        type: 'rows',
+        id: 'sign-in',
+        eyebrow: 'Sign in',
+        title: 'Sign-in happens in the app.',
+        intro: `Your account lives in the ${BRAND.name} app. There is no web sign-in, and this website never asks for your password or health information. In the app, you can sign in with:`,
+        items: [
+          { title: 'Google', text: 'Continue with your Google account.' },
+          { title: 'Apple', text: 'Continue with your Apple ID, on iPhones that support it.' },
+          { title: 'Email', text: 'Get a one-time code sent to your email address.' },
+        ],
+      },
+    ],
   },
 
   'data-ai-principles': {

@@ -4,6 +4,7 @@ import { SITE } from '@/lib/config';
 
 const ROUTES = [
   '',
+  '/download',
   '/product',
   '/how-it-works',
   '/ai-intelligence',

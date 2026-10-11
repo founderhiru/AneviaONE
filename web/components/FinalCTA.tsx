@@ -2,8 +2,7 @@ import { StoreButtons } from './StoreButtons';
 import { PRIMARY_CTA, STORES_LIVE } from '@/lib/config';
 
 /**
- * Closing call to action and the target of every "Get Started" link
- * (DOWNLOAD_ANCHOR → #get-started). The store buttons are the action itself;
+ * Closing call to action (#get-started; older links still land here). The store buttons are the action itself;
  * until store URLs are configured they show an honest "Soon" state.
  */
 export function FinalCTA() {

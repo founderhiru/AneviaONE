@@ -152,3 +152,102 @@
 .wchg__text { display: flex; flex-direction: column; line-height: 1.25; }
 .wchg__text small { font-size: 0.58em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-500); }
 .wchg__text b { font-size: 0.8em; color: var(--navy-800); letter-spacing: -0.01em; }
+
+/* Home dashboard (hero) — the app's own colours (mobile design/colors.ts,
+   design/brandSurface.ts), scoped to the phone. */
+.dash {
+  --d-bg: #fbfaf7; --d-surface: #ffffff; --d-alt: #f7f5f0; --d-border: #e4ddcf;
+  --d-ink: #181b22; --d-ink2: #3b3f49; --d-ink3: #6b7080;
+  --d-accent: #2e7d74; --d-accent-bg: #dceeec; --d-info: #3a5686; --d-info-bg: #e4ebf6;
+  --d-warn: #b4791f; --d-warn-bg: #f5e7d0; --d-forest: #0e2a1b; --d-on-forest: #f6f9ef;
+  background: var(--d-bg);
+}
+.dash .app__body { padding-top: 0.55em; }
+.dash__top { display: flex; align-items: center; gap: 0.45em; margin-bottom: 0.6em; }
+.dash__brand { flex: 1; font-size: 1em; font-weight: 500; letter-spacing: -0.02em; color: var(--d-ink); }
+.dash__brand b { font-weight: 700; color: var(--d-accent); }
+.dash__add { padding: 0.32em 0.7em; border-radius: 99px; background: var(--d-forest); color: var(--d-on-forest); font-size: 0.66em; font-weight: 650; }
+.dash__avatar { display: grid; place-items: center; width: 1.75em; height: 1.75em; border-radius: 50%; background: var(--d-accent-bg); color: var(--d-accent); font-size: 0.7em; font-weight: 700; }
+.dash__greet { font-size: 0.72em; color: var(--d-ink3); }
+.dash__title { margin: 0.05em 0 0.65em; font-size: 1.28em; font-weight: 700; line-height: 1.12; letter-spacing: -0.03em; color: var(--d-ink); }
+
+.dash__tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4em; }
+.dash__tile { display: flex; flex-direction: column; align-items: center; gap: 0.08em; padding: 0.55em 0.2em; border-radius: 0.8em; background: var(--t-bg); color: var(--t-ink); }
+.dash__tile svg { width: 1.05em; height: 1.05em; }
+.dash__tile b { font-size: 1.05em; font-weight: 700; color: var(--d-ink); line-height: 1.2; }
+.dash__tile small { font-size: 0.56em; color: var(--d-ink2); white-space: nowrap; }
+.dash__tile--accent { --t-bg: var(--d-accent-bg); --t-ink: var(--d-accent); }
+.dash__tile--info { --t-bg: var(--d-info-bg); --t-ink: var(--d-info); }
+.dash__tile--warning { --t-bg: var(--d-warn-bg); --t-ink: var(--d-warn); }
+
+.dash__changed { display: grid; gap: 0.5em; margin-top: 0.6em; padding: 0.65em; border-radius: 1em; background: var(--d-accent-bg); }
+.dash__changed-head { display: flex; gap: 0.5em; align-items: flex-start; }
+.dash__changed-head > span:last-child { display: flex; flex-direction: column; gap: 0.1em; }
+.dash__changed-head b { font-size: 0.78em; color: var(--d-ink); }
+.dash__changed-head small { font-size: 0.56em; line-height: 1.35; color: var(--d-ink2); }
+.dash__changed-icon { display: grid; place-items: center; flex: none; width: 1.75em; height: 1.75em; border-radius: 50%; background: var(--d-surface); color: var(--d-accent); }
+.dash__changed-icon svg { width: 1em; height: 1em; }
+.dash__preview { padding: 0.55em 0.6em 0.45em; border-radius: 0.7em; background: var(--d-surface); }
+.dash__preview-row { display: flex; justify-content: space-between; gap: 0.4em; }
+.dash__preview-row > span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.dash__preview-row b { font-size: 0.7em; color: var(--d-ink); }
+.dash__preview-vals { font-size: 0.68em; color: var(--d-ink); }
+.dash__preview-vals i { font-style: normal; color: var(--d-ink3); }
+.dash__badge { font-size: 0.66em; font-weight: 700; color: var(--d-accent); white-space: nowrap; }
+.phone .dash__spark { display: block; width: 100%; height: 2.2em; margin: 0.25em 0 0.1em; overflow: visible; }
+.dash__spark path { fill: var(--d-accent); fill-opacity: 0.08; }
+.dash__spark polyline { fill: none; stroke: var(--d-accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.dash__spark circle { fill: var(--d-accent); }
+.dash__preview-dates { display: flex; justify-content: space-between; font-size: 0.54em; color: var(--d-ink3); }
+
+.dash__section { display: flex; align-items: baseline; justify-content: space-between; margin: 0.8em 0 0.4em; }
+.dash__section b { font-size: 0.8em; color: var(--d-ink); }
+.dash__section span { font-size: 0.64em; font-weight: 650; color: var(--d-accent); }
+.dash__chips { display: flex; gap: 0.35em; margin-bottom: 0.45em; }
+.dash__chip { padding: 0.32em 0.65em; border-radius: 99px; background: var(--d-alt); color: var(--d-ink2); font-size: 0.6em; font-weight: 600; white-space: nowrap; }
+.dash__chip.is-on { background: var(--d-forest); color: var(--d-on-forest); }
+.dash__group { border: 1px solid var(--d-border); border-radius: 0.8em; background: var(--d-surface); overflow: hidden; }
+.dash__row { display: flex; align-items: center; gap: 0.5em; padding: 0.5em 0.6em; }
+.dash__row + .dash__row { border-top: 1px solid var(--d-border); }
+.dash__row-main { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 0.08em; }
+.dash__row-main b { overflow: hidden; font-size: 0.68em; color: var(--d-ink); white-space: nowrap; text-overflow: ellipsis; }
+.dash__row-main small { font-size: 0.54em; color: var(--d-ink3); }
+.dash__finding { font-size: 0.6em; color: var(--d-ink2); }
+.dash__row-val { display: flex; flex-direction: column; align-items: flex-end; gap: 0.05em; text-align: right; }
+.dash__row-val b { font-size: 0.68em; color: var(--d-ink); white-space: nowrap; }
+.dash__row-val small { font-size: 0.52em; color: var(--d-ink3); white-space: nowrap; }
+.dash__row-val em { font-style: normal; font-size: 0.54em; font-weight: 650; color: var(--d-warn); white-space: nowrap; }
+.dash__gicon { display: grid; place-items: center; flex: none; width: 1.8em; height: 1.8em; border-radius: 0.5em; }
+.dash__gicon svg, .dash__doc svg { width: 0.95em; height: 0.95em; }
+.dash__gicon--lab { background: var(--d-accent-bg); color: var(--d-accent); }
+.dash__gicon--imaging { background: var(--d-info-bg); color: var(--d-info); }
+.dash__doc { display: grid; place-items: center; flex: none; width: 1.6em; height: 2em; border-radius: 0.3em; border: 1px solid var(--d-border); background: var(--d-alt); color: var(--d-ink3); }
+
+/* Product screens in the app's colours: My documents, Health Timeline,
+   What changed?, Ask My Health. */
+.dash__screen-title { margin: 0.2em 0 0.7em; font-size: 1.15em; font-weight: 700; letter-spacing: -0.02em; color: var(--d-ink); }
+.dash__display { margin: 0.15em 0 0.3em; font-size: 1.45em; font-weight: 700; line-height: 1.1; letter-spacing: -0.035em; color: var(--d-ink); }
+.dash__sub { margin-bottom: 0.8em; font-size: 0.6em; line-height: 1.4; color: var(--d-ink3); }
+.dash__card { border: 1px solid var(--d-border); border-radius: 0.8em; background: var(--d-surface); }
+.dash__docs { display: grid; gap: 0.4em; }
+.dash__docrow { display: flex; align-items: center; gap: 0.55em; padding: 0.55em 0.6em; }
+.dash__docicon { display: grid; place-items: center; flex: none; width: 1.7em; height: 1.7em; color: var(--d-info); }
+.dash__docicon svg { width: 1.15em; height: 1.15em; }
+.dash__chev { flex: none; color: var(--d-ink3); }
+.dash__chev svg { width: 0.9em; height: 0.9em; rotate: -90deg; }
+.dash__year { display: grid; gap: 0.25em; margin-top: 0.45em; }
+.dash__year-label { font-size: 0.68em; font-weight: 700; color: var(--d-ink3); }
+.dash__event { display: flex; flex-direction: column; gap: 0.08em; padding: 0.5em 0.65em; border-left: 3px solid var(--d-accent); }
+.dash__event b { font-size: 0.72em; color: var(--d-ink); }
+.dash__event small { font-size: 0.56em; color: var(--d-ink3); }
+.dash__cmp { display: grid; gap: 0.35em; margin-bottom: 0.5em; padding: 0.6em; }
+.dash__cmp-head { display: flex; align-items: center; gap: 0.5em; }
+.dash__cmp-badge { font-size: 0.64em; font-weight: 700; color: var(--d-warn); white-space: nowrap; }
+.dash__cmp-vals { display: flex; align-items: center; gap: 0.6em; font-size: 0.7em; color: var(--d-ink3); }
+.dash__cmp-vals > span:not([aria-hidden]) { display: flex; flex-direction: column; }
+.dash__cmp-vals i { font-style: normal; color: var(--d-ink3); }
+.dash__cmp-vals b { color: var(--d-ink); }
+.dash__cmp-vals small { font-size: 0.78em; }
+.dash__cmp-note { font-size: 0.56em; color: var(--d-ink2); }
+.dash .bubble--user { background: var(--d-forest); }
+.dash .badge--brand { background: var(--d-accent-bg); color: var(--d-accent); }

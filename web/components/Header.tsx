@@ -7,7 +7,8 @@ import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { MegaPanel } from './MegaMenu';
 import { MobileNav } from './MobileNav';
-import { LINKS, PRIMARY_CTA } from '@/lib/config';
+import { SignInLink } from './SignInLink';
+import { PRIMARY_CTA } from '@/lib/config';
 import { NAV_GROUPS, NAV_LINKS } from '@/lib/nav';
 
 export function Header() {
@@ -121,15 +122,7 @@ export function Header() {
             if (e.pointerType === 'mouse') setOpenId(null);
           }}
         >
-          {LINKS.signIn ? (
-            <a href={LINKS.signIn} className="header__signin">
-              Sign In
-            </a>
-          ) : (
-            <span className="header__signin header__signin--soon" aria-disabled="true" title="Sign in opens with the app launch">
-              Sign In
-            </span>
-          )}
+          <SignInLink className="header__signin" onClick={closeAll} />
           <Link href={PRIMARY_CTA.href} className="btn btn--primary btn--sm header__download">
             {PRIMARY_CTA.label}
           </Link>

@@ -3,15 +3,15 @@ import type { ReactNode } from 'react';
 
 import { Icon } from '../Icon';
 import { Phone } from '../Phone';
-import { AskScreen, ChangesScreen, HomeScreen, TimelineScreen } from '../PhoneScreens';
+import { AskScreen, ChangesScreen, DocumentsScreen, TimelineScreen } from '../PhoneScreens';
 import { BRAND } from '@/lib/config';
 
 /** What you actually get: four product surfaces, shown, not described at length. */
 const SURFACES: { id: string; title: string; line: string; live?: boolean; alt: string; screen: ReactNode }[] = [
-  { id: 'memory', title: 'Health Memory', line: 'Your reports, kept together in private storage.', live: true, alt: 'Home screen with health timeline and snapshot', screen: <HomeScreen /> },
-  { id: 'timeline', title: 'Timeline', line: 'Your health journey in one place.', alt: 'Timeline screen listing records from 2019 to 2026', screen: <TimelineScreen /> },
-  { id: 'changes', title: 'What Changed', line: 'Meaningful changes across your history.', alt: 'What Changed screen comparing current values with past history', screen: <ChangesScreen /> },
-  { id: 'ask', title: 'Ask My Health', line: 'Questions grounded in your records.', alt: 'Ask screen with an answer and its sources', screen: <AskScreen /> },
+  { id: 'memory', title: 'Health Memory', line: 'Your reports, kept together in private storage.', live: true, alt: 'My documents screen listing six sample reports', screen: <DocumentsScreen /> },
+  { id: 'timeline', title: 'Timeline', line: 'Your health journey in one place.', alt: 'Health Timeline screen listing reports from 2019 to 2026', screen: <TimelineScreen /> },
+  { id: 'changes', title: 'What Changed', line: 'Meaningful changes across your history.', alt: 'What changed? screen comparing LDL cholesterol and HbA1c across reports', screen: <ChangesScreen /> },
+  { id: 'ask', title: 'Ask My Health', line: 'Questions grounded in your records.', alt: 'Ask My Health screen with an answer and its sources', screen: <AskScreen /> },
 ];
 
 export function ProductSection() {

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import { Icon } from './Icon';
-import { LINKS, PRIMARY_CTA } from '@/lib/config';
+import { SignInLink } from './SignInLink';
+import { PRIMARY_CTA } from '@/lib/config';
 import { NAV_GROUPS, NAV_LINKS } from '@/lib/nav';
 
 type Props = { open: boolean; onClose: () => void };
@@ -88,15 +89,7 @@ export function MobileNav({ open, onClose }: Props) {
         <Link href={PRIMARY_CTA.href} className="btn btn--primary" onClick={onClose}>
           {PRIMARY_CTA.label}
         </Link>
-        {LINKS.signIn ? (
-          <a href={LINKS.signIn} className="btn btn--ghost">
-            Sign In
-          </a>
-        ) : (
-          <span className="btn btn--ghost" aria-disabled="true" title="Sign in opens with the app launch">
-            Sign In · soon
-          </span>
-        )}
+        <SignInLink className="btn btn--ghost" onClick={onClose} />
       </div>
     </div>
   );

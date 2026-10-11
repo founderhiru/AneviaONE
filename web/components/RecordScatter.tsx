@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import { HomeScreen } from './PhoneScreens';
+import { DashboardScreen } from './PhoneScreens';
 import { Phone } from './Phone';
 import { Icon } from './Icon';
 import { RECORD_CHIPS } from '@/lib/sample';
@@ -53,8 +53,8 @@ export function RecordScatter() {
       </svg>
 
       <div className="scatter__phone">
-        <Phone label={`${BRAND.name} Home screen showing a health timeline from 2019 to 2026 and a health snapshot`}>
-          <HomeScreen />
+        <Phone label={`${BRAND.name} Home dashboard: report and result counts, what changed, latest results and recent documents (sample data)`}>
+          <DashboardScreen />
         </Phone>
       </div>
 

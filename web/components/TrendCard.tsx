@@ -19,12 +19,12 @@ export function TrendCard() {
       <p className="icard__kicker">See trends</p>
       <p className="icard__text">Track how key health measures change over months and years.</p>
 
-      <figure className="chart" aria-label="Sample LDL cholesterol readings: 118 in 2022, 131 in 2024, 146 in 2026">
+      <figure className="chart" aria-label="Sample LDL cholesterol readings: 112 in 2019, 131 in 2024, 146 in 2026">
         <figcaption className="chart__head">
           <span>LDL Cholesterol</span>
           <span className="chart__unit">mg/dL</span>
         </figcaption>
-        <svg viewBox={`0 0 ${W} ${H}`} className="chart__svg" role="img" aria-label="Line chart trending upward from 118 to 146">
+        <svg viewBox={`0 0 ${W} ${H}`} className="chart__svg" role="img" aria-label="Line chart trending upward from 112 to 146">
           <defs>
             <linearGradient id="trend-line" x1="0" x2="1" y1="0" y2="0">
               <stop offset="0" stopColor="#5fd0e8" />
@@ -60,9 +60,9 @@ export function TrendCard() {
       </figure>
 
       <p className="icard__flag icard__flag--alert">
-        <span aria-hidden="true">▲</span> Trending upward over 4 years
+        <span aria-hidden="true">▲</span> Trending upward over 7 years
       </p>
-      <p className="icard__detail">Latest reading is 28 mg/dL above the earliest, across 3 records.</p>
+      <p className="icard__detail">Latest reading is 34 mg/dL above the earliest, across 3 records.</p>
       <p className="icard__note">Sample data for illustration.</p>
     </article>
   );
