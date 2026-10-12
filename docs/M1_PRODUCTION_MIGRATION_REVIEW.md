@@ -23,7 +23,7 @@ Supporting SQL (all executed in the review): `supabase/release/m1/`.
 
 ## 2. Dependencies and order
 
-1. **Production must already have every migration up to `20261011090000_extraction_run_diagnostics.sql`.** Confirm first: `supabase migration list --linked` (local and remote columns must match through `20261011090000`). This review could not query production; it assumed that state.
+1. **Production must already have every migration up to `20261011090000_extraction_run_diagnostics.sql`.** Confirm first with the read-only `supabase/release/m1/prod_precheck.sql` (§10). Production has not been inspected yet.
 2. **Migration 1 before migration 2.** Migration 2 relies on migration 1's insert trigger (fingerprint takeover) to keep a re-recorded correction unique and reread-safe.
 3. **Database before app.** Any app build from current `main` already contains the Result screen; without migration 1 saving a correction fails (generic error). Deploy migration 1 before shipping such a build.
 4. **PR #12 must be merged** before migration 2 is deployed (so the deployed file matches the repository).
@@ -85,7 +85,7 @@ Both rollback scripts were executed on the isolated stack.
 
 ## 9. Deployment procedure (for approval — not executed)
 
-1. `supabase migration list --linked` → confirm production is at `20261011090000`, nothing pending except these.
+1. Run `supabase/release/m1/prod_precheck.sql` (read-only) in the SQL Editor → every value as in §10. (Avoid `supabase migration list --linked` without a database password: it may create a temporary login role.)
 2. Confirm backup/PITR; take `pg_dump -Fc`.
 3. Run `row_fingerprint.sql` against production (read-only) and save the output.
 4. Apply migration 1 — e.g. via `supabase db push` after setting a lock timeout for the session, or in the SQL editor as one transaction starting `set local lock_timeout = '5s';`. On a lock timeout: wait and retry.
@@ -94,7 +94,36 @@ Both rollback scripts were executed on the isolated stack.
 7. (After PR #12 is merged) apply migration 2; run `verify_20261013090000…sql` → 6/6.
 8. Proceed to the production-backed test plan (`docs/M1_PRODUCTION_TEST_PLAN.md`) only after explicit authorisation.
 
-## 10. Open items / risks
+## 10. Production pre-check (read-only) — not yet run
+
+Production state has **not** been inspected. Production can only be reached through the Supabase CLI login. `supabase migration list --linked` may create a temporary login role in production when no database password is supplied, which is a write, and reading the CLI credential directly was blocked. Run `supabase/release/m1/prod_precheck.sql` in the Supabase SQL Editor instead. It is a single read-only transaction containing only SELECTs and catalog reads, and it ends in `rollback`.
+
+Expected output when production is ready (validated on a throwaway database built from the repository migrations up to `20261011090000`; the four function hashes are identical on Postgres 16 and on the Supabase Postgres 17.6 image):
+
+| Check | Expected |
+|---|---|
+| last applied migrations | starts with `20261011090000 extraction_run_diagnostics` |
+| M1 migrations already applied | `none` |
+| required predecessor 20261011090000 applied | `true` |
+| correction_reason columns present | `0` |
+| correct_fact present | `false` |
+| M1 private helpers present | `0` |
+| trigger functions to replace present | `3` |
+| engine_delete_document(uuid, uuid) present | `true` |
+| fact triggers bound | `24` |
+| user_corrected rows already present | any (informational) |
+| size … | informational: lock duration of migration 1 scales with these |
+| open transactions older than 1 minute | `0` at deployment time |
+| md5 clinical_fact_after_insert | `d76e7ddaf7e7ff849df991d4dec0374c` |
+| md5 clinical_fact_before_insert | `e14968933b7066d43d51402aae53a73d` |
+| md5 clinical_fact_before_update | `9ee96ac11db6e7251992827f51893080` |
+| md5 engine_delete_document | `0e0c689034c4285e7dfe6f4b65703ed8` |
+
+Any difference, especially a function hash, means production differs from the repository. In that case stop and compare the live definition (`select pg_get_functiondef('private.clinical_fact_before_insert'::regproc)`) with `20261001090200_clinical_facts.sql` before deploying. Migration 1 replaces these functions and would silently discard any production-only change.
+
+After both migrations are deployed, the same hashes become `8699275869c01e7b6fbb0e5e4a21f612`, `8061ea85a7f6e88ee7f43fa2f538e1cd`, `a934eee05fd4622ffe2ac8419f2f6169` and `18fe841b2f746ed41cccb8c02ca8ba70`, in the same order.
+
+## 11. Open items / risks
 
 - Production's applied-migration state is unverified from here (step 1).
 - Production table sizes are unknown here; the migration-1 lock duration scales with them (check scan).

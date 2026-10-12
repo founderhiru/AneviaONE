@@ -4,6 +4,7 @@ Executed during the review in `docs/M1_PRODUCTION_MIGRATION_REVIEW.md`.
 
 | File | Purpose | Safe on production? |
 |---|---|---|
+| `prod_precheck.sql` | Pre-deployment state check (migration history, absent M1 objects, function hashes, table sizes, open transactions); expected values in the review §10 | yes (read-only transaction) |
 | `row_fingerprint.sql` | Hash of every pre-existing fact/document row — run before and after deploying; must match | yes (read-only) |
 | `verify_20261012090000_fact_corrections.sql` | Post-deploy checks for migration 1 (13) | yes (read-only) |
 | `verify_20261013090000_corrections_survive_report_deletion.sql` | Post-deploy checks for migration 2 (6) | yes (read-only) |
