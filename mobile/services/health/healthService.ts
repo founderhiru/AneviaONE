@@ -72,13 +72,14 @@ type ObservationRow = {
   effective_date: string | null;
   confidence_gate: 'passed' | 'needs_review';
   review_status: string;
+  origin?: string | null;
   document_id: string | null;
   document_page_id: string | null;
   created_at: string;
 };
 
 const OBSERVATION_COLUMNS =
-  'id, name_as_written, value_as_written, unit_as_written, reference_range_as_written, abnormal_flag_as_written, value_numeric, reference_low, reference_high, category, effective_date, confidence_gate, review_status, document_id, document_page_id, created_at';
+  'id, name_as_written, value_as_written, unit_as_written, reference_range_as_written, abnormal_flag_as_written, value_numeric, reference_low, reference_high, category, effective_date, confidence_gate, review_status, origin, document_id, document_page_id, created_at';
 
 /** Postgres numerics may arrive as strings; anything unreadable is null, never 0. */
 const numeric = (v: number | string | null | undefined): number | null => {
@@ -130,6 +131,7 @@ async function loadObservations(filter: { documentId?: string }): Promise<Record
       referenceRange: r.reference_range_as_written,
       date: r.effective_date,
       needsReview: r.confidence_gate === 'needs_review' && r.review_status !== 'confirmed',
+      corrected: r.origin === 'user_corrected',
       valueNumeric: numeric(r.value_numeric),
       referenceLow: numeric(r.reference_low),
       referenceHigh: numeric(r.reference_high),

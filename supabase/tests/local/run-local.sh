@@ -62,6 +62,10 @@ echo "▸ Running identity profile test (full name + date of birth: validation, 
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/identity_profile_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 
+echo "▸ Running fact corrections test (integrity, validation, isolation, reread cannot restore the original)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/fact_corrections_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   echo "▸ Running health data model integrity & isolation test (proposed schema)"
   PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \

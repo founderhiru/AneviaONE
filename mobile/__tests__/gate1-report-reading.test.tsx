@@ -173,7 +173,7 @@ describe('production test results', () => {
     fake.respond('select', { data: [{ id: DOC_ID, original_filename: 'Sunrise lab report.pdf' }], error: null });
     fake.respond('select', { data: [{ id: 'p1', page_number: 1 }], error: null });
     expect(await productionHealthService.getRecordedObservations()).toEqual([
-      { ...hba1c, valueNumeric: 5.8, referenceLow: 4, referenceHigh: 5.6, category: 'laboratory', abnormalFlag: null },
+      { ...hba1c, valueNumeric: 5.8, referenceLow: 4, referenceHigh: 5.6, category: 'laboratory', abnormalFlag: null, corrected: false },
     ]);
     expect(fake.calls.map((c) => c.table)).toEqual(['current_observations', 'documents', 'document_pages']);
   });

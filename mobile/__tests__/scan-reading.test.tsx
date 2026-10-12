@@ -121,7 +121,7 @@ describe('Read again', () => {
     await fireEvent.press(await openCompleted());
     expect(alert).toHaveBeenCalledWith(
       'Read this report again?',
-      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading.',
+      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading. Results you have confirmed or corrected are kept.',
       [expect.objectContaining({ text: 'Cancel', style: 'cancel' }), expect.objectContaining({ text: 'Read again' })],
     );
     await waitFor(() => expect(start).toHaveBeenCalledWith(DOC_ID, { retry: false, reprocess: true }));
