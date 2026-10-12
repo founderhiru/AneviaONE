@@ -28,7 +28,7 @@ import FactScreen from '../app/facts/[id]';
 import DocumentViewerScreen from '../app/documents/[id]';
 import { documentsService } from '../services/documents/documentsService';
 import { checkCorrection, correctionMatches, draftFrom, type CorrectableResult } from '../services/health/factCorrection';
-import { factService, isStaleRefusal, OutcomeUnknownError, productionFactService, type FactDetail } from '../services/health/factService';
+import { factService, isStaleRefusal, OutcomeUnknownError, productionFactService, WRITE_TIMEOUT_MS, type FactDetail } from '../services/health/factService';
 import { onHealthMemoryChanged } from '../services/health/healthMemoryApi';
 import { healthService } from '../services/health/healthService';
 import { ServiceError } from '../services/serviceError';
@@ -271,6 +271,175 @@ describe('productionFactService', () => {
       code: 'invalid_input',
       userMessage: 'This report hasn’t been confirmed as yours, so its results can’t be confirmed yet.',
     });
+  });
+});
+
+// ------------------------------------- Change A: time limit and outcomes ---
+
+type Pending<T> = {
+  request: PromiseLike<{ data: T | null; error: unknown }> & { abortSignal: jest.Mock };
+  resolve: (r: { data: T | null; error: unknown }) => void;
+  signal: () => AbortSignal | undefined;
+};
+
+/** A request that stays open until resolved, recording the abort signal it was given. */
+function pending<T>(): Pending<T> {
+  let resolve!: (r: { data: T | null; error: unknown }) => void;
+  const promise = new Promise<{ data: T | null; error: unknown }>((r) => (resolve = r));
+  let signal: AbortSignal | undefined;
+  const request = {
+    then: promise.then.bind(promise),
+    abortSignal: jest.fn((s: AbortSignal) => {
+      signal = s;
+      return request;
+    }),
+  } as Pending<T>['request'];
+  return { request, resolve, signal: () => signal };
+}
+
+/** A client whose correct_fact RPC and confirm update return the given request (or a function's result). */
+function clientWith(request: () => unknown) {
+  const rpc = jest.fn(request);
+  const select = jest.fn(request);
+  const from = jest.fn(() => ({ update: () => ({ eq: () => ({ is: () => ({ select }) }) }) }));
+  (getSupabaseClient as jest.Mock).mockReturnValue({ rpc, from });
+  return { rpc, select };
+}
+
+describe('Change A — every write has a time limit; only a server answer is a definite outcome', () => {
+  let changed: jest.Mock;
+  let unsubscribe: () => void;
+  beforeEach(() => {
+    changed = jest.fn();
+    unsubscribe = onHealthMemoryChanged(changed);
+  });
+  afterEach(() => {
+    unsubscribe();
+    jest.useRealTimers();
+  });
+
+  it('a correction with no answer after 20 s is aborted and reported as an unknown outcome — a late answer is ignored', async () => {
+    jest.useFakeTimers();
+    const p = pending<string>();
+    const { rpc } = clientWith(() => p.request);
+    const outcome = productionFactService.correct('f1', { value: '6.8' }, null).catch((e) => e);
+    await jest.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS);
+    expect(await outcome).toBeInstanceOf(OutcomeUnknownError);
+    expect(p.signal()?.aborted).toBe(true);
+
+    // The original request completes afterwards: nothing refreshes, nothing is sent again.
+    p.resolve({ data: 'c1', error: null });
+    await jest.runAllTimersAsync();
+    expect(changed).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('an answer just inside the limit is a normal success (not aborted), refreshing once', async () => {
+    jest.useFakeTimers();
+    const p = pending<string>();
+    clientWith(() => p.request);
+    const outcome = productionFactService.correct('f1', { value: '6.8' }, null);
+    await jest.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS - 1);
+    p.resolve({ data: 'c1', error: null });
+    await expect(outcome).resolves.toBe('c1');
+    expect(p.signal()?.aborted).toBe(false);
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['Expo’s transport failure (as seen on the simulator)', { message: 'Error: fetch failed: UnexpectedException: Could not connect to the server. (at ExpoModulesCore/Promise.swift:56)', code: '' }],
+    ['a gateway failure with no database answer', { message: '', code: '', details: 'Bad Gateway' }],
+    ['an aborted request', { message: 'AbortError: Aborted', code: '' }],
+    ['a browser-style network error', { message: 'TypeError: Failed to fetch' }],
+  ])('%s is an unknown outcome, never "failed"', async (_label, error) => {
+    const { rpc } = clientWith(async () => ({ data: null, error }));
+    await expect(productionFactService.correct('f1', { value: '6.8' }, null)).rejects.toBeInstanceOf(OutcomeUnknownError);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(changed).not.toHaveBeenCalled();
+  });
+
+  it('a thrown exception while sending is an unknown outcome too', async () => {
+    clientWith(() => Promise.reject(new TypeError('Network request failed')));
+    await expect(productionFactService.correct('f1', { value: '6.8' }, null)).rejects.toBeInstanceOf(OutcomeUnknownError);
+  });
+
+  it.each([
+    ['validation (22023)', { message: 'correct_fact: the value is required', code: '22023' }, 'invalid_input', 'Enter the value as printed on the report.'],
+    ['identity safeguard (22023)', { message: 'correct_fact: that report has not been confirmed as yours', code: '22023' }, 'invalid_input', 'This report hasn’t been confirmed as yours, so its results can’t be corrected yet.'],
+    ['not found / another person’s (P0002)', { message: 'correct_fact: that result was not found', code: 'P0002' }, 'not_found', 'This result is no longer available.'],
+    ['already corrected (22023)', { message: 'correct_fact: that result has already been corrected — correct the newer version instead', code: '22023' }, 'not_available', 'This result has already been corrected. The latest version is shown below.'],
+    ['permission (42501)', { message: 'permission denied for function correct_fact', code: '42501' }, undefined, undefined],
+    ['a database constraint (23505)', { message: 'duplicate key value violates unique constraint', code: '23505' }, undefined, undefined],
+    ['a PostgREST refusal (PGRST301)', { message: 'JWT expired', code: 'PGRST301' }, undefined, undefined],
+  ])('a database answer — %s — stays a definite, structured error', async (_label, error, code, userMessage) => {
+    clientWith(async () => ({ data: null, error }));
+    const e = await productionFactService.correct('f1', { value: '6.8' }, null).catch((x) => x);
+    expect(e).toBeInstanceOf(ServiceError);
+    expect(e).not.toBeInstanceOf(OutcomeUnknownError);
+    if (code) expect(e).toMatchObject({ code, userMessage });
+    expect(e.userMessage).not.toMatch(/duplicate|constraint|JWT|permission denied/);
+    expect(changed).not.toHaveBeenCalled();
+  });
+
+  it('a successful correction returns the new id and refreshes Health Memory once', async () => {
+    const { rpc } = clientWith(async () => ({ data: 'c1', error: null }));
+    await expect(productionFactService.correct('f1', { value: '6.8' }, 'misread')).resolves.toBe('c1');
+    expect(rpc).toHaveBeenCalledWith('correct_fact', { p_table: 'observations', p_fact_id: 'f1', p_fields: { value: '6.8' }, p_reason: 'misread' });
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirming: timeout → aborted, unknown; ambiguous → unknown; database refusals and success unchanged', async () => {
+    jest.useFakeTimers();
+    const p = pending<{ id: string }[]>();
+    let calls = clientWith(() => p.request);
+    const timedOut = productionFactService.confirm('f1').catch((e) => e);
+    await jest.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS);
+    expect(await timedOut).toBeInstanceOf(OutcomeUnknownError);
+    expect(p.signal()?.aborted).toBe(true);
+    p.resolve({ data: [{ id: 'f1' }], error: null });
+    await jest.runAllTimersAsync();
+    expect(changed).not.toHaveBeenCalled();
+    expect(calls.select).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+
+    clientWith(async () => ({ data: null, error: { message: 'Error: fetch failed: Could not connect to the server.', code: '' } }));
+    await expect(productionFactService.confirm('f1')).rejects.toBeInstanceOf(OutcomeUnknownError);
+
+    clientWith(async () => ({ data: null, error: { message: 'observations: this report has not been confirmed as yours', code: '22023' } }));
+    await expect(productionFactService.confirm('f1')).rejects.toMatchObject({
+      code: 'invalid_input',
+      userMessage: 'This report hasn’t been confirmed as yours, so its results can’t be confirmed yet.',
+    });
+
+    clientWith(async () => ({ data: [], error: null }));
+    await expect(productionFactService.confirm('f1')).rejects.toMatchObject({ code: 'not_found' });
+
+    calls = clientWith(async () => ({ data: [{ id: 'f1' }], error: null }));
+    await expect(productionFactService.confirm('f1')).resolves.toBeUndefined();
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reconciliation after a timeout only reads the saved state — it never writes again', async () => {
+    jest.useFakeTimers();
+    const p = pending<string>();
+    const { rpc } = clientWith(() => p.request);
+    const outcome = productionFactService.correct('f1', { value: '6.8' }, null).catch((e) => e);
+    await jest.advanceTimersByTimeAsync(WRITE_TIMEOUT_MS);
+    expect(await outcome).toBeInstanceOf(OutcomeUnknownError);
+    jest.useRealTimers();
+
+    // The screen then reads the result: it has a newer version holding exactly what was sent.
+    const fake = createFakeSupabase();
+    (getSupabaseClient as jest.Mock).mockReturnValue(fake);
+    fake.respond('select', { data: row({ superseded_at: '2026-10-12T09:00:00Z' }), error: null });
+    fake.respond('select', { data: { id: 'c1' }, error: null });
+    const latest = await productionFactService.getFact('f1');
+    fake.respond('select', { data: row({ id: 'c1', value_as_written: '6.8', origin: 'user_corrected', review_status: 'confirmed', confidence: null, supersedes_id: 'f1' }), error: null });
+    fake.respond('select', { data: row({ superseded_at: '2026-10-12T09:00:00Z' }), error: null });
+    const newer = await productionFactService.getFact(latest!.correctedById!);
+    expect(correctionMatches(newer!, { value: '6.8' })).toBe(true);
+    expect(fake.calls.every((c) => c.op === 'select')).toBe(true);
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 });
 

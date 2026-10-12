@@ -126,15 +126,73 @@ const CORRECTION_MESSAGES: Record<string, string> = {
   'nothing was changed': 'Nothing has changed. Edit a field to correct it.',
 };
 
+/** How long a correction or confirmation may take before its outcome is treated as unknown. */
+export const WRITE_TIMEOUT_MS = 20_000;
+
+/**
+ * Whether the server actually answered: a Postgres error (5-character
+ * SQLSTATE, e.g. 22023, 42501, P0002) or a PostgREST refusal (PGRSTnnn).
+ * Such an answer is definite — the statement failed and nothing was written.
+ * Anything else (no answer, an aborted or timed-out request, a gateway
+ * failure, a transport message such as Expo's "fetch failed …") says nothing
+ * about whether the write reached the database.
+ */
+function serverAnswered(error: unknown): boolean {
+  const code = String((error as { code?: unknown } | null)?.code ?? '');
+  return /^[0-9A-Z]{5}$/.test(code) || /^PGRST\d+$/.test(code);
+}
+
 function correctionError(error: unknown): ServiceError {
+  if (!serverAnswered(error)) return new OutcomeUnknownError(error);
   const message = (error as { message?: string } | null)?.message ?? '';
   const key = message.startsWith('correct_fact: ') ? message.slice('correct_fact: '.length) : '';
   const stale = STALE_MESSAGES[key];
   if (stale) return new ServiceError(stale[0], stale[1], { cause: error });
   if (CORRECTION_MESSAGES[key]) return new ServiceError('invalid_input', CORRECTION_MESSAGES[key], { cause: error });
-  const mapped = toServiceError(error, SAVE_ERROR);
-  // A dropped connection says nothing about whether the server saved it.
-  return mapped.code === 'network' ? new OutcomeUnknownError(error) : mapped;
+  return toServiceError(error, SAVE_ERROR);
+}
+
+function confirmationError(error: unknown): ServiceError {
+  if (!serverAnswered(error)) return new OutcomeUnknownError(error);
+  if (String((error as { message?: string }).message ?? '').endsWith('this report has not been confirmed as yours')) {
+    return new ServiceError('invalid_input', 'This report hasn’t been confirmed as yours, so its results can’t be confirmed yet.', { cause: error });
+  }
+  return toServiceError(error, SAVE_ERROR);
+}
+
+type WriteResult<T> = { data: T | null; error: unknown };
+type AbortableRequest<T> = PromiseLike<WriteResult<T>> & { abortSignal?: (signal: AbortSignal) => PromiseLike<WriteResult<T>> };
+
+/**
+ * Runs one write with a time limit. On timeout the request is aborted and the
+ * outcome is unknown: the caller checks the saved state before saying
+ * anything. A response that arrives after the time limit is ignored — it
+ * neither refreshes screens nor triggers another attempt (nothing is ever
+ * retried automatically), so it can't change what the person was shown. A
+ * second correction of the same result can't create a duplicate either: the
+ * database refuses to correct a result that has already been corrected.
+ */
+async function timedWrite<T>(start: () => AbortableRequest<T>): Promise<WriteResult<T>> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<'timed_out'>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve('timed_out');
+    }, WRITE_TIMEOUT_MS);
+  });
+  try {
+    const request = start();
+    const sent = typeof request.abortSignal === 'function' ? request.abortSignal(controller.signal) : request;
+    const result = await Promise.race([Promise.resolve(sent), timedOut]);
+    if (result === 'timed_out') throw new OutcomeUnknownError('timed out');
+    return result;
+  } catch (e) {
+    // A thrown transport failure is as ambiguous as a timeout.
+    throw e instanceof ServiceError ? e : new OutcomeUnknownError(e);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const confidenceOf = (v: number | string | null): number | null => {
@@ -206,7 +264,10 @@ export const productionFactService: FactService = {
   },
 
   async correct(id, fields, reason) {
-    const { data, error } = await client().rpc('correct_fact', { p_table: 'observations', p_fact_id: id, p_fields: fields, p_reason: reason });
+    const c = client();
+    const { data, error } = await timedWrite<string>(
+      () => c.rpc('correct_fact', { p_table: 'observations', p_fact_id: id, p_fields: fields, p_reason: reason }) as unknown as AbortableRequest<string>,
+    );
     if (error) throw correctionError(error);
     // No error but no new id: we can't tell what was saved.
     if (typeof data !== 'string') throw new OutcomeUnknownError();
@@ -215,14 +276,14 @@ export const productionFactService: FactService = {
   },
 
   async confirm(id) {
-    const { data, error } = await client().from('observations').update({ review_status: 'confirmed' }).eq('id', id).is('superseded_at', null).select('id');
-    if (error) {
-      if (String((error as { message?: string }).message ?? '').endsWith('this report has not been confirmed as yours')) {
-        throw new ServiceError('invalid_input', 'This report hasn’t been confirmed as yours, so its results can’t be confirmed yet.', { cause: error });
-      }
-      const mapped = toServiceError(error, SAVE_ERROR);
-      throw mapped.code === 'network' ? new OutcomeUnknownError(error) : mapped;
-    }
+    const c = client();
+    const { data, error } = await timedWrite<{ id: string }[]>(
+      () =>
+        c.from('observations').update({ review_status: 'confirmed' }).eq('id', id).is('superseded_at', null).select('id') as unknown as AbortableRequest<
+          { id: string }[]
+        >,
+    );
+    if (error) throw confirmationError(error);
     if (!data || data.length === 0) throw new ServiceError('not_found', 'This result is no longer available.');
     invalidateHealthMemory();
   },
