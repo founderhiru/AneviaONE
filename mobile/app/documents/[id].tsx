@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, ScreenHeader, SecondaryButton, StatusBadge } from '../../components';
 import { isDemoMode } from '../../config/appMode';
 import { useTheme } from '../../design/theme';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { useReadReport } from '../../hooks/useReadReport';
 import { loadDemoServices } from '../../services/demo/demoServices';
 import {
@@ -74,6 +75,9 @@ function StoredDocumentView({ id }: { id: string }) {
     load();
   }, [load]);
 
+  // A result was corrected or confirmed (or a read finished): show its current version.
+  useHealthMemoryUpdates(() => load(true));
+
   // Reading finished or failed while this screen was open: refresh status and results.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -106,12 +110,13 @@ function StoredDocumentView({ id }: { id: string }) {
     }
   }
 
-  // Re-reading replaces this report's results in Health Memory, so it is
-  // never a single tap: the person confirms it first.
+  // Re-reading replaces this report's unchecked results in Health Memory, so
+  // it is never a single tap: the person confirms it first. Results the person
+  // confirmed or corrected are kept.
   function confirmReadAgain() {
     Alert.alert(
       'Read this report again?',
-      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading.',
+      'We’ll read the original again. The results from this report in your Health Memory will be replaced by the new reading. Results you have confirmed or corrected are kept.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Read again', onPress: () => void reading.readAgain() },
@@ -205,7 +210,8 @@ function StoredDocumentView({ id }: { id: string }) {
             <RecordedResultRow key={r.id} result={r} />
           ))}
           <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
-            Values are shown exactly as printed. Open the original to check them against the page shown.
+            Values are shown exactly as printed. Open the original to check them against the page shown, and tap a result to see where it
+            comes from or to correct it.
           </Text>
         </View>
       ) : null}
@@ -270,7 +276,7 @@ function StoredDocumentView({ id }: { id: string }) {
 function RecordedResultRow({ result }: { result: RecordedObservation }) {
   const theme = useTheme();
   return (
-    <Card>
+    <Card onPress={() => router.push(`/facts/${result.id}`)} accessibilityLabel={`${result.name}, ${result.value}${result.unit ? ` ${result.unit}` : ''}. Open details`}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: theme.spacing.sm }}>
         <View style={{ flex: 1 }}>
           <Text style={[theme.typography.bodyMedium, { color: theme.colors.textPrimary }]}>{result.name}</Text>
@@ -284,7 +290,11 @@ function RecordedResultRow({ result }: { result: RecordedObservation }) {
             {result.value}
             {result.unit ? ` ${result.unit}` : ''}
           </Text>
-          {result.needsReview ? <StatusBadge label="Not yet checked" tone="warning" /> : null}
+          {result.needsReview ? (
+            <StatusBadge label="Not yet checked" tone="warning" />
+          ) : result.corrected ? (
+            <StatusBadge label="Corrected by you" tone="accent" />
+          ) : null}
         </View>
       </View>
     </Card>

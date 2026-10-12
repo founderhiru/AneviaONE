@@ -160,6 +160,8 @@ export type RecordedObservation = {
   date: string | null;
   /** Read with lower confidence or ambiguity — not yet used for trends. */
   needsReview: boolean;
+  /** The person corrected this result (it replaced the reading from the report). */
+  corrected?: boolean;
   /** The value as a plain number, when it is one ("<0.5" and "Nil" are not). */
   valueNumeric?: number | null;
   /** Bounds of the range printed on the report, parsed by the server. */
