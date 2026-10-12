@@ -66,6 +66,10 @@ echo "▸ Running fact corrections test (integrity, validation, isolation, rerea
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/fact_corrections_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 
+echo "▸ Running correction deletion test (a correction survives deleting its report while another report holds the result)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/correction_deletion_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   echo "▸ Running health data model integrity & isolation test (proposed schema)"
   PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \
