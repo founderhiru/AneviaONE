@@ -28,3 +28,25 @@ export function authHref(method?: AuthMethod): Href {
 export function openAuth(method?: AuthMethod) {
   router.push(method ? authHref(method) : { pathname: AUTH_ROUTE, params: { from: 'app' } });
 }
+
+/**
+ * Where to go once onboarding is marked complete, when it isn't just Home
+ * (e.g. "Upload a document" → Add Record). Completing onboarding makes the
+ * root layout's guard move the person out of `(auth)` to Home; if onboarding
+ * also navigated itself, the guard — still seeing the onboarding route —
+ * would replace that with Home and the choice would be lost. So onboarding
+ * only records the destination, and the guard (the one place that leaves
+ * onboarding) opens it on top of Home.
+ */
+let routeAfterOnboarding: Href | null = null;
+
+export function setRouteAfterOnboarding(route: Href | null) {
+  routeAfterOnboarding = route;
+}
+
+/** Returns the recorded destination once, then forgets it. */
+export function takeRouteAfterOnboarding(): Href | null {
+  const route = routeAfterOnboarding;
+  routeAfterOnboarding = null;
+  return route;
+}

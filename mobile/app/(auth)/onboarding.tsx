@@ -6,6 +6,7 @@ import { Button, ScreenContainer, SecondaryButton } from '../../components';
 import { PRODUCT_TERMS, taglineLines } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
+import { setRouteAfterOnboarding } from '../../navigation/authRoutes';
 
 // No WhatsApp step: that capture channel isn't available yet (the /whatsapp
 // screen stays parked), so the intro doesn't offer to connect it.
@@ -23,8 +24,10 @@ export default function OnboardingScreen() {
   }
 
   function goToAdd() {
+    // The root layout leaves onboarding and opens Add Record over Home; doing
+    // it here as well would race its redirect (see setRouteAfterOnboarding).
+    setRouteAfterOnboarding('/add');
     completeOnboarding();
-    router.replace('/add');
   }
 
   return (
