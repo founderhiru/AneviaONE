@@ -59,12 +59,13 @@ export default function FaqPage() {
           <div className="faqx__main">
             <p className="faqx__legend">
               <span className="faqx__legend-text">
-                Unlabelled answers describe what the product does today. Labels mark what isn&rsquo;t fully available
+                Unlabelled answers describe how the app works today. Labels mark what isn&rsquo;t fully available
                 yet:
               </span>
               <span className="faqx__legend-pills">
-                <span className="faqx__status faqx__status--planned">Not yet available</span>
                 <span className="faqx__status faqx__status--partial">Partly available</span>
+                <span className="faqx__status faqx__status--development">In development</span>
+                <span className="faqx__status faqx__status--planned">Planned</span>
                 <span className="faqx__status faqx__status--preview">Preview only</span>
               </span>
             </p>

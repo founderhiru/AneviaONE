@@ -20,7 +20,6 @@ const CATEGORY = 'Personal Health Intelligence';
 export const BRAND = {
   name: NAME,
   category: CATEGORY,
-  parent: 'MedhaIQ Systems',
   tagline: 'Every record. Every change. One intelligent health history.',
   promise: 'Your health has a history. Now it has intelligence.',
   /** Brand signature (matches mobile `launchTagline`). Footer only. */
@@ -45,8 +44,8 @@ export const LINKS = {
   signIn: clean(process.env.NEXT_PUBLIC_SIGN_IN_URL),
   // TODO(launch): set to the 1-minute product walkthrough when it is recorded.
   demoVideo: clean(process.env.NEXT_PUBLIC_DEMO_VIDEO_URL),
-  // TODO(launch): set to a monitored inbox.
-  contactEmail: clean(process.env.NEXT_PUBLIC_CONTACT_EMAIL),
+  // The help inbox. Override with NEXT_PUBLIC_CONTACT_EMAIL if it ever changes.
+  contactEmail: clean(process.env.NEXT_PUBLIC_CONTACT_EMAIL) ?? 'help@aneviaone.com',
 } as const;
 
 /**

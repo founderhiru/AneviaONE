@@ -21,7 +21,7 @@ export function IntelligencePreview() {
           {CONCEPTS.map((c) => (
             <li key={c.name} className="intelp__item">
               <span className="intelp__name">{c.name}</span>
-              <span className="status status--soon">Being built</span>
+              <span className="status status--dev">In development</span>
               <span className="intelp__line">{c.line}</span>
             </li>
           ))}

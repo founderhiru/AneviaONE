@@ -49,8 +49,8 @@ export function Hero() {
             )}
           </div>
           <p className="fine hero__status">
-            Today: add health reports and keep them together in private storage. Reading and comparing them, and
-            answering questions, are being built.
+            The app lets you add health reports and keep them together in private storage. Reading and comparing them,
+            and answering questions, are in development and not yet available to everyone.
           </p>
         </div>
 
