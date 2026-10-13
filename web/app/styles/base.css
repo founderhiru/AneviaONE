@@ -542,6 +542,8 @@ ol {
 .status--now { background: var(--mint-100); color: var(--good-ink); }
 .status--soon { background: var(--ivory-2); color: var(--ink-700); border: 1px solid var(--line); }
 .status--sample { background: var(--lav-50); color: var(--lav-600); }
+.status--dev { background: #e0f4f8; color: var(--teal-700); }
 .on-dark .status--now { background: rgba(95, 192, 138, 0.18); color: #9fe0bd; }
 .on-dark .status--soon { background: rgba(255, 255, 255, 0.08); color: #c8d6ea; border-color: rgba(255, 255, 255, 0.18); }
+.on-dark .status--dev { background: rgba(52, 191, 220, 0.16); color: #9fdcec; }
 .on-dark .status--sample { background: rgba(222, 216, 244, 0.14); color: #d9d2f3; }

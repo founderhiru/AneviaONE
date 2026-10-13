@@ -291,6 +291,7 @@
 .faqx__status--planned { background: var(--ivory-2); color: var(--ink-700); border: 1px solid var(--line); }
 .faqx__status--preview { background: var(--lav-50); color: var(--lav-600); }
 .faqx__status--partial { background: #e0f4f8; color: var(--teal-700); }
+.faqx__status--development { background: #e0f4f8; color: var(--teal-700); border: 1px solid rgba(52, 191, 220, 0.4); }
 
 .faqx__group { scroll-margin-top: calc(var(--header-h) + 76px); }
 .faqx__group + .faqx__group { margin-top: clamp(36px, 5vw, 56px); }

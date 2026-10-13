@@ -7,7 +7,7 @@ import { PatternCard } from './PatternCard';
 import { Reveal } from './Reveal';
 import { StoreButtons } from './StoreButtons';
 import { TrendCard } from './TrendCard';
-import { BRAND, LINKS, PRIMARY_CTA } from '@/lib/config';
+import { LINKS, PRIMARY_CTA } from '@/lib/config';
 import type { Block, Item, PageDef } from '@/lib/pages';
 
 export function PageHero({
@@ -219,17 +219,17 @@ function BlockView({ block }: { block: Block }) {
               <span className="icon-tile icon-tile--lg tone-blue">
                 <Icon name="mail" size={26} />
               </span>
-              <h2 className="h3">Email us</h2>
+              <h2 className="h3">Need help?</h2>
               {LINKS.contactEmail ? (
                 <a className="contact__mail" href={`mailto:${LINKS.contactEmail}`}>
                   {LINKS.contactEmail}
                 </a>
               ) : (
-                // TODO(launch): set NEXT_PUBLIC_CONTACT_EMAIL to a monitored inbox.
-                <p className="contact__soon">Contact details will be published here at launch.</p>
+                <p className="contact__soon">Contact details will be published here soon.</p>
               )}
               <p className="fine">
-                {BRAND.name} is a product of {BRAND.parent}.
+                Questions, feedback, press or partnerships. Please do not email health records or other personal health
+                information.
               </p>
             </Reveal>
           </div>
@@ -251,7 +251,7 @@ export function ClosingCta({ kind }: { kind: 'download' | 'contact' | 'none' }) 
               </h2>
               <p className="page-cta__label">{PRIMARY_CTA.label}</p>
               <StoreButtons tone="light" className="page-cta__stores" />
-              {!LINKS.appStore && !LINKS.googlePlay ? <p className="fine">App store links will appear here at launch.</p> : null}
+              {!LINKS.appStore && !LINKS.googlePlay ? <p className="fine">App store links will appear here when the app is released.</p> : null}
             </>
           ) : (
             <>

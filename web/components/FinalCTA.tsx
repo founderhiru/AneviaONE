@@ -16,7 +16,7 @@ export function FinalCTA() {
         </h2>
         <p className="cta__label">{PRIMARY_CTA.label}</p>
         <StoreButtons tone="light" className="cta__stores" />
-        {!STORES_LIVE ? <p className="fine cta__note">App store links will appear here at launch.</p> : null}
+        {!STORES_LIVE ? <p className="fine cta__note">App store links will appear here when the app is released.</p> : null}
       </div>
     </section>
   );

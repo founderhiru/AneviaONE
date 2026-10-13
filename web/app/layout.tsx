@@ -46,7 +46,7 @@ const jsonLd = {
     {
       '@type': 'Organization',
       '@id': `${SITE.url}/#org`,
-      name: BRAND.parent,
+      name: BRAND.name,
       url: SITE.url,
       brand: { '@type': 'Brand', name: BRAND.name },
     },

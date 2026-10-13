@@ -27,7 +27,7 @@ export function ProductSection() {
           Explore Product <Icon name="arrow" size={16} />
         </Link>
         <p className="lede product-sec__status">
-          Today you can add reports and keep them in private storage. The rest of what you see here is being built.
+          The app lets you add reports and keep them in private storage. The other screens below are in development and not yet available to everyone.
         </p>
       </div>
 
@@ -39,9 +39,9 @@ export function ProductSection() {
               <p className="product-sec__tags">
                 <span className="status status--sample">Sample data</span>
                 {s.live ? (
-                  <span className="status status--now">Available today</span>
+                  <span className="status status--now">Partly available</span>
                 ) : (
-                  <span className="status status--soon">Coming soon</span>
+                  <span className="status status--dev">In development</span>
                 )}
               </p>
               <h3 className="product-sec__title">{s.title}</h3>

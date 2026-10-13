@@ -19,7 +19,7 @@ export function HowPreview() {
             From records to understanding.
           </h2>
           <p className="lede howp__lede">
-            {BRAND.name} is being built to turn a first report into years of connected health history.
+            {BRAND.name} is being built to turn a first report into years of connected health history. Capture works in the app; the other four stages are in development.
           </p>
         </div>
         <ol className="howp__flow">
@@ -28,9 +28,9 @@ export function HowPreview() {
               <span className="howp__num">{String(i + 1).padStart(2, '0')}</span>
               <span className="howp__name">{stage}</span>
               {AVAILABLE_TODAY.has(stage) ? (
-                <span className="status status--now">Available today</span>
+                <span className="status status--now">Partly available</span>
               ) : (
-                <span className="status status--soon">Being built</span>
+                <span className="status status--dev">In development</span>
               )}
             </li>
           ))}
