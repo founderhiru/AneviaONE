@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { StyleSheet, TextInput as RNTextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput as RNTextInput, View } from 'react-native';
 
 import { FOREST } from '../design/brandSurface';
 import { useTheme } from '../design/theme';
@@ -29,7 +29,17 @@ export function OtpInput({ length = OTP_LENGTH, value, onChange, errorText, appe
 
   return (
     <View style={{ gap: theme.spacing.xs }}>
-      <View style={styles.row} accessible accessibilityLabel={`One time passcode, ${value.length} of ${length} digits entered`}>
+      {/* The boxes only show the digits; tapping them must focus the hidden
+          input, or there is no way to bring up the keyboard and type the code. */}
+      <Pressable
+        style={styles.row}
+        onPress={() => inputRef.current?.focus()}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`One time passcode, ${value.length} of ${length} digits entered`}
+        accessibilityHint="Opens the keyboard to type the code"
+        testID="otp-boxes"
+      >
         {digits.map((digit, index) => {
           const isActive = index === value.length;
           return (
@@ -46,6 +56,7 @@ export function OtpInput({ length = OTP_LENGTH, value, onChange, errorText, appe
             >
               <RNTextInput
                 editable={false}
+                pointerEvents="none"
                 value={digit}
                 style={[theme.typography.headingMedium, { color: c.text, textAlign: 'center' }]}
                 importantForAccessibility="no"
@@ -53,10 +64,12 @@ export function OtpInput({ length = OTP_LENGTH, value, onChange, errorText, appe
             </View>
           );
         })}
-      </View>
+      </Pressable>
       {/* Invisible input carries actual focus + keyboard + autofill */}
       <RNTextInput
         ref={inputRef}
+        // The code is the only thing to do on this screen.
+        autoFocus
         value={value}
         onChangeText={(text) => onChange(text.replace(/\D/g, '').slice(0, length))}
         keyboardType="number-pad"
