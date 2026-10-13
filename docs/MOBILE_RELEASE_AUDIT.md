@@ -22,6 +22,32 @@
 
 The local stack had migrations up to `20261012090000`, so it was missing `20261013090000`. It was left unchanged; that migration's behaviour is covered by the throwaway-Postgres suite.
 
+## 1b. iOS simulator run against local Supabase (2026-10-13)
+
+The run used an iPhone 17 Pro simulator (iOS 26.5) with a debug build, synthetic accounts, and the bundle served from an isolated Metro (port 8082). Before any network action, each launch was checked to be loading from that Metro, with the bundle containing only `127.0.0.1:54321` and no production project ref. Taps were driven by Maestro.
+
+| Flow | UI | Database / server evidence | Result |
+|---|---|---|---|
+| Email code sign-in | code entered, signed in | session created | pass (after fix 1 below) |
+| Identity + onboarding | profile saved; "Upload a document" opens Add Record | `profiles` / `health_profiles` rows | pass (after fix 2) |
+| Upload PDF (Files picker) | "Uploaded", consent asked first | `uploaded`, 1 object in the private bucket, 0 consents until Allow | pass |
+| Consent → read with no AI key | "Couldn't read this report yet… temporarily unavailable", Retry | both consents at `ai-2026-11`; `provider_not_configured`; `failure_kind provider` | pass (honest failure) |
+| Results (written via engine functions, `synthetic`) | 4 added, 1 held, page + range shown | 5 rows, 1 `needs_review` | pass |
+| Correct 104 → 106 with reason | "Correction saved.", history | original superseded; new `user_corrected · confirmed` row with the reason | pass |
+| Confirm held HbA1c | "Confirmed. This result is now in your Health Memory." | `confirmed`; 5 in `current_observations` | pass |
+| Health / Timeline / Ask (no AI) | 106 shown with source; one event; answer cites report and page; diagnosis question refused | `model: records`; `safety_diagnosis` | pass |
+| Sign out → relaunch → sign in | Welcome with no restored session; 106 still shown | sessions 1 → 0; no refresh tokens left; all rows identical before and after | pass |
+| Delete report (from Timeline) | "Health record deleted." | 6 observations, 1 page, 2 runs, 8 history rows, 1 file removed; the other report and the other account identical; no orphaned file | pass (after fix 5 for the screen behind it) |
+
+Fixes found on the device (all with regression tests that fail on the old code):
+1. The code boxes could not be focused, so a sign-in code could not be typed.
+2. Onboarding's "Take a photo" / "Upload a document" landed on Home.
+3. Home's "Needs review" stayed stale after a confirmation.
+4. The report screen's "held back" count stayed stale in the same way.
+5. The Timeline event screen kept showing a deleted report's results.
+
+Not covered: real AI extraction (needs the restricted test key), Android, real devices, release builds, Apple and Google sign-in (Google is disabled on the local stack).
+
 ## 2. Feature matrix
 
 Classifications: **Implemented** (code exists) · **Locally verified** (real behaviour in an isolated local environment, not mocks) · **Internally release-ready** · **Production verified** · **Planned / incomplete**.
