@@ -128,12 +128,52 @@ async function withHealthInfo(client: SupabaseClient, documents: StoredDocument[
   if (error || !data) return documents;
   const latest = new Map<string, RunCounts>();
   for (const run of data as RunCounts[]) if (!latest.has(run.document_id)) latest.set(run.document_id, run);
+  const held = await heldNow(client, ids);
   return documents.map((d) => {
     const run = latest.get(d.id);
     if (!run) return d;
-    const trusted = (run.facts_written ?? 0) - (run.facts_needs_review ?? 0) + (run.facts_duplicate ?? 0);
-    return { ...d, healthInfoCount: Math.max(0, trusted), heldForReviewCount: Math.max(0, run.facts_needs_review ?? 0) };
+    const heldAtRead = Math.max(0, run.facts_needs_review ?? 0);
+    const trustedAtRead = (run.facts_written ?? 0) - heldAtRead + (run.facts_duplicate ?? 0);
+    // The run's counts are frozen when the report is read. Results the person
+    // has since confirmed or corrected are in Health Memory and no longer held;
+    // rejected ones are neither. Without the live counts, keep the run's.
+    const now = held?.get(d.id) ?? { unreviewed: 0, rejected: 0 };
+    const stillHeld = held ? Math.min(heldAtRead, now.unreviewed) : heldAtRead;
+    const accepted = held ? Math.max(0, heldAtRead - stillHeld - now.rejected) : 0;
+    return { ...d, healthInfoCount: Math.max(0, trustedAtRead + accepted), heldForReviewCount: stillHeld };
   });
+}
+
+const FACT_TABLES = ['observations', 'conditions', 'medications', 'procedures', 'allergies', 'encounters'] as const;
+
+/**
+ * Results of these reports that are held for checking right now (current,
+ * unreviewed) or were rejected, per report — read live (RLS: own rows only).
+ * Null when any read fails, so callers fall back to the counts at reading time.
+ */
+async function heldNow(client: SupabaseClient, ids: string[]): Promise<Map<string, { unreviewed: number; rejected: number }> | null> {
+  const results = await Promise.all(
+    FACT_TABLES.map((table) =>
+      client
+        .from(table)
+        .select('document_id, review_status')
+        .in('document_id', ids)
+        .eq('confidence_gate', 'needs_review')
+        .is('superseded_at', null)
+        .neq('review_status', 'confirmed')
+    )
+  ).catch(() => null);
+  if (!results || results.some((r) => r.error || !r.data)) return null;
+  const counts = new Map<string, { unreviewed: number; rejected: number }>();
+  for (const { data } of results) {
+    for (const row of data as { document_id: string; review_status: string }[]) {
+      const c = counts.get(row.document_id) ?? { unreviewed: 0, rejected: 0 };
+      if (row.review_status === 'rejected') c.rejected += 1;
+      else c.unreviewed += 1;
+      counts.set(row.document_id, c);
+    }
+  }
+  return counts;
 }
 
 /** The delete-document function's HTTP status and error code, if the failure was an HTTP response. */
