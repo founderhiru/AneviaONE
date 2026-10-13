@@ -10,7 +10,7 @@ import { APP_MODE, isDemoMode } from '../config/appMode';
 import { useTheme } from '../design/theme';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { markLaunchSplashDone } from '../hooks/useLaunchSplash';
-import { AUTH_ROUTE, PROFILE_SETUP_ROUTE } from '../navigation/authRoutes';
+import { AUTH_ROUTE, PROFILE_SETUP_ROUTE, takeRouteAfterOnboarding } from '../navigation/authRoutes';
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
@@ -63,6 +63,9 @@ function RootNavigator() {
     // person's own Health Memory.
     if (user && user.onboardingComplete && (inAuthGroup || inExplore || atEntry || atProfileSetup)) {
       router.replace('/(tabs)/home');
+      // A choice made on the last onboarding step (e.g. Add Record) opens on top of Home.
+      const next = takeRouteAfterOnboarding();
+      if (next) router.push(next);
     }
   }, [user, isLoading, segments, router]);
 

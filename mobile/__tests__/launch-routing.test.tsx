@@ -8,6 +8,7 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 import { router, useSegments } from 'expo-router';
 
 import RootLayout from '../app/_layout';
+import { setRouteAfterOnboarding } from '../navigation/authRoutes';
 import { BRAND } from '../config/brand';
 import { authService } from '../services/auth/authService';
 import type { User } from '../types';
@@ -101,5 +102,29 @@ describe('launch routing', () => {
       await view.rerender(<RootLayout />);
       expect(screen.queryByLabelText(splash)).toBeNull();
     }
+  });
+});
+
+describe('leaving onboarding for Add Record', () => {
+  it('"Upload a document" / "Take a photo": Home, then Add Record on top — never lost to the guard', async () => {
+    // The last onboarding step records the destination and completes onboarding;
+    // the guard (still on the onboarding route) is the one that navigates.
+    (useSegments as jest.Mock).mockReturnValue(['(auth)', 'onboarding']);
+    setRouteAfterOnboarding('/add');
+    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(baseUser);
+    await render(<RootLayout />);
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/add'));
+    expect(router.replace).toHaveBeenCalledWith('/(tabs)/home');
+    const replaceOrder = (router.replace as jest.Mock).mock.invocationCallOrder[0];
+    const pushOrder = (router.push as jest.Mock).mock.invocationCallOrder[0];
+    expect(replaceOrder).toBeLessThan(pushOrder);
+  });
+
+  it('the destination is used once — a later launch goes to Home only', async () => {
+    (useSegments as jest.Mock).mockReturnValue(['(auth)', 'onboarding']);
+    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(baseUser);
+    await render(<RootLayout />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/(tabs)/home'));
+    expect(router.push).not.toHaveBeenCalled();
   });
 });

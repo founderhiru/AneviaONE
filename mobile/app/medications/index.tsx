@@ -52,12 +52,16 @@ export default function MedicationsScreen() {
         />
       ) : (
         medications.map((med) => (
-          <Card key={med.id}>
+          <Card
+            key={med.id}
+            onPress={med.sourceDocumentId ? () => router.push(`/documents/${med.sourceDocumentId}`) : undefined}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{med.name}</Text>
                 <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-                  {med.dosage} · {med.frequency}
+                  {/* Production records carry the dose as written and no frequency. */}
+                  {[med.dosage, med.frequency].filter(Boolean).join(' · ') || 'As written on your report'}
                 </Text>
                 {med.prescribedBy ? (
                   <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>

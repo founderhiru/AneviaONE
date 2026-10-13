@@ -5,6 +5,7 @@ import { invalidateHealthMemory } from '../health/healthMemoryApi';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { isListedStatus, hasStoredOriginal } from './documentStatus';
+import { heldNow, reviewProgress } from './heldResults';
 import { sanitizeFilename, validateDocumentBytes, validatePickedFile } from './documentValidation';
 import type { DocumentsService } from './documentsTypes';
 import { readLocalFile } from './fileAccess';
@@ -128,11 +129,15 @@ async function withHealthInfo(client: SupabaseClient, documents: StoredDocument[
   if (error || !data) return documents;
   const latest = new Map<string, RunCounts>();
   for (const run of data as RunCounts[]) if (!latest.has(run.document_id)) latest.set(run.document_id, run);
+  const held = await heldNow(client, ids);
   return documents.map((d) => {
     const run = latest.get(d.id);
     if (!run) return d;
-    const trusted = (run.facts_written ?? 0) - (run.facts_needs_review ?? 0) + (run.facts_duplicate ?? 0);
-    return { ...d, healthInfoCount: Math.max(0, trusted), heldForReviewCount: Math.max(0, run.facts_needs_review ?? 0) };
+    const heldAtRead = Math.max(0, run.facts_needs_review ?? 0);
+    const trustedAtRead = (run.facts_written ?? 0) - heldAtRead + (run.facts_duplicate ?? 0);
+    // The run's counts are frozen at reading time; see heldResults.ts.
+    const { stillHeld, accepted } = reviewProgress(heldAtRead, held, d.id);
+    return { ...d, healthInfoCount: Math.max(0, trustedAtRead + accepted), heldForReviewCount: stillHeld };
   });
 }
 

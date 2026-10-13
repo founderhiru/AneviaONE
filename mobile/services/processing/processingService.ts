@@ -1,5 +1,6 @@
 import { isDemoMode } from '../../config/appMode';
 import { ServiceError, toServiceError } from '../serviceError';
+import { heldNow, reviewProgress } from '../documents/heldResults';
 import { getSupabaseClient } from '../supabaseClient';
 
 /**
@@ -175,7 +176,11 @@ export const supabaseProcessingService: ProcessingService = {
         .maybeSingle();
       run = data;
     }
-    return toProcessingState(row as DocumentStateRow, run);
+    const state = toProcessingState(row as DocumentStateRow, run);
+    if (state.phase !== 'ready' || state.needsReview === 0) return state;
+    // "N added · M held back" must follow confirmations and corrections made since.
+    const { stillHeld, accepted } = reviewProgress(state.needsReview, await heldNow(client, [documentId]), documentId);
+    return { ...state, resultsAdded: state.resultsAdded + accepted, needsReview: stillHeld };
   },
 
   async listAutoReads() {
