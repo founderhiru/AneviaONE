@@ -98,6 +98,8 @@ Both rollback scripts were executed on the isolated stack.
 
 Production state has **not** been inspected. Production can only be reached through the Supabase CLI login. `supabase migration list --linked` may create a temporary login role in production when no database password is supplied, which is a write, and reading the CLI credential directly was blocked. Run `supabase/release/m1/prod_precheck.sql` in the Supabase SQL Editor instead. It is a single read-only transaction containing only SELECTs and catalog reads, and it ends in `rollback`.
 
+The SQL Editor shows only the **last** statement's result, which for that script is the `rollback`. Run `supabase/release/m1/prod_precheck_single_query.sql` instead. It runs the same checks as one `SELECT` and returns them all in a single table. It was verified on throwaway databases to give output identical to `prod_precheck.sql`, both before the migrations and after them (the post-deployment hashes below).
+
 Expected output when production is ready (validated on a throwaway database built from the repository migrations up to `20261011090000`; the four function hashes are identical on Postgres 16 and on the Supabase Postgres 17.6 image):
 
 | Check | Expected |
