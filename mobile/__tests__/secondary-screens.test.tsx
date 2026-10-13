@@ -79,7 +79,8 @@ describe('Privacy & Security screen', () => {
     expect(screen.queryByLabelText('Download My Data')).toBeNull();
     expect(screen.queryByLabelText('Delete your data')).toBeNull();
     expect(screen.queryByText(/UI preview/)).toBeNull();
-    expect(screen.getByTestId('privacy-not-yet-available')).toHaveTextContent(/account.*download.*aren.t available/);
+    expect(screen.getByTestId('privacy-not-yet-available')).toHaveTextContent(/Downloading a copy of your data isn.t available/);
+    expect(screen.getByLabelText('Delete account')).toBeTruthy();
     // Data Sharing is parked (nothing is shared, so nothing to switch).
     expect(screen.queryByLabelText('You control sharing')).toBeNull();
     expect(screen.getByText('Not shared')).toBeTruthy();

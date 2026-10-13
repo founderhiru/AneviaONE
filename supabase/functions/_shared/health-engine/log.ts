@@ -35,6 +35,7 @@ const ALLOWED_KEYS = new Set([
   'provider_request_id',
   'provider_error_message',
   'missing_config',
+  'objects_removed',
 ]);
 
 export type LogFields = Record<string, string | number | boolean | null | undefined>;

@@ -70,6 +70,10 @@ echo "▸ Running correction deletion test (a correction survives deleting its r
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/correction_deletion_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 
+echo "▸ Running account deletion test (begin, freeze, retry, cascade, anonymous audit, another person untouched)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/account_deletion_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   echo "▸ Running health data model integrity & isolation test (proposed schema)"
   PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/proposed_health_model_test.sql" 2>&1 \

@@ -102,12 +102,11 @@ describe('productionAiService', () => {
 });
 
 describe('productionProfileService', () => {
-  it('shows every sharing option as off and refuses changes/requests honestly', async () => {
+  it('shows every sharing option as off and refuses unavailable changes/requests honestly', async () => {
     const settings = await productionProfileService.getDataSharingSettings();
     expect(settings.every((s) => !s.enabled)).toBe(true);
     await expect(productionProfileService.setDataSharingSetting('share-doctor-brief', true)).rejects.toMatchObject({ code: 'not_available' });
     await expect(productionProfileService.requestDataDownload()).rejects.toMatchObject({ code: 'not_available' });
-    await expect(productionProfileService.requestAccountDeletion()).rejects.toMatchObject({ code: 'not_available' });
   });
 });
 

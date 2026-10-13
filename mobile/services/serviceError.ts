@@ -19,6 +19,9 @@ export type ServiceErrorCode =
   | 'invalid_code'
   | 'not_available'
   | 'consent_required'
+  | 'reauthentication_required'
+  | 'busy'
+  | 'incomplete'
   | 'unknown';
 
 export class ServiceError extends Error {

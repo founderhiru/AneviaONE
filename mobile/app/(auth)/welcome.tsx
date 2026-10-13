@@ -99,6 +99,11 @@ export default function WelcomeScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'position' : undefined}>
       <Animated.View style={[styles.sheet, entrance.sheet]} testID="welcome-sheet">
         <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.sheetInner}>
+          {notice === 'account_deleted' ? (
+            <Text style={styles.notice} accessibilityRole="alert" testID="account-deleted-notice">
+              Your account and everything in it have been deleted.
+            </Text>
+          ) : null}
           {notice === 'session_expired' ? (
             <Text style={styles.notice} accessibilityRole="alert" testID="session-expired-notice">
               {SESSION_EXPIRED_MESSAGE}

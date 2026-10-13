@@ -45,7 +45,7 @@ function SessionProbe() {
     <>
       <Text testID="user">{user ? user.id : 'signed-out'}</Text>
       <Text testID="notice">{notice ?? 'none'}</Text>
-      <Text onPress={signOut}>sign out</Text>
+      <Text onPress={() => signOut()}>sign out</Text>
     </>
   );
 }
