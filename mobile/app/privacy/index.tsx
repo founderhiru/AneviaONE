@@ -112,10 +112,16 @@ export default function PrivacyScreen() {
         description="Open a report in My documents and delete it. Its original file and the results read from it are removed from your Health Memory."
         onPress={() => router.push('/documents')}
       />
-      {/* Account deletion and data download have no backend yet. They are not
-          offered as buttons that always fail; this says so plainly instead. */}
+      <Row
+        icon="person-remove-outline"
+        label="Delete account"
+        description="Permanently delete your account and everything in it."
+        onPress={() => router.push('/privacy/delete-account')}
+      />
+      {/* Data download has no backend yet. It is not offered as a button that
+          always fails; this says so plainly instead. */}
       <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]} testID="privacy-not-yet-available">
-        Deleting your whole account and downloading a copy of your data aren&rsquo;t available in the app yet.
+        Downloading a copy of your data isn&rsquo;t available in the app yet.
       </Text>
     </ScreenContainer>
   );

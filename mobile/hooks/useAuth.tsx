@@ -4,7 +4,7 @@ import { authService } from '../services/auth/authService';
 import type { OnboardingFlags, User } from '../types';
 
 /** Something the signed-out screens should explain to the person. */
-export type AuthNotice = 'session_expired';
+export type AuthNotice = 'session_expired' | 'account_deleted';
 
 export const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again to continue.';
 
@@ -22,7 +22,8 @@ export type AuthContextValue = {
   completeOnboarding: () => void;
   /** Marks one-time onboarding steps done now, and saves them for next time. */
   markOnboardingFlags: (flags: OnboardingFlags) => void;
-  signOut: () => Promise<void>;
+  /** Signs out; `notice` is then shown on Welcome (e.g. after deleting the account). */
+  signOut: (notice?: AuthNotice) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -99,13 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(async (after?: AuthNotice) => {
     signingOut.current = true;
     try {
       await authService.signOut();
     } finally {
       signingOut.current = false;
-      setNotice(null);
+      setNotice(after ?? null);
       setUser(null);
     }
   }, []);

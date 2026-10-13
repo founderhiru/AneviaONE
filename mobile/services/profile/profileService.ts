@@ -27,7 +27,14 @@ export interface ProfileService {
   getDataSharingSettings(): Promise<DataSharingSetting[]>;
   setDataSharingSetting(id: string, enabled: boolean): Promise<void>;
   requestDataDownload(): Promise<{ requested: true }>;
-  requestAccountDeletion(): Promise<{ requested: true }>;
+  /**
+   * Deletes the signed-in person's account and everything in it (server:
+   * delete-account). Resolves only once the account is gone. Throws
+   * `reauthentication_required` (sign in again first), `busy` (a report is
+   * being read), `incomplete` (started but not finished — calling again
+   * resumes) or `network`/`unknown`.
+   */
+  deleteAccount(): Promise<void>;
   /** The signed-in person's own identity details (never anyone else's). */
   getMyIdentity(): Promise<IdentityProfile>;
   /** Saves both values (null = not provided / clears it). Throws on invalid input. */
@@ -87,7 +94,7 @@ export const demoProfileService: ProfileService = {
     await delay(undefined);
   },
   requestDataDownload: () => delay({ requested: true }),
-  requestAccountDeletion: () => delay({ requested: true }),
+  deleteAccount: () => delay(undefined),
   getMyIdentity: () => delay({ ...demoIdentity }),
   async updateMyIdentity(identity) {
     assertValidIdentity(identity);
@@ -95,6 +102,45 @@ export const demoProfileService: ProfileService = {
     return delay({ ...demoIdentity });
   },
 };
+
+const ACCOUNT_DELETE_FAILED = 'We couldn’t delete your account. Please try again.';
+
+/** The function's HTTP status and error code, if the failure was an HTTP response. */
+async function functionError(error: unknown): Promise<{ status: number; code: string | null } | null> {
+  const response = (error as { context?: unknown })?.context;
+  if (!(response instanceof Response)) return null;
+  const body = await response.json().catch(() => null);
+  return { status: response.status, code: typeof body?.error === 'string' ? body.error : null };
+}
+
+/**
+ * What each outcome means for the person. Once deletion has started the
+ * account is frozen; an unclear outcome is never reported as "nothing changed".
+ */
+function accountDeleteError(http: { status: number; code: string | null } | null, cause: unknown): ServiceError {
+  if (http?.code === 'reauthentication_required') {
+    return new ServiceError('reauthentication_required', 'For your security, sign in again, then delete your account within 15 minutes. Nothing has been deleted.');
+  }
+  if (http?.code === 'account_busy') {
+    return new ServiceError('busy', 'A report is being read right now. Try again in a few minutes. Nothing has been deleted.', { retryable: true });
+  }
+  if (http && (http.code === 'storage_delete_failed' || http.code === 'delete_failed')) {
+    return new ServiceError(
+      'incomplete',
+      'Deleting your account started but didn’t finish. Some of your data may already be removed, and no new reports can be added. Please try again — it continues where it stopped.',
+      { retryable: true, cause }
+    );
+  }
+  if (!http) {
+    // No answer (offline, timeout): the request may or may not have reached the server.
+    return new ServiceError(
+      'network',
+      'We couldn’t reach the server, so we can’t tell whether deletion started. Check your connection and try again — trying again is safe.',
+      { retryable: true, cause }
+    );
+  }
+  return new ServiceError('unknown', ACCOUNT_DELETE_FAILED, { retryable: true, cause });
+}
 
 const notAvailable = (what: string) =>
   new ServiceError('not_available', `${what} isn’t available in the app yet. Your data has not been changed.`);
@@ -112,8 +158,21 @@ export const productionProfileService: ProfileService = {
   async requestDataDownload() {
     throw notAvailable('Downloading your data');
   },
-  async requestAccountDeletion() {
-    throw notAvailable('Deleting your account');
+  async deleteAccount() {
+    const client = getSupabaseClient();
+    if (!client) throw new ServiceError('not_configured', ACCOUNT_DELETE_FAILED, { retryable: true });
+    let result: Awaited<ReturnType<typeof client.functions.invoke>>;
+    try {
+      result = await client.functions.invoke('delete-account', { body: { confirm: 'DELETE' } });
+    } catch (error) {
+      throw accountDeleteError(null, error);
+    }
+    if (!result.error) {
+      if ((result.data as { status?: string } | null)?.status === 'deleted') return;
+      // An answer that doesn't confirm deletion is never treated as success.
+      throw new ServiceError('unknown', ACCOUNT_DELETE_FAILED, { retryable: true });
+    }
+    throw accountDeleteError(await functionError(result.error), result.error);
   },
 
   async getMyIdentity() {
