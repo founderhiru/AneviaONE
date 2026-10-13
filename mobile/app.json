@@ -28,9 +28,12 @@
       },
       "predictiveBackGestureEnabled": true,
       "permissions": [
-        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.READ_MEDIA_VIDEO"
       ]
     },
     "web": {
@@ -39,7 +42,12 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       "expo-font",
       "expo-apple-authentication",
       [
@@ -51,15 +59,11 @@
         }
       ],
       [
-        "expo-camera",
-        {
-          "cameraPermission": "Your camera is used to capture photos of health reports and prescriptions."
-        }
-      ],
-      [
         "expo-image-picker",
         {
-          "photosPermission": "Access to your photos lets you upload existing health documents."
+          "photosPermission": "Access to your photos lets you upload existing health documents.",
+          "cameraPermission": "Your camera is used to capture photos of health reports and prescriptions so they can be added to your Health Memory.",
+          "microphonePermission": false
         }
       ],
       [

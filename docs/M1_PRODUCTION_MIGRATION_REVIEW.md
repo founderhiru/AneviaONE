@@ -6,7 +6,7 @@ Applying either migration to production needs explicit final approval.
 | # | Migration | SHA-256 | Where it is |
 |---|---|---|---|
 | 1 | `20261012090000_fact_corrections.sql` (444 lines) | `72ac362b15e10d160f2e5f54d2290c5ff2ebb516aef866203fb67eb11f04c061` | on `main` (PR #9, #10) |
-| 2 | `20261013090000_corrections_survive_report_deletion.sql` (227 lines) | `7508356e7eb0e934d7cde34e6ff09975faf4fc8668819dbb11e36c636450cc21` | PR #12 (not merged) |
+| 2 | `20261013090000_corrections_survive_report_deletion.sql` (227 lines) | `7508356e7eb0e934d7cde34e6ff09975faf4fc8668819dbb11e36c636450cc21` | on `main` (PR #12, merged in `6221c10`) |
 
 Supporting SQL (all executed in the review): `supabase/release/m1/`.
 
@@ -26,7 +26,7 @@ Supporting SQL (all executed in the review): `supabase/release/m1/`.
 1. **Production must already have every migration up to `20261011090000_extraction_run_diagnostics.sql`.** Confirm first with the read-only `supabase/release/m1/prod_precheck.sql` (§10). Production has not been inspected yet.
 2. **Migration 1 before migration 2.** Migration 2 relies on migration 1's insert trigger (fingerprint takeover) to keep a re-recorded correction unique and reread-safe.
 3. **Database before app.** Any app build from current `main` already contains the Result screen; without migration 1 saving a correction fails (generic error). Deploy migration 1 before shipping such a build.
-4. **PR #12 must be merged** before migration 2 is deployed (so the deployed file matches the repository).
+4. PR #12 is merged (`6221c10`), so the migration 2 file on `main` is the one to deploy. Check its SHA-256 against the table above before deploying.
 5. No Edge Function redeploy is needed for either migration.
 
 ## 3. Production-schema compatibility (evidence)
@@ -91,7 +91,7 @@ Both rollback scripts were executed on the isolated stack.
 4. Apply migration 1 — e.g. via `supabase db push` after setting a lock timeout for the session, or in the SQL editor as one transaction starting `set local lock_timeout = '5s';`. On a lock timeout: wait and retry.
 5. Run `verify_20261012090000…sql` → expect 13/13 (the last check is true only while no one has corrected anything).
 6. Re-run `row_fingerprint.sql` → must match step 3 exactly.
-7. (After PR #12 is merged) apply migration 2; run `verify_20261013090000…sql` → 6/6.
+7. Apply migration 2; run `verify_20261013090000…sql` → 6/6.
 8. Proceed to the production-backed test plan (`docs/M1_PRODUCTION_TEST_PLAN.md`) only after explicit authorisation.
 
 ## 10. Production pre-check (read-only) — not yet run

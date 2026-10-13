@@ -69,9 +69,25 @@ describe('Add Record screen', () => {
 });
 
 describe('Privacy & Security screen', () => {
-  it('renders download and delete account actions', async () => {
+  it('offers only working actions and says plainly what is not available', async () => {
     await renderWithAuth(<PrivacyScreen />);
     await waitFor(() => expect(screen.getByText('Privacy & Security')).toBeTruthy());
+    // No backend yet: never offered as buttons that always fail.
+    expect(screen.queryByLabelText('Download My Data')).toBeNull();
+    expect(screen.queryByLabelText('Delete your data')).toBeNull();
+    expect(screen.queryByText(/UI preview/)).toBeNull();
+    expect(screen.getByTestId('privacy-not-yet-available')).toHaveTextContent(/account.*download.*aren.t available/);
+    // Data Sharing is parked (nothing is shared, so nothing to switch).
+    expect(screen.queryByLabelText('You control sharing')).toBeNull();
+    expect(screen.getByText('Not shared')).toBeTruthy();
+  });
+
+  it('report deletion, which works, is reachable from here', async () => {
+    await renderWithAuth(<PrivacyScreen />);
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Delete a report'));
+    });
+    expect(router.push).toHaveBeenCalledWith('/documents');
   });
 });
 
