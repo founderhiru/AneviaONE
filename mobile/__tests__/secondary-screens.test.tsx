@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import WhatChangedScreen from '../app/changes/index';
 import AddRecordScreen from '../app/add/index';
@@ -49,10 +49,13 @@ describe('Trend detail screen', () => {
 
 describe('Timeline event detail screen', () => {
   it('loads an event by id and shows its date', async () => {
+    (useFocusEffect as jest.Mock).mockImplementation((effect: () => void) => {
+      React.useEffect(effect, [effect]);
+    });
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'evt-2026-annual' });
     await renderWithAuth(<EventDetailScreen />);
     await waitFor(() => expect(screen.queryByText('Loading event…')).toBeNull());
-    expect(screen.queryByText('Event not found.')).toBeNull();
+    expect(screen.queryByTestId('event-gone')).toBeNull();
   });
 });
 

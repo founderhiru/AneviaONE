@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, SecondaryButton } from '../../components';
 import { useTheme } from '../../design/theme';
@@ -14,22 +14,24 @@ export default function EventDetailScreen() {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [error, setError] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError(false);
     try {
       const result = await healthService.getEventById(id);
       setEvent(result ?? undefined);
-      if (result) setObservations(await healthService.getEventObservations(result));
+      setObservations(result ? await healthService.getEventObservations(result) : []);
     } catch {
       setError(true);
     }
-  }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Reloaded whenever shown: the report behind this event can be corrected or
+  // deleted from a screen opened on top of it ("View Original Document").
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   if (error) {
     return (
@@ -53,7 +55,9 @@ export default function EventDetailScreen() {
     return (
       <ScreenContainer>
         <ScreenHeader title="Event" />
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>Event not found.</Text>
+        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]} testID="event-gone">
+          This event is no longer in your Health Memory. The report it came from may have been deleted.
+        </Text>
       </ScreenContainer>
     );
   }
