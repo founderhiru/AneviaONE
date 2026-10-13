@@ -88,13 +88,13 @@ Both rollback scripts were executed on the isolated stack.
 1. Run `supabase/release/m1/prod_precheck.sql` (read-only) in the SQL Editor → every value as in §10. (Avoid `supabase migration list --linked` without a database password: it may create a temporary login role.)
 2. Confirm backup/PITR; take `pg_dump -Fc`.
 3. Run `row_fingerprint.sql` against production (read-only) and save the output.
-4. Apply migration 1 — e.g. via `supabase db push` after setting a lock timeout for the session, or in the SQL editor as one transaction starting `set local lock_timeout = '5s';`. On a lock timeout: wait and retry.
+4. Apply migration 1, e.g. via `supabase db push` after setting a lock timeout for the session. On a lock timeout: wait and retry. **If it is instead run in the SQL Editor, the objects are created but no row is written to `supabase_migrations.schema_migrations`.** A later `supabase db push` would then try to apply it again and stop (see §6 and §12). In that case, record it with `supabase migration repair --status applied 20261012090000` (a one-row write, which needs approval) only after §12 confirms the definitions match.
 5. Run `verify_20261012090000…sql` → expect 13/13 (the last check is true only while no one has corrected anything).
 6. Re-run `row_fingerprint.sql` → must match step 3 exactly.
 7. Apply migration 2; run `verify_20261013090000…sql` → 6/6.
 8. Proceed to the production-backed test plan (`docs/M1_PRODUCTION_TEST_PLAN.md`) only after explicit authorisation.
 
-## 10. Production pre-check (read-only) — not yet run
+## 10. Production pre-check (read-only)
 
 Production state has **not** been inspected. Production can only be reached through the Supabase CLI login. `supabase migration list --linked` may create a temporary login role in production when no database password is supplied, which is a write, and reading the CLI credential directly was blocked. Run `supabase/release/m1/prod_precheck.sql` in the Supabase SQL Editor instead. It is a single read-only transaction containing only SELECTs and catalog reads, and it ends in `rollback`.
 
@@ -130,3 +130,66 @@ After both migrations are deployed, the same hashes become `8699275869c01e7b6fbb
 - Production's applied-migration state is unverified from here (step 1).
 - Production table sizes are unknown here; the migration-1 lock duration scales with them (check scan).
 - No production writes are part of this review.
+
+## 12. Pre-check result (2026-10-13): M1 objects present, but no history row
+
+The owner ran the pre-check. Reported values:
+
+| Check | Production | Expected before M1 |
+|---|---|---|
+| M1 migrations already applied | none | none |
+| required predecessor 20261011090000 applied | true | true |
+| correction_reason columns present | **6** | 0 |
+| correct_fact present | **true** | false |
+| M1 private helpers present | **4** | 0 |
+| trigger functions to replace present | 3 | 3 |
+
+**Reproduced.** A throwaway database with migration 1 **applied but not recorded** in `supabase_migrations.schema_migrations` gives exactly these six values.
+- The script reads correctly; this is not an expectation bug in it.
+- Migration 1 runs as one transaction, so "present but unrecorded" points to it being **run outside the migration tool**. The likeliest route is the SQL Editor, which §9 step 4 used to offer as an option. A partial application is unlikely, but the remaining checks must rule it out.
+- Production has **not** been changed by this review.
+
+**Not concluded yet.** The decision needs the other 16 pre-check rows, especially rows 19–22 (the function hashes), and the read-only diagnostic `supabase/release/m1/prod_m1_state_diagnosis.sql` (one query; SQL Editor).
+
+### How to read the results
+
+Expected diagnostic output, recorded on throwaway databases built from the repository migrations:
+
+| Check | Before M1 | M1 applied (recorded or not) | M1 + M2 applied |
+|---|---|---|---|
+| correction_reason column per table | all `false` | all `true` | all `true` |
+| reason_only_on_corrections constraints | `0` | `6` | `6` |
+| md5 private.clinical_fact_after_insert | `d76e7ddaf7e7ff849df991d4dec0374c` | `8699275869c01e7b6fbb0e5e4a21f612` | same |
+| md5 private.clinical_fact_before_insert | `e14968933b7066d43d51402aae53a73d` | `8061ea85a7f6e88ee7f43fa2f538e1cd` | same |
+| md5 private.clinical_fact_before_update | `9ee96ac11db6e7251992827f51893080` | `a934eee05fd4622ffe2ac8419f2f6169` | same |
+| md5 private.fact_identity_held | absent | `3c3e09c9f131cac875af6456f29d5010` | same |
+| md5 private.fact_plain_number | absent | `5ec9395c1c0308cec51d8c7acdbef12a` | same |
+| md5 private.fact_reference_bounds | absent | `4cca9fa5391208d14726ccd975d318ec` | same |
+| md5 private.report_identity_unconfirmed | absent | `1001720343cafd4eba08f58e92d8995e` | same |
+| md5 public.correct_fact | absent | `69806bdbe337d1e8c95783a5971f3a1b` | same |
+| correct_fact EXECUTE authenticated/anon/public | absent | `true/false/false` | same |
+| md5 public.engine_delete_document | `0e0c689034c4285e7dfe6f4b65703ed8` | `0e0c689034c4285e7dfe6f4b65703ed8` | **`18fe841b2f746ed41cccb8c02ca8ba70`** |
+| fact triggers bound | `24` | `24` | `24` |
+| history since 20261001 | ends `20261011090000` | ends `20261011090000` if unrecorded, `20261012090000` if recorded | ends `20261013090000` if recorded |
+
+The three trigger-function hashes are identical on Postgres 16 and on the Supabase Postgres 17.6 image (§10). The other function hashes were recorded on Postgres 16. If only those differ while everything else matches, compare `pg_get_functiondef(...)` text with the file before drawing conclusions.
+
+### Decision table (nothing below is approved or executed)
+
+| Production shows | Meaning | Next step (each needs explicit approval) |
+|---|---|---|
+| Every M1 row matches the "M1 applied" column; `engine_delete_document` = `0e0c…` | M1 fully applied outside the tool; M2 not applied | (1) backups (below); (2) `supabase migration repair --status applied 20261012090000` (writes only the history row; no schema change); (3) run `verify_20261012090000_fact_corrections.sql`, expecting 13/13; the last check holds only if nobody has corrected anything yet; (4) then M2 through `supabase db push` as in §9 step 7 |
+| As above, but `engine_delete_document` = `18fe…` | M1 **and** M2 applied outside the tool | Backups; repair both versions (`20261012090000`, `20261013090000`); run both verify scripts |
+| Any M1 object present but others missing (e.g. 6 columns but fewer than 6 constraints, a helper absent), or a trigger hash matching neither column | Partial or different definition | **Stop.** Do not push, repair or roll back. Compare each `pg_get_functiondef` with the file, and find out who ran what and when (Supabase Logs: Postgres logs filtered for `correction_reason` / `correct_fact` DDL, role and application name). Then write a specific plan. |
+
+Why not simply `supabase db push` now: migration 1 is not re-runnable (§6). Its first `ALTER TABLE` would fail ("column correction_reason already exists"), the transaction would roll back with nothing changed, and every later migration (M2, account deletion) would stay blocked behind it.
+
+Why not roll back to a clean state: if anyone has already saved a correction (diagnostic rows 7–8), the rollback script refuses (§8), and rolling back would remove a feature the current app build uses.
+
+### Backup / recovery checks before ANY production write (including `migration repair`)
+1. **Plan and PITR:** Supabase Dashboard → Database → Backups. Confirm daily backups exist and note the latest timestamp. If Point-in-Time Recovery is enabled, note the earliest restorable time. If it is not enabled (Pro plan add-on), decide whether to enable it first.
+2. **Logical backup:** `pg_dump -Fc --no-owner` of the production database to an encrypted local file. Use the database password from the dashboard, never committed. Check it is readable with `pg_restore --list <file> | head`, and record its size and SHA-256.
+3. **Schema-only snapshot:** `pg_dump --schema-only` before and after the change, for an exact diff.
+4. **Row fingerprint:** `release/m1/row_fingerprint.sql` (read-only) before and after; it must be identical.
+5. **Quiet window:** pre-check row "open transactions older than 1 minute" = 0, with `lock_timeout` set for any DDL (§5).
+6. **Recovery order if something goes wrong:** the rollback scripts (§8, only while no correction reasons are stored), then PITR or backup restore (loses everything written after the restore point; last resort).
