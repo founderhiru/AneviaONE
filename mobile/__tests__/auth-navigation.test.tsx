@@ -262,7 +262,10 @@ describe('Mobile code', () => {
   });
 
   it('after the cooldown a new code is sent to the same number, and the cooldown restarts', async () => {
-    jest.useFakeTimers();
+    // Fake only the cooldown timers. Faking microtask/immediate scheduling too left
+    // the session provider stuck for every later test in this file (they saw a
+    // signed-out session), which is what the two failures after this test were.
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'queueMicrotask', 'setImmediate', 'clearImmediate', 'performance'] });
     try {
       const resend = jest.spyOn(authService, 'sendMobileOtp').mockResolvedValue({ success: true });
       await renderStep({ mobileNumber: '+919876543210' }, <OtpScreen />);
