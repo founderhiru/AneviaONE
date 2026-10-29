@@ -214,7 +214,7 @@ export default function HomeScreen() {
         hitSlop={8}
         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       >
-        {user?.fullName ? <Avatar name={user.fullName} size={36} /> : <Ionicons name="person-circle-outline" size={36} color={theme.colors.brandPrimary} />}
+        <Avatar name={user?.fullName} size={36} />
       </Pressable>
     </View>
   );
