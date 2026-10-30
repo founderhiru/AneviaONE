@@ -355,7 +355,7 @@ describe('Home — B. early user (one report)', () => {
     expect(screen.getByText('Your health, over time.')).toBeTruthy();
     expect(screen.getByLabelText('1 Report')).toBeTruthy();
     expect(screen.getByLabelText('6 Results')).toBeTruthy();
-    expect(screen.getByLabelText('0 Needs review')).toBeTruthy();
+    expect(screen.getByLabelText('0 Reports to verify')).toBeTruthy();
     expect(screen.queryByText(/Medications?/)).toBeNull();
     expect(screen.queryByText(/^Areas?$/)).toBeNull();
   });
@@ -445,7 +445,7 @@ describe('Home — review and trust states', () => {
     await waitFor(() => expect(screen.getByTestId('home-summary')).toBeTruthy());
     expect(screen.getByLabelText('4 Reports')).toBeTruthy();
     expect(screen.getByLabelText('7 Results')).toBeTruthy(); // the held result is not counted
-    expect(screen.getByLabelText('3 Needs review')).toBeTruthy();
+    expect(screen.getByLabelText('3 Reports to verify')).toBeTruthy();
     const card = screen.getByTestId('home-review-card');
     expect(within(card).getByText('3 reports need your review')).toBeTruthy();
     expect(within(card).getByText(/Adding your name and date of birth helps us recognise your reports\./)).toBeTruthy();
@@ -457,12 +457,34 @@ describe('Home — review and trust states', () => {
     expect(within(screen.getByTestId('stored-document-scan')).getByText('Needs review')).toBeTruthy();
   });
 
+  it('"Reports to verify" counts reports (not results) and opens the list of exactly those reports', async () => {
+    const held = { ...doc('held'), healthInfoCount: 0, heldForReviewCount: 5, identityCheck: 'consistent' };
+    await renderHome({ snapshot: early(), documents: [doc('urine'), held], results: URINE });
+    await waitFor(() => expect(screen.getByTestId('home-summary')).toBeTruthy());
+    // Five held results, one report: the tile counts the report, singular.
+    const tile = screen.getByLabelText('1 Report to verify');
+    expect(within(screen.getByTestId('home-summary')).queryByText(/Needs review/)).toBeNull();
+    await act(async () => {
+      fireEvent.press(tile);
+    });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/documents', params: { filter: 'verify' } });
+  });
+
+  it('with nothing to verify, the tile shows 0 and opens nothing', async () => {
+    await renderHome({ snapshot: early(), documents: [doc('urine')], results: URINE });
+    const tile = await screen.findByLabelText('0 Reports to verify');
+    await act(async () => {
+      fireEvent.press(tile);
+    });
+    expect(router.push).not.toHaveBeenCalledWith(expect.objectContaining({ params: { filter: 'verify' } }));
+  });
+
   it('a single report to review opens that report; a failed read is told apart from review', async () => {
     const failed = { ...doc('blurry'), status: 'failed' as const, failureKind: 'validation', healthInfoCount: null };
     await renderHome({ snapshot: early(), documents: [doc('urine'), failed], results: URINE });
     const card = await screen.findByTestId('home-review-card');
     expect(within(card).getByText('1 report couldn’t be read')).toBeTruthy();
-    expect(screen.getByLabelText('0 Needs review')).toBeTruthy();
+    expect(screen.getByLabelText('0 Reports to verify')).toBeTruthy();
     await act(async () => {
       fireEvent.press(card);
     });

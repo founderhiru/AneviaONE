@@ -176,6 +176,8 @@ export default function HomeScreen() {
   const reviewDocs = docs.filter((d) => needsReview(d) || couldNotRead(d));
   const identityHint = docs.some((d) => needsReview(d) && IDENTITY_HELD.has(d.identityCheck ?? ''));
   const openReview = () => (reviewDocs.length === 1 ? router.push(`/documents/${reviewDocs[0].id}`) : router.push('/documents'));
+  // "Reports to verify": the same reports the tile counts (needsReview), listed on their own.
+  const openVerify = () => router.push({ pathname: '/documents', params: { filter: 'verify' } });
   const recent = docs.slice(0, RECENT_DOCUMENTS);
   const names = React.useMemo(() => reportNames(trustedResults(allResults)), [allResults]);
   const stillReading = autoRead.reading > 0 || docs.some((d) => d.status === 'uploaded' || isProcessing(d.status));
@@ -247,7 +249,7 @@ export default function HomeScreen() {
         />
       ) : (
         <>
-          <SummaryTiles counts={counts} onReports={() => router.push('/documents')} onResults={() => router.push('/(tabs)/health')} onReview={openReview} />
+          <SummaryTiles counts={counts} onReports={() => router.push('/documents')} onResults={() => router.push('/(tabs)/health')} onVerify={openVerify} />
 
           <WhatChangedHero comparisons={comparisons} onOpen={() => router.push('/changes')} />
 

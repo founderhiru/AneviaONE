@@ -261,6 +261,59 @@ describe('My documents + document viewer', () => {
     expect(screen.getAllByLabelText('View previous result').length).toBeGreaterThan(0);
   });
 
+  describe('?filter=verify (Home → Reports to verify)', () => {
+    const base = {
+      userId: 'u1',
+      source: 'upload' as const,
+      documentType: 'blood_test' as const,
+      mimeType: 'application/pdf' as const,
+      fileSizeBytes: 1000,
+      storagePath: 'u1/x.pdf',
+      processingError: null,
+      uploadedAt: '2026-10-01T00:00:00Z',
+      createdAt: '2026-10-01T00:00:00Z',
+      updatedAt: '2026-10-01T00:00:00Z',
+    };
+    const docs = [
+      { ...base, id: 'held', originalFilename: 'Held results.pdf', status: 'completed' as const, healthInfoCount: 0, heldForReviewCount: 5 },
+      { ...base, id: 'mismatch', originalFilename: 'Someone else.pdf', status: 'failed' as const, failureKind: 'identity_mismatch' },
+      { ...base, id: 'done', originalFilename: 'All trusted.pdf', status: 'completed' as const, healthInfoCount: 8, heldForReviewCount: 0 },
+      { ...base, id: 'unreadable', originalFilename: 'Blurry scan.pdf', status: 'failed' as const, failureKind: 'validation' },
+    ];
+
+    it('lists only the reports Home counts as "to verify", with a data-verification explanation', async () => {
+      jest.spyOn(documentsService, 'listDocuments').mockResolvedValue(docs);
+      (useLocalSearchParams as jest.Mock).mockReturnValue({ filter: 'verify' });
+      await renderWithAuth(<MyDocumentsScreen />);
+      await waitFor(() => expect(screen.getByText('Held results.pdf')).toBeTruthy());
+      expect(screen.getByText('Reports to verify')).toBeTruthy();
+      expect(screen.getByTestId('verify-intro')).toHaveTextContent(/aren’t in your Health Memory until they’re checked/);
+      expect(screen.getByText('Someone else.pdf')).toBeTruthy();
+      expect(screen.queryByText('All trusted.pdf')).toBeNull();
+      expect(screen.queryByText('Blurry scan.pdf')).toBeNull();
+      await act(async () => {
+        fireEvent.press(screen.getByText('Held results.pdf'));
+      });
+      expect(router.push).toHaveBeenCalledWith('/documents/held');
+    });
+
+    it('with nothing to verify, says so and offers all documents', async () => {
+      jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([docs[2]]);
+      (useLocalSearchParams as jest.Mock).mockReturnValue({ filter: 'verify' });
+      await renderWithAuth(<MyDocumentsScreen />);
+      await waitFor(() => expect(screen.getByText('Nothing to verify')).toBeTruthy());
+      expect(screen.queryByText('All trusted.pdf')).toBeNull();
+    });
+
+    it('without the filter, My documents still lists every report', async () => {
+      jest.spyOn(documentsService, 'listDocuments').mockResolvedValue(docs);
+      await renderWithAuth(<MyDocumentsScreen />);
+      await waitFor(() => expect(screen.getByText('All trusted.pdf')).toBeTruthy());
+      expect(screen.getByText('My documents')).toBeTruthy();
+      expect(screen.getByText('Blurry scan.pdf')).toBeTruthy();
+    });
+  });
+
   it('shows not-found for an unknown (or another user’s) real document id', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '99999999-9999-4999-8999-999999999999' });
     await renderWithAuth(<DocumentViewerScreen />);

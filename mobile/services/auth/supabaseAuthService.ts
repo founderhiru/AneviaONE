@@ -252,7 +252,10 @@ async function runAppleSignIn(client: SupabaseClient): Promise<AppleSignInResult
 
   const credential = await requestAppleCredential();
   if (credential.kind === 'cancelled') return { success: false, cancelled: true };
-  if (credential.kind === 'error') return { success: false, errorMessage: authErrorMessage(credential.error, 'oauth') };
+  if (credential.kind === 'error') {
+    diagnose('apple credential', credential.error);
+    return { success: false, errorMessage: authErrorMessage(credential.error, 'oauth') };
+  }
 
   // Supabase verifies the token (audience = the app's bundle ID, set as a
   // Client ID on the Apple provider) and the nonce, then signs in — or
@@ -264,7 +267,10 @@ async function runAppleSignIn(client: SupabaseClient): Promise<AppleSignInResult
     token: credential.identityToken,
     nonce: credential.rawNonce,
   });
-  if (error || !data.user) return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
+  if (error || !data.user) {
+    diagnose('apple token exchange', error);
+    return { success: false, errorMessage: authErrorMessage(error, 'oauth') };
+  }
 
   // Apple shares the person's name only on the very first authorisation,
   // so keep it now (never overwriting a name already set).
