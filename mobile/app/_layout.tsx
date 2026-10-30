@@ -4,8 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ShareIntentProvider } from 'expo-share-intent';
 
 import { AnimatedSplash, ConfigurationRequired, DemoModeBadge } from '../components';
+import { ShareIntentHandler } from '../components/ShareIntentHandler';
 import { APP_MODE, isDemoMode } from '../config/appMode';
 import { useTheme } from '../design/theme';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
@@ -106,14 +108,17 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <StatusBar style="auto" />
-          <RootNavigator />
-          {isDemoMode ? <DemoModeBadge /> : null}
-        </AuthProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ShareIntentProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <StatusBar style="auto" />
+            <RootNavigator />
+            <ShareIntentHandler />
+            {isDemoMode ? <DemoModeBadge /> : null}
+          </AuthProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
 }

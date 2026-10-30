@@ -36,6 +36,7 @@ import {
 import { DOCUMENT_STATUS_PRESENTATION, documentsService } from '../../services/documents/documentsService';
 import { profileService } from '../../services/profile/profileService';
 import { GENERIC_ERROR_MESSAGE, ServiceError } from '../../services/serviceError';
+import { takePendingSharedFile } from '../../navigation/sharedFile';
 import type { PickedFile, StoredDocument, UploadResult, UploadStage } from '../../types';
 
 type FlowStep = 'choose' | 'preparing' | 'uploading' | 'done' | 'error';
@@ -94,6 +95,15 @@ export default function AddRecordScreen() {
   const [failure, setFailure] = useState<{ message: string; retryable: boolean } | null>(null);
   const [pickedFile, setPickedFile] = useState<PickedFile | null>(null);
   const captureOnce = useSingleFlight();
+
+  // A PDF shared into the app (WhatsApp, Gmail, Files…) goes through the same
+  // upload, consent and reading path as a file picked here.
+  useEffect(() => {
+    const shared = takePendingSharedFile();
+    if (shared) void upload(shared);
+    // Once, when the screen opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!checkingIdentity) return;
