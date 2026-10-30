@@ -15,7 +15,7 @@ import {
   ScreenContainer,
 } from '../../components';
 import { HomeSection } from '../../components/home/HomeDashboard';
-import { DocumentRows, FilterChips, ResultRows, ReviewCard, SummaryTiles, WhatChangedHero } from '../../components/home/WhatChangedUI';
+import { DocumentRows, FilterChips, ReviewCard, SnapshotByReport, SummaryTiles, WhatChangedHero } from '../../components/home/WhatChangedUI';
 import { BRAND, wordmarkParts } from '../../config/brand';
 import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
@@ -26,6 +26,7 @@ import { documentsService } from '../../services/documents/documentsService';
 import { isProcessing } from '../../services/documents/documentStatus';
 import { healthService } from '../../services/health/healthService';
 import { healthSnapshot, homeStage, trustedResults } from '../../services/health/homeDashboard';
+import { reportNames } from '../../services/documents/reportName';
 import {
   buildComparisons,
   couldNotRead,
@@ -176,6 +177,7 @@ export default function HomeScreen() {
   const identityHint = docs.some((d) => needsReview(d) && IDENTITY_HELD.has(d.identityCheck ?? ''));
   const openReview = () => (reviewDocs.length === 1 ? router.push(`/documents/${reviewDocs[0].id}`) : router.push('/documents'));
   const recent = docs.slice(0, RECENT_DOCUMENTS);
+  const names = React.useMemo(() => reportNames(trustedResults(allResults)), [allResults]);
   const stillReading = autoRead.reading > 0 || docs.some((d) => d.status === 'uploaded' || isProcessing(d.status));
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   const quiet = [theme.typography.bodySmall, { color: theme.colors.textTertiary }];
@@ -269,7 +271,13 @@ export default function HomeScreen() {
                   testID="home-snapshot-filter"
                 />
                 {snapshot.length ? (
-                  <ResultRows items={snapshot} onPress={(r) => router.push(`/documents/${r.source.documentId}`)} testID="home-snapshot" />
+                  <SnapshotByReport
+                    items={snapshot}
+                    names={names}
+                    onPressResult={(r) => router.push(`/documents/${r.source.documentId}`)}
+                    onOpenReport={(id) => router.push(`/documents/${id}`)}
+                    testID="home-snapshot"
+                  />
                 ) : (
                   <Text style={quiet} testID="home-snapshot-empty">No results of this kind yet.</Text>
                 )}
@@ -295,7 +303,7 @@ export default function HomeScreen() {
             ) : recent.length === 0 ? (
               <Text style={quiet}>Documents you add appear here.</Text>
             ) : (
-              <DocumentRows documents={recent} onPress={(d) => router.push(`/documents/${d.id}`)} />
+              <DocumentRows documents={recent} names={names} onPress={(d) => router.push(`/documents/${d.id}`)} />
             )}
           </HomeSection>
         </>
