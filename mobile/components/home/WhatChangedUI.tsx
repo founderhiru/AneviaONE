@@ -379,7 +379,52 @@ export function ReviewCard({ needsReview, couldNotRead, identityHint, onPress }:
 
 // -------------------------------------------------------- recent docs --
 
-export function DocumentRows({ documents, onPress }: { documents: StoredDocument[]; onPress: (d: StoredDocument) => void }) {
+/** The latest results, grouped under the report they came from ("Blood test · 15 Jan 2026"). */
+export function SnapshotByReport({
+  items,
+  names,
+  onPressResult,
+  onOpenReport,
+  testID,
+}: {
+  items: RecordedObservation[];
+  names: Map<string, string>;
+  onPressResult: (r: RecordedObservation) => void;
+  onOpenReport: (documentId: string) => void;
+  testID?: string;
+}) {
+  const theme = useTheme();
+  const groups = new Map<string, RecordedObservation[]>();
+  for (const r of items) {
+    const id = r.source.documentId;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id)!.push(r);
+  }
+  return (
+    <View style={{ gap: theme.spacing.md }} testID={testID}>
+      {[...groups.entries()].map(([id, list]) => {
+        const title = names.get(id) ?? list[0].source.documentName;
+        return (
+          <View key={id} style={{ gap: theme.spacing.xs }}>
+            <Pressable
+              onPress={() => onOpenReport(id)}
+              accessibilityRole="button"
+              accessibilityLabel={`${title}, ${list.length} ${list.length === 1 ? 'result' : 'results'}. Open report`}
+              testID={`snapshot-report-${id}`}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: pressed ? 0.7 : 1 })}
+            >
+              <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary, flex: 1 }]} numberOfLines={1}>{title}</Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>Open report</Text>
+            </Pressable>
+            <ResultRows items={list} onPress={onPressResult} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+export function DocumentRows({ documents, onPress, names }: { documents: StoredDocument[]; onPress: (d: StoredDocument) => void; names?: Map<string, string> }) {
   const theme = useTheme();
   return (
     <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }}>
@@ -393,7 +438,7 @@ export function DocumentRows({ documents, onPress }: { documents: StoredDocument
             <Pressable
               onPress={() => onPress(d)}
               accessibilityRole="button"
-              accessibilityLabel={`${d.originalFilename}, ${date}, ${status.label}`}
+              accessibilityLabel={`${names?.get(d.id) ?? d.originalFilename}, ${date}, ${status.label}`}
               testID={`stored-document-${d.id}`}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, padding: theme.spacing.md, opacity: pressed ? 0.7 : 1 })}
             >
@@ -401,8 +446,8 @@ export function DocumentRows({ documents, onPress }: { documents: StoredDocument
                 <Ionicons name="document-text-outline" size={18} color={theme.colors.textTertiary} />
               </View>
               <View style={{ flex: 1, gap: 3, alignItems: 'flex-start' }}>
-                <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]} numberOfLines={1}>{d.originalFilename}</Text>
-                <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>{[date, formatFileSize(d.fileSizeBytes)].filter(Boolean).join(' · ')}</Text>
+                <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]} numberOfLines={1}>{names?.get(d.id) ?? d.originalFilename}</Text>
+                <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]} numberOfLines={1}>{[names?.has(d.id) ? d.originalFilename : null, date, formatFileSize(d.fileSizeBytes)].filter(Boolean).join(' · ')}</Text>
                 <View style={{ paddingHorizontal: theme.spacing.xs, paddingVertical: 2, borderRadius: theme.radius.pill, backgroundColor: tone[0] }}>
                   <Text style={[theme.typography.labelSmall, { color: tone[1] }]}>{status.label}</Text>
                 </View>
