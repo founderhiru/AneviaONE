@@ -8,7 +8,7 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   home: 'home',
   timeline: 'time',
   health: 'pulse',
-  ask: 'chatbubble-ellipses',
+  doctor: 'medkit',
   me: 'person-circle',
 };
 
@@ -36,7 +36,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="home" options={{ title: 'Home' }} />
       <Tabs.Screen name="timeline" options={{ title: 'Timeline' }} />
       <Tabs.Screen name="health" options={{ title: 'Health' }} />
-      <Tabs.Screen name="ask" options={{ title: 'Ask' }} />
+      <Tabs.Screen name="doctor" options={{ title: 'Doctor' }} />
       <Tabs.Screen name="me" options={{ title: 'Me' }} />
     </Tabs>
   );

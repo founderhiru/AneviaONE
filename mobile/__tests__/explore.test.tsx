@@ -11,7 +11,6 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import WelcomeScreen from '../app/(auth)/welcome';
-import ExploreAskScreen from '../app/explore/ask';
 import ExploreChangesScreen from '../app/explore/changes';
 import ExploreHomeScreen from '../app/explore/index';
 import MakeItYoursScreen from '../app/explore/make-it-yours';
@@ -39,7 +38,6 @@ const EXPLORE_SCREENS: [string, React.ComponentType][] = [
   ['memory', ExploreMemoryScreen],
   ['changes', ExploreChangesScreen],
   ['timeline', ExploreTimelineScreen],
-  ['ask', ExploreAskScreen],
 ];
 
 const { __setAppleAvailableForTests } = require('expo-apple-authentication');
@@ -140,7 +138,6 @@ describe('Demo Home', () => {
     ['explore-open-memory', '/explore/memory'],
     ['explore-open-changes', '/explore/changes'],
     ['explore-open-timeline', '/explore/timeline'],
-    ['explore-open-ask', '/explore/ask'],
   ])('%s navigates to %s', async (testID, href) => {
     await renderWithProviders(<ExploreHomeScreen />);
     await fireEvent.press(screen.getByTestId(testID));
@@ -183,16 +180,6 @@ describe('Explore screens', () => {
     for (const { year } of sampleTimeline()) expect(screen.getByTestId(`timeline-year-${year}`)).toBeTruthy();
   });
 
-  it('Ask My Health is an honest preview: example questions, no answers, no AI call', async () => {
-    const askSpy = jest.spyOn(aiService, 'askQuestion');
-    await renderWithProviders(<ExploreAskScreen />);
-    expect(screen.getByText(PRODUCT_TERMS.askMyHealth)).toBeTruthy();
-    expect(screen.getByText('PREVIEW')).toBeTruthy();
-    expect(screen.getByText(/Not available in this preview/)).toBeTruthy();
-    for (const question of SAMPLE_QUESTIONS) expect(screen.getByText(question)).toBeTruthy();
-    expect(screen.getByTestId('ask-preview-input').props.accessibilityState).toEqual({ disabled: true });
-    expect(askSpy).not.toHaveBeenCalled();
-  });
 });
 
 describe('Make it yours', () => {

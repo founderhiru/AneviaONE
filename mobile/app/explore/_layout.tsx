@@ -19,7 +19,6 @@ export default function ExploreLayout() {
       <Stack.Screen name="memory" />
       <Stack.Screen name="changes" />
       <Stack.Screen name="timeline" />
-      <Stack.Screen name="ask" />
       <Stack.Screen name="make-it-yours" options={{ animation: 'fade' }} />
     </Stack>
   );

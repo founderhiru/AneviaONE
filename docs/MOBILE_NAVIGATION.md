@@ -89,7 +89,7 @@ links inside AI answers.
 ## Tab bar
 
 Exactly 5 tabs, defined in `app/(tabs)/_layout.tsx` with Ionicons: Home,
-Timeline, Health, Ask, Me. No additional tabs are added for Family, Doctor
+Timeline, Health, Doctor, Me (Ask was removed; Doctor is built from stored facts, no AI). No additional tabs are added for Family, Doctor
 Brief, or WhatsApp — those are reached via `Me`'s row list, consistent with
 the reduced-MVP screen set (spec section: "don't build Family, ABDM,
 Doctor Brief... before the core loop works").

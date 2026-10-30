@@ -36,14 +36,6 @@ const DESTINATIONS: { title: string; description: string; icon: IconName; href: 
     href: '/explore/timeline',
     testID: 'explore-open-timeline',
   },
-  {
-    title: PRODUCT_TERMS.askMyHealth,
-    description: 'The questions it is being built to answer',
-    icon: 'chatbubble-ellipses-outline',
-    href: '/explore/ask',
-    preview: true,
-    testID: 'explore-open-ask',
-  },
 ];
 
 function Stat({ value, label }: { value: number; label: string }) {
