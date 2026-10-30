@@ -3,15 +3,15 @@ import type { ReactNode } from 'react';
 
 import { Icon } from '../Icon';
 import { Phone } from '../Phone';
-import { AskScreen, ChangesScreen, DocumentsScreen, TimelineScreen } from '../PhoneScreens';
+import { DoctorScreen, ChangesScreen, DocumentsScreen, TimelineScreen } from '../PhoneScreens';
 import { BRAND } from '@/lib/config';
 
 /** What you actually get: four product surfaces, shown, not described at length. */
-const SURFACES: { id: string; title: string; line: string; live?: boolean; alt: string; screen: ReactNode }[] = [
-  { id: 'memory', title: 'Health Memory', line: 'Your reports, kept together in private storage.', live: true, alt: 'My documents screen listing six sample reports', screen: <DocumentsScreen /> },
+const SURFACES: { id: string; title: string; line: string; alt: string; screen: ReactNode }[] = [
+  { id: 'memory', title: 'Health Memory', line: 'Your reports, kept together in private storage.', alt: 'My documents screen listing six sample reports', screen: <DocumentsScreen /> },
   { id: 'timeline', title: 'Timeline', line: 'Your health journey in one place.', alt: 'Health Timeline screen listing reports from 2019 to 2026', screen: <TimelineScreen /> },
   { id: 'changes', title: 'What Changed', line: 'Meaningful changes across your history.', alt: 'What changed? screen comparing LDL cholesterol and HbA1c across reports', screen: <ChangesScreen /> },
-  { id: 'ask', title: 'Ask My Health', line: 'Questions grounded in your records.', alt: 'Ask My Health screen with an answer and its sources', screen: <AskScreen /> },
+  { id: 'doctor', title: 'For Doctor', line: 'A one-page summary to show or send before a visit.', alt: 'For Doctor screen with a summary of results outside their printed range', screen: <DoctorScreen /> },
 ];
 
 export function ProductSection() {
@@ -27,7 +27,7 @@ export function ProductSection() {
           Explore Product <Icon name="arrow" size={16} />
         </Link>
         <p className="lede product-sec__status">
-          The app lets you add reports and keep them in private storage. The other screens below are in development and not yet available to everyone.
+          Add a report and the app reads it, keeps your results in order, shows what changed and prepares a summary for your Doctor.
         </p>
       </div>
 
@@ -38,11 +38,6 @@ export function ProductSection() {
               <Phone label={`${BRAND.name} ${s.alt}`}>{s.screen}</Phone>
               <p className="product-sec__tags">
                 <span className="status status--sample">Sample data</span>
-                {s.live ? (
-                  <span className="status status--now">Partly available</span>
-                ) : (
-                  <span className="status status--dev">In development</span>
-                )}
               </p>
               <h3 className="product-sec__title">{s.title}</h3>
               <p className="product-sec__line">{s.line}</p>

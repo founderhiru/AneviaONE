@@ -72,7 +72,7 @@ export default function ExploreChangesScreen() {
         <Text style={styles.noteTitle}>Illustrative values only</Text>
         <Text style={exploreStyles.body}>
           These are invented sample results. The labels describe how the sample moved — they are not medical advice, a
-          diagnosis, or a treatment recommendation. Always talk to your doctor about your own results.
+          diagnosis, or a treatment recommendation. Always talk to your Doctor about your own results.
         </Text>
       </View>
 

@@ -5,8 +5,8 @@ import { Icon } from '../Icon';
 /** Principles only; the specifics live on /privacy and /security. */
 const PRINCIPLES = [
   { title: 'Private by design', line: 'Your health information is personal. Your records are yours; the app does not share them with other people, and sharing will be your choice.' },
-  { title: 'Evidence matters', line: 'Insights are designed to point back to your records, with the source one tap away.' },
-  { title: 'AI should explain, not invent.', line: 'AI explanations are designed to be labelled and kept apart from what your records say.' },
+  { title: 'Evidence matters', line: 'Every result points back to your records, with the source one tap away.' },
+  { title: 'AI should explain, not invent.', line: 'What your reports say is always shown with its source, never mixed with guesses.' },
 ];
 
 export function TrustSection() {

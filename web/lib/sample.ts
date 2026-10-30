@@ -84,7 +84,7 @@ export const DASHBOARD = {
   tiles: [
     { key: 'reports', value: '6', label: 'Reports', icon: 'file', tone: 'accent' },
     { key: 'results', value: '33', label: 'Results', icon: 'trend', tone: 'info' },
-    { key: 'review', value: '0', label: 'Needs review', icon: 'clock', tone: 'warning' },
+    { key: 'review', value: '0', label: 'To verify', icon: 'clock', tone: 'warning' },
   ],
   change: { name: 'LDL Cholesterol', from: '131', to: '146 mg/dL', badge: '+11%', points: [112, 131, 146], start: 'Jan 2019', end: 'Mar 2026' },
   chips: [
@@ -103,4 +103,13 @@ export const DASHBOARD = {
   ],
 } as const;
 
-export const ASK_SOURCES = ['Full Checkup · Mar 2026', 'Heart Panel · Mar 2024', 'Lipid Panel · Jan 2019'] as const;
+export const RESULT_SOURCES = ['Full Checkup · Mar 2026', 'Heart Panel · Mar 2024', 'Lipid Panel · Jan 2019'] as const;
+
+export const DOCTOR = {
+  name: 'Sample Patient',
+  meta: '6 reports · 33 results · Prepared 14 Mar 2026',
+  results: [
+    { name: 'LDL Cholesterol', value: '146 mg/dL', line: 'Report range < 130 · Above · Full Checkup', was: 'was 131 in Mar 2024' },
+    { name: 'HbA1c', value: '6.2 %', line: 'Report range 4.0 – 5.6 · Above · Full Checkup', was: 'was 5.9 in Mar 2025' },
+  ],
+} as const;

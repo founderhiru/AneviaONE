@@ -45,7 +45,7 @@ export function PatternCard() {
       <blockquote className="icard__quote">
         Your blood pressure readings have been consistently higher in your recent records compared to your earlier history.
       </blockquote>
-      <Link href="/#ask" className="link-arrow">
+      <Link href="/#product" className="link-arrow">
         View supporting records <Icon name="arrow" size={16} />
       </Link>
       <p className="icard__note">Sample data for illustration.</p>

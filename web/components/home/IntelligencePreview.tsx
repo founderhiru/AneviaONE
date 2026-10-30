@@ -6,7 +6,7 @@ import { Icon } from '../Icon';
 const CONCEPTS = [
   { name: 'Understand', line: 'Turn records into structured health information.' },
   { name: 'Compare', line: 'See meaningful changes across time.' },
-  { name: 'Ask', line: 'Explore your history with answers grounded in your records.' },
+  { name: 'Share', line: 'Show your Doctor a one-page summary, built only from your reports.' },
 ];
 
 export function IntelligencePreview() {
@@ -15,13 +15,12 @@ export function IntelligencePreview() {
       <div className="container">
         <p className="eyebrow">Intelligence</p>
         <h2 id="intel-title" className="h2 intelp__title">
-          Intelligence that will grow <span className="accent">with your history.</span>
+          Intelligence that grows <span className="accent">with your history.</span>
         </h2>
         <ul className="intelp__list">
           {CONCEPTS.map((c) => (
             <li key={c.name} className="intelp__item">
               <span className="intelp__name">{c.name}</span>
-              <span className="status status--dev">In development</span>
               <span className="intelp__line">{c.line}</span>
             </li>
           ))}

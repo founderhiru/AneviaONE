@@ -157,9 +157,9 @@ export const SIGNAL_COPY = {
   flagged: (flag: string) => `Your report marks this result “${flag}”.`,
   criticalHeadline: 'Flagged as critical on your report',
   critical: 'Your report flags this result as critical. Please follow the instructions on the report and contact your healthcare professional promptly.',
-  discussResult: 'Consider discussing this result with your doctor.',
-  discussPattern: 'Consider discussing this pattern with your doctor.',
-  discussAll: 'Consider discussing these results with your doctor.',
+  discussResult: 'Consider discussing this result with your Doctor.',
+  discussPattern: 'Consider discussing this pattern with your Doctor.',
+  discussAll: 'Consider discussing these results with your Doctor.',
   none: 'No results currently flagged for attention.',
 } as const;
 

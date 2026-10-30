@@ -39,7 +39,7 @@ export type FaqCategory = {
 };
 
 /**
- * `planned`  — designed and on the roadmap, not in the current version.
+ * `planned`  — on the roadmap, not in the current version.
  * `partial`  — some of it works today; the answer says exactly which part.
  * `preview`  — a preview screen exists, but the real service isn't live.
  * Omit when the answer describes something that is true today.
@@ -83,7 +83,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'about',
     question: 'What is {product}?',
     answer: [
-      '{product} is a Personal Health Intelligence app. It is designed to bring your health records, reports and changes together into one connected health history — so you can understand your health across time, not one report at a time.',
+      '{product} is a Personal Health Intelligence app. It brings your health reports together into one connected health history, so you can understand your health across time, not one report at a time.',
     ],
     webVisible: true,
     mobileVisible: true,
@@ -94,7 +94,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'about',
     question: 'Is {product} just a place to store medical records?',
     answer: [
-      'No. Storing documents is the starting point, not the goal. {product} is being built to turn scattered records into a structured, longitudinal health history that you can follow over time, compare and ask questions about.',
+      'No. Storing your reports is the starting point. {product} reads them, builds a timeline of your results, shows what changed between reports, and prepares a one-page summary you can show or send to your Doctor.',
     ],
     webVisible: true,
     mobileVisible: false,
@@ -105,7 +105,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'about',
     question: 'Does {product} diagnose or treat medical conditions?',
     answer: [
-      'No. {product} is a consumer health-information product. It helps you organize and understand your own records. It does not diagnose conditions, prescribe medication, make treatment decisions or replace your doctor.',
+      'No. {product} is a consumer health-information product. It helps you organize and understand your own records. It does not diagnose conditions, prescribe medication, make treatment decisions or replace your Doctor.',
       'Always talk to a qualified healthcare professional about symptoms, results or treatment.',
     ],
     webVisible: true,
@@ -130,11 +130,10 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'how-it-works',
     question: 'What can I do with {product}?',
     answer: [
-      '{product} is built around five steps: Capture, Remember, Understand, Compare and Ask.',
-      'Today you can sign in, add PDF health reports and keep them together in private storage, where you can open the originals at any time.',
-      'Reading your reports, building your health timeline, showing what changed and answering questions from your records are being built next. Until they are ready, the app tells you so instead of showing made-up results.',
+      '{product} follows five steps: Capture, Understand, Remember, Compare and Share.',
+      'Add a health report as a PDF, a photo or a scan. With your permission, the app reads it and adds the results to your health history. Home shows your latest results and what changed, Timeline and Health keep everything in order, and For Doctor turns it all into a one-page summary you can show or send before a visit.',
+      'Every result links back to the report it came from, so you can always check it.',
     ],
-    status: 'partial',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 20,
@@ -144,11 +143,23 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'how-it-works',
     question: 'Are the screens on this website real results?',
     answer: [
-      'No. Screens, charts and answers shown on the website use sample data to illustrate how {product} is designed to work. They are not real people’s records, and some of the features they show are not available yet.',
+      'No. Screens, charts and results shown on the website use sample data to illustrate how {product} works. They are not real people’s records.',
     ],
     webVisible: true,
     mobileVisible: false,
     sortOrder: 25,
+  },
+  {
+    id: 'doctor-summary',
+    category: 'how-it-works',
+    question: 'What is For Doctor?',
+    answer: [
+      'For Doctor is a one-page summary of your own reports, ready for a visit: your name, the results that fall outside the range printed on their report, how repeated tests have changed, and the medications, conditions and allergies written on your reports.',
+      'Tap “Show to Doctor” for a large, easy-to-read view you can hold up in the consultation, or “Send PDF” to share it. It is built only from what your reports say, with no AI interpretation, and results still waiting for your check are left out.',
+    ],
+    webVisible: true,
+    mobileVisible: true,
+    sortOrder: 22,
   },
 
   // ── Health records ───────────────────────────────────────────────────────
@@ -169,9 +180,9 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'health-records',
     question: 'What kinds of files can I add?',
     answer: [
-      'Currently, PDF reports up to 20 MB. Scanning paper documents with your camera and adding photos are planned, but not available yet.',
+      'PDF reports, photos of paper reports (taken with your camera or chosen from your photos) and multi-page scans, up to 20 MB each. Photos and scans are saved as a PDF of the pages, exactly as captured.',
+      'You can also open a PDF in another app, such as WhatsApp, Gmail or Files, tap Share and choose {product}. Typing records in by hand is not available.',
     ],
-    status: 'partial',
     webVisible: true,
     mobileVisible: false,
     sortOrder: 35,
@@ -181,13 +192,36 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'health-records',
     question: 'Can {product} understand my reports?',
     answer: [
-      'Reading your reports — picking out values, dates and results and adding them to your health history — is at the core of what {product} is being built to do, but it is not available in the current version.',
-      'For now, reports you upload are stored safely and you can open them, but nothing from a file is added to your health history yet. The app tells you this after each upload.',
+      'Yes, with your permission. {product} reads each report and picks out the values, dates, units and the range printed on the report, each linked to the page it came from. It handles blood and urine tests, other lab reports and imaging reports such as X-rays.',
+      'Reading uses a third-party AI service and only runs if you have allowed it (Me → Privacy & Security). If a report appears to belong to someone else, the app declines it.',
+      'AI can make mistakes. Check important results against the original report.',
     ],
-    status: 'planned',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 40,
+  },
+  {
+    id: 'verify',
+    category: 'health-records',
+    question: 'What does “Reports to verify” mean?',
+    answer: [
+      'When the app is not sure it read something correctly — for example a blurred value or an unclear date — it holds that result back instead of guessing. Held results are not counted in your history, and are left out of the For Doctor summary, until you confirm or reject them.',
+      'Tap “Reports to verify” on Home to see each one next to its source and decide.',
+    ],
+    webVisible: true,
+    mobileVisible: true,
+    sortOrder: 41,
+  },
+  {
+    id: 'correct-results',
+    category: 'health-records',
+    question: 'Can I correct what the app reads from a report?',
+    answer: [
+      'Yes. Each result shows the page it came from. You can confirm it, or correct it, while the original reading stays on record.',
+    ],
+    webVisible: true,
+    mobileVisible: false,
+    sortOrder: 42,
   },
   {
     id: 'family',
@@ -206,23 +240,21 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'ai',
     question: 'Can I see what changed over time?',
     answer: [
-      '{product} is designed to compare new results with your own earlier records, so you can see what went up, what went down and what stayed the same — with a link back to each source document.',
-      'Timelines, trends and What Changed depend on your reports being read, so they are not available in the current version yet.',
+      'Yes. When the same test appears in more than one report, {product} shows what went up, what went down and what stayed the same, with the dates, and links back to each source report.',
+      'Home highlights what changed, Timeline lists your reports in date order, and Health shows each result with the range printed on its report.',
     ],
-    status: 'planned',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 50,
   },
   {
-    id: 'ask',
+    id: 'no-questions',
     category: 'ai',
-    question: 'Can I ask questions about my health history?',
+    question: 'Can I ask the app health questions?',
     answer: [
-      'Ask My Health is designed to answer plain-language questions from your own records and to show the documents each answer is based on.',
-      'It is not available in the current version. It will only answer once your reports can be read — until then, the Ask screen explains this rather than guessing.',
+      'No. {product} does not answer health questions or give medical advice. It shows what is written on your reports and how your results have changed.',
+      'For questions about your results, ask your Doctor. The For Doctor summary is there to make that conversation easier.',
     ],
-    status: 'planned',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 60,
@@ -232,11 +264,10 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'ai',
     question: 'How does AI work in {product}?',
     answer: [
-      'AI is meant to help you understand and organize your own health history — reading reports, comparing results across time and explaining terms in plain language. These features are being introduced in stages and are not active in the current version.',
-      'What your records say and what AI says about them are always shown separately, with a link to the source so you can check it.',
-      'AI can make mistakes. AI-generated information is not a medical diagnosis or medical advice.',
+      'AI is used for one job: reading your reports, to pick out the values, dates and results written on them. It uses a third-party AI service, and only if you have allowed it. Your name, email, phone number and date of birth are not sent, but personal details printed inside a report are not removed.',
+      'What your reports say is always shown separately from anything else, with a link to the source so you can check it. The For Doctor summary is built from stored results, without AI.',
+      'AI can make mistakes. Nothing in the app is a medical diagnosis or medical advice.',
     ],
-    status: 'planned',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 80,
@@ -244,9 +275,9 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     id: 'rely-on-ai',
     category: 'ai',
-    question: 'Can I rely on AI explanations to make health decisions?',
+    question: 'Can I rely on what the app reads to make health decisions?',
     answer: [
-      'No. Treat them as help reading your own records. They can be wrong, and they are not a substitute for a healthcare professional. Check the original record, and talk to your doctor about any health decision.',
+      'No. Treat it as help organizing your own records. A reading can be wrong, and it is not a substitute for a healthcare professional. Check the original report, and talk to your Doctor about any health decision.',
     ],
     webVisible: true,
     mobileVisible: false,
@@ -255,9 +286,9 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     id: 'own-records',
     category: 'ai',
-    question: 'Where do insights and answers come from?',
+    question: 'Where do results and comparisons come from?',
     answer: [
-      'From your own records — not from assumptions about people in general. Each insight is designed to point back to the documents behind it.',
+      'From your own reports, as written on them. Ranges are the ones printed on each report, not general assumptions about people. Each result points back to the report behind it.',
     ],
     webVisible: true,
     mobileVisible: false,
@@ -270,7 +301,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'privacy-security',
     question: 'Is my health information private?',
     answer: [
-      '{product} is private by design. Each account can see only its own records, documents are kept in private storage with no public links, and sharing with anyone else — such as a doctor — is your choice. Sharing is off, and it cannot be switched on in the current version.',
+      '{product} is private by design. Each account can see only its own records, and documents are kept in private storage with no public links. Nothing is shared with anyone else unless you choose to: the For Doctor summary is only shown or sent when you tap to do so.',
       'On your phone, your sign-in session is kept in the device’s secure storage (Keychain on iPhone, Keystore on Android).',
     ],
     webVisible: true,
@@ -304,12 +335,12 @@ export const FAQ_ENTRIES: FaqEntry[] = [
   {
     id: 'whatsapp',
     category: 'whatsapp',
-    question: 'How does WhatsApp work with {product}?',
+    question: 'Can I add reports from WhatsApp or email?',
     answer: [
-      'WhatsApp is planned as a convenient way to send reports in and receive simple updates — a capture and conversation layer. Your detailed health history stays in the {product} app, not in WhatsApp, and messages sent back to you stay generic, without health details.',
-      'WhatsApp is not live yet. The app includes a preview of the connection screen, but it does not send or receive real WhatsApp messages in the current version.',
+      'Yes, by sharing. Open the report PDF in WhatsApp, Gmail or Files, tap Share and choose {product}. The app opens and starts adding it.',
+      'A WhatsApp chat connection — sending reports to a {product} number — and forwarding by email are not available.',
     ],
-    status: 'preview',
+    status: 'partial',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 100,
@@ -318,7 +349,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     id: 'need-whatsapp',
     category: 'whatsapp',
     question: 'Do I need WhatsApp to use {product}?',
-    answer: ['No. You can add reports directly in the app. WhatsApp is an optional convenience.'],
+    answer: ['No. You can add reports directly in the app. WhatsApp is just one place you can share from.'],
     webVisible: true,
     mobileVisible: false,
     sortOrder: 105,
@@ -330,9 +361,9 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'account-data',
     question: 'Can I delete my data?',
     answer: [
-      'Deleting your account and the data linked to it is part of the Privacy & Security screen in the app, but it is not available in the current version yet. If you try it, the app says so and your data is not changed.',
+      'Yes. To delete one report, open it in My documents and delete it: the original file and the results read from it are removed.',
+      'To delete everything, go to Me → Privacy & Security → Delete account. This permanently removes your account, your reports and their files, and your results, and it cannot be undone.',
     ],
-    status: 'planned',
     webVisible: true,
     mobileVisible: true,
     sortOrder: 110,
@@ -342,7 +373,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'account-data',
     question: 'Can I export my data?',
     answer: [
-      'Download My Data — getting a copy of everything stored in your health history — is planned and appears on the Privacy & Security screen, but it is not available in the current version yet.',
+      'Downloading a copy of everything in your health history is not available yet. You can send a PDF summary of your results from For Doctor, and you can open and share your original reports at any time.',
     ],
     status: 'planned',
     webVisible: true,
@@ -352,11 +383,22 @@ export const FAQ_ENTRIES: FaqEntry[] = [
 
   // ── Getting started ──────────────────────────────────────────────────────
   {
+    id: 'get-started',
+    category: 'getting-started',
+    question: 'How do I get started?',
+    answer: [
+      'Sign in with a method the app’s sign-in screen offers, tap Add, and upload a PDF or photograph a paper report. Allow report reading when asked, and your results appear on Home.',
+    ],
+    webVisible: true,
+    mobileVisible: false,
+    sortOrder: 128,
+  },
+  {
     id: 'platforms',
     category: 'getting-started',
     question: 'Is {product} available on iPhone and Android?',
     answer: [
-      '{product} is being built for both iPhone and Android. It is not in the App Store or Google Play yet — store links will appear on the {product} website at launch.',
+      '{product} is launching on iPhone first, with Android to follow. Official App Store and Google Play links will appear on the {product} website as soon as they are live.',
     ],
     status: 'planned',
     webVisible: true,
@@ -377,7 +419,7 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     category: 'getting-started',
     question: 'How do I get help?',
     answer: [
-      'Start with these questions — in the app, they are under Me → Help & FAQ. A dedicated support contact is not available yet; contact details will be published on the {product} website at launch.',
+      'Start with these questions. In the app, they are under Me → Help & FAQ. For anything else, use the contact details on the {product} website. Please do not send health records or other personal health information.',
     ],
     webVisible: true,
     mobileVisible: true,

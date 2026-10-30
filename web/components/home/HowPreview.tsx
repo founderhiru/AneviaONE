@@ -4,10 +4,7 @@ import { Icon } from '../Icon';
 import { BRAND } from '@/lib/config';
 
 /** The five-stage concept only. The explanation lives on /how-it-works. */
-export const STAGES = ['Capture', 'Understand', 'Remember', 'Compare', 'Ask'] as const;
-
-/** Only Capture exists in the app today; the page says so rather than implying all five. */
-const AVAILABLE_TODAY = new Set<string>(['Capture']);
+export const STAGES = ['Capture', 'Understand', 'Remember', 'Compare', 'Share'] as const;
 
 export function HowPreview() {
   return (
@@ -19,7 +16,7 @@ export function HowPreview() {
             From records to understanding.
           </h2>
           <p className="lede howp__lede">
-            {BRAND.name} is being built to turn a first report into years of connected health history. Capture works in the app; the other four stages are in development.
+            {BRAND.name} turns a first report into years of connected health history, and into a summary your Doctor can use.
           </p>
         </div>
         <ol className="howp__flow">
@@ -27,11 +24,6 @@ export function HowPreview() {
             <li key={stage} className="howp__stage">
               <span className="howp__num">{String(i + 1).padStart(2, '0')}</span>
               <span className="howp__name">{stage}</span>
-              {AVAILABLE_TODAY.has(stage) ? (
-                <span className="status status--now">Partly available</span>
-              ) : (
-                <span className="status status--dev">In development</span>
-              )}
             </li>
           ))}
         </ol>

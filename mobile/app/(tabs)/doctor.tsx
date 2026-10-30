@@ -13,9 +13,9 @@ import { healthService } from '../../services/health/healthService';
 import { profileService } from '../../services/profile/profileService';
 
 /**
- * Doctor: a one-page summary of the person's own trusted records, for a visit.
+ * For Doctor: a one-page summary of the person's own trusted records, for a visit.
  * Built from stored facts only — no AI, no interpretation. "Hand-over view"
- * shows it in large type, read-only, to hold up to a doctor.
+ * shows it in large type, read-only, to hold up to a Doctor.
  */
 export default function DoctorScreen() {
   const theme = useTheme();
@@ -107,7 +107,7 @@ export default function DoctorScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your doctor</Text>
+      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your Doctor</Text>
       <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>Built only from your own reports, ready to show or send before a visit.</Text>
 
       {error ? (
@@ -116,7 +116,7 @@ export default function DoctorScreen() {
         <LoadingState label="Preparing your summary…" />
       ) : brief.resultCount === 0 && brief.medications.length === 0 && brief.conditions.length === 0 && brief.allergies.length === 0 ? (
         <EmptyState
-          title="Nothing to show a doctor yet."
+          title="Nothing to show a Doctor yet."
           description="Add a health report and your summary appears here, built only from what is written on it."
           actionLabel="Add health record"
           onActionPress={() => router.push('/add')}
@@ -145,7 +145,7 @@ export default function DoctorScreen() {
           {!big ? (
             <View style={{ gap: theme.spacing.xs }}>
               <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
-                <View style={{ flex: 1 }}><Button label="Show to doctor" onPress={() => setHandover(true)} testID="doctor-handover" /></View>
+                <View style={{ flex: 1 }}><Button label="Show to Doctor" onPress={() => setHandover(true)} testID="doctor-handover" /></View>
                 <View style={{ flex: 1 }}><Button label={sharing ? 'Preparing…' : 'Send PDF'} variant="secondary" onPress={sharePdf} loading={sharing} testID="doctor-share-pdf" /></View>
               </View>
               {shareError ? <Text style={[theme.typography.caption, { color: theme.colors.danger }]} testID="doctor-share-error">We couldn’t create the PDF. Please try again.</Text> : null}

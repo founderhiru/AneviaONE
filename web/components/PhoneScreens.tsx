@@ -1,10 +1,10 @@
 import { Icon, type IconName } from './Icon';
-import { ASK_SOURCES, CHANGES, DASHBOARD, DOCUMENTS, LDL_SERIES, TIMELINE_EVENTS } from '@/lib/sample';
+import { CHANGES, DOCTOR, DASHBOARD, DOCUMENTS, LDL_SERIES, TIMELINE_EVENTS } from '@/lib/sample';
 import { WORDMARK } from '@/lib/config';
 
 /**
  * Faithful HTML/CSS renderings of the app screens. They follow the
- * real app's structure (tabs: Home · Timeline · Health · Ask · Me; "From your
+ * real app's structure (tabs: Home · Timeline · Health · For Doctor · Me; "From your
  * records" evidence badge; the Health History Line motif) using sample data.
  */
 
@@ -12,7 +12,7 @@ const TABS: { id: string; label: string; icon: IconName }[] = [
   { id: 'home', label: 'Home', icon: 'overview' },
   { id: 'timeline', label: 'Timeline', icon: 'clock' },
   { id: 'health', label: 'Health', icon: 'pulse' },
-  { id: 'ask', label: 'Ask', icon: 'chat' },
+  { id: 'doctor', label: 'For Doctor', icon: 'chat' },
   { id: 'me', label: 'Me', icon: 'users' },
 ];
 
@@ -20,8 +20,16 @@ function TabBar({ active }: { active: string }) {
   return (
     <div className="tabbar">
       {TABS.map((t) => (
-        <span key={t.id} className={`tabbar__item${t.id === active ? ' is-active' : ''}`}>
-          <Icon name={t.icon} size={18} />
+        <span key={t.id} className={`tabbar__item${t.id === active ? ' is-active' : ''}${t.id === 'doctor' ? ' tabbar__item--doctor' : ''}`}>
+          {t.id === 'doctor' ? (
+            <span className="tabbar__badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
+          ) : (
+            <Icon name={t.icon} size={18} />
+          )}
           <span>{t.label}</span>
         </span>
       ))}
@@ -328,35 +336,41 @@ export function ChangesScreen() {
   );
 }
 
-/* ---------------- Ask My Health ---------------- */
-/** The app's Ask tab: answers only from your reports, with their sources (mobile app/(tabs)/ask). */
-export function AskScreen() {
+/* ---------------- For Doctor ---------------- */
+/** The app's For Doctor tab: a one-page summary of your own reports (mobile app/(tabs)/doctor). */
+export function DoctorScreen() {
+  const d = DOCTOR;
   return (
     <div className="app dash">
-      <div className="app__body app__body--ask">
-        <h3 className="dash__display">Ask My Health</h3>
-        <p className="dash__sub">Answers come only from your reports — not diagnosis or treatment advice.</p>
-        <div className="bubble bubble--user">How has my LDL cholesterol changed?</div>
-        <div className="bubble bubble--ai">
-          <span className="badge badge--brand">From your records</span>
-          <p>Your LDL cholesterol rose from 112 mg/dL in Jan 2019 to 131 mg/dL in Mar 2024, and 146 mg/dL in Mar 2026.</p>
-          <div className="srcs">
-            <span className="srcs__label">Sources</span>
-            {ASK_SOURCES.map((src) => (
-              <span key={src} className="srcs__chip">
-                {src}
-              </span>
-            ))}
-          </div>
+      <div className="app__body">
+        <h3 className="dash__display">Summary for your Doctor</h3>
+        <p className="dash__sub">Built only from your own reports, ready to show or send before a visit.</p>
+        <div className="docm__person">
+          <b>{d.name}</b>
+          <span>{d.meta}</span>
         </div>
-        <div className="askpill askpill--input">
-          <span>Ask about your health...</span>
-          <span className="askpill__send">
-            <Icon name="arrow" size={13} />
-          </span>
+        <div className="docm__buttons">
+          <span className="docm__btn docm__btn--primary">Show to Doctor</span>
+          <span className="docm__btn">Send PDF</span>
         </div>
+        <div className="docm__section">
+          <p className="docm__h">
+            Results to mention <span className="docm__pill">{d.results.length}</span>
+          </p>
+          <p className="docm__note">Outside the range printed on the report.</p>
+          {d.results.map((r) => (
+            <div key={r.name} className="docm__row">
+              <b>
+                {r.name} <span>{r.value}</span>
+              </b>
+              <span>{r.line}</span>
+              <span>{r.was}</span>
+            </div>
+          ))}
+        </div>
+        <p className="docm__link">See all results</p>
       </div>
-      <TabBar active="ask" />
+      <TabBar active="doctor" />
     </div>
   );
 }

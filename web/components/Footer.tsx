@@ -48,8 +48,8 @@ export function Footer() {
         <div className="footer__legal">
           <p>© 2026 {BRAND.name}</p>
           <p className="footer__disclaimer">
-            {BRAND.name} is a consumer health-information product. It helps you keep your own records together and is
-            being built to help you understand them; it does not diagnose, treat or replace professional medical advice.
+            {BRAND.name} is a consumer health-information product. It helps you keep your own records together and
+            understand them; it does not diagnose, treat or replace professional medical advice.
           </p>
         </div>
       </div>
