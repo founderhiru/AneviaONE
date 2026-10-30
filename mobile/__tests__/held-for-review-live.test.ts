@@ -64,3 +64,16 @@ it('held rows in any fact table count', async () => {
 it('if the live read fails, the counts at reading time are kept (no false "all clear")', async () => {
   expect(await listed(client({}, true))).toEqual({ held: 1, added: 4 });
 });
+
+it('a held visit record (the report’s own date line) is not a result to check: no review, results unchanged', async () => {
+  // Read with 5 facts, 1 held — and the held one is the visit record.
+  expect(await listed(client({ encounters: [{ document_id: DOC, review_status: 'unreviewed' }] }))).toEqual({ held: 0, added: 4 });
+});
+
+it('a held result still needs review even when a held visit record sits beside it', async () => {
+  const twoHeldRun = { ...runRow, facts_written: 6, facts_needs_review: 2 };
+  const c = client({ observations: [{ document_id: DOC, review_status: 'unreviewed' }], encounters: [{ document_id: DOC, review_status: 'unreviewed' }] });
+  const from = c.from;
+  c.from = jest.fn((table: string) => (table === 'extraction_runs' ? query({ data: [twoHeldRun], error: null }) : from(table)));
+  expect(await listed(c)).toEqual({ held: 1, added: 4 });
+});

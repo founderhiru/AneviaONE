@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type HeldNow = { unreviewed: number; rejected: number };
+/**
+ * `unreviewed` / `rejected` count held RESULTS (anything the person can check).
+ * `visits` counts held encounter records — the report's own date/type line.
+ * Those carry no health value and there is nothing for the person to confirm,
+ * so they never make a report "need review" (they stay out of Health Memory).
+ */
+export type HeldNow = { unreviewed: number; rejected: number; visits: number };
 
 const FACT_TABLES = ['observations', 'conditions', 'medications', 'procedures', 'allergies', 'encounters'] as const;
 
@@ -26,10 +32,12 @@ export async function heldNow(client: SupabaseClient, ids: string[]): Promise<Ma
   ).catch(() => null);
   if (!results || results.some((r) => r.error || !r.data)) return null;
   const counts = new Map<string, HeldNow>();
-  for (const { data } of results) {
+  for (const [i, { data }] of results.entries()) {
+    const table = FACT_TABLES[i];
     for (const row of data as { document_id: string; review_status: string }[]) {
-      const c = counts.get(row.document_id) ?? { unreviewed: 0, rejected: 0 };
-      if (row.review_status === 'rejected') c.rejected += 1;
+      const c = counts.get(row.document_id) ?? { unreviewed: 0, rejected: 0, visits: 0 };
+      if (table === 'encounters') c.visits += 1;
+      else if (row.review_status === 'rejected') c.rejected += 1;
       else c.unreviewed += 1;
       counts.set(row.document_id, c);
     }
@@ -44,7 +52,9 @@ export async function heldNow(client: SupabaseClient, ids: string[]): Promise<Ma
  */
 export function reviewProgress(heldAtRead: number, live: Map<string, HeldNow> | null, documentId: string) {
   if (!live) return { stillHeld: heldAtRead, accepted: 0 };
-  const now = live.get(documentId) ?? { unreviewed: 0, rejected: 0 };
-  const stillHeld = Math.min(heldAtRead, now.unreviewed);
-  return { stillHeld, accepted: Math.max(0, heldAtRead - stillHeld - now.rejected) };
+  const now = live.get(documentId) ?? { unreviewed: 0, rejected: 0, visits: 0 };
+  // Held visit records are not results to check: take them out of the read's held count.
+  const heldResults = Math.max(0, heldAtRead - now.visits);
+  const stillHeld = Math.min(heldResults, now.unreviewed);
+  return { stillHeld, accepted: Math.max(0, heldResults - stillHeld - now.rejected) };
 }
