@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
@@ -28,15 +29,37 @@ export default function TabsLayout() {
           borderTopColor: theme.colors.border,
         },
         tabBarLabelStyle: theme.typography.labelSmall,
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={size} color={color} />
-        ),
+        tabBarIcon: ({ color, size }) =>
+          route.name === 'doctor' ? (
+            // Raised red badge with a white plus, so the doctor hand-over is easy to find.
+            <View
+              testID="doctor-tab-badge"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 13,
+                marginTop: -10,
+                backgroundColor: theme.colors.danger,
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 4,
+              }}
+            >
+              <Ionicons name="add" size={28} color="#FFFFFF" />
+            </View>
+          ) : (
+            <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={size} color={color} />
+          ),
       })}
     >
       <Tabs.Screen name="home" options={{ title: 'Home' }} />
       <Tabs.Screen name="timeline" options={{ title: 'Timeline' }} />
       <Tabs.Screen name="health" options={{ title: 'Health' }} />
-      <Tabs.Screen name="doctor" options={{ title: 'Doctor' }} />
+      <Tabs.Screen name="doctor" options={{ title: 'For doctor' }} />
       <Tabs.Screen name="me" options={{ title: 'Me' }} />
     </Tabs>
   );

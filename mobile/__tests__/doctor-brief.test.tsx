@@ -140,4 +140,22 @@ describe('Doctor screen', () => {
     await renderWithAuth(<DoctorScreen />);
     await waitFor(() => expect(screen.getByText('Nothing to show a doctor yet.')).toBeTruthy());
   });
+
+  it('lists all results only after See all, and the hand-over view shows them', async () => {
+    await renderWithAuth(<DoctorScreen />);
+    await waitFor(() => expect(screen.getByTestId('doctor-see-all')).toBeTruthy());
+    expect(screen.queryByTestId('doctor-report-plt')).toBeNull();
+    await act(async () => { fireEvent.press(screen.getByTestId('doctor-see-all')); });
+    expect(screen.getByTestId('doctor-report-plt')).toBeTruthy();
+    await act(async () => { fireEvent.press(screen.getByTestId('doctor-see-all')); });
+    expect(screen.queryByTestId('doctor-report-plt')).toBeNull();
+    await act(async () => { fireEvent.press(screen.getByTestId('doctor-handover')); });
+    expect(screen.getByTestId('doctor-report-plt')).toBeTruthy();
+  });
+
+  it('shows a Review link when reports are held', async () => {
+    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([doc('d1'), doc('held', { heldForReviewCount: 2 })]);
+    await renderWithAuth(<DoctorScreen />);
+    await waitFor(() => expect(screen.getByTestId('doctor-review-link')).toBeTruthy());
+  });
 });

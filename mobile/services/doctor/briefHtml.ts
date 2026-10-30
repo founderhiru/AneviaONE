@@ -22,7 +22,7 @@ export function doctorBriefHtml(b: DoctorBrief): string {
     ? `<h2>Outside the range printed on the report</h2>${table(b.outsideRange.map((r) => `<tr><td>${esc(r.name)}</td><td><b>${esc(r.value)}</b></td><td>${esc(r.range ?? '')}</td><td>${esc(marker(r))} · ${esc(briefDate(r.date))} · ${esc(r.reportTitle)}</td></tr>`))}`
     : '<h2>Outside the range printed on the report</h2><p>No result is outside the range printed on its own report.</p>';
   const trends = b.trends.length
-    ? `<h2>Repeated tests</h2>${b.trends
+    ? `<h2>Changes over time</h2>${b.trends
         .map((t) => `<p><b>${esc(t.name)}</b> — ${t.points.map((p) => `${esc(briefDate(p.date))}: ${esc(p.value)}${t.unit ? ' ' + esc(t.unit) : ''}`).join(' → ')}</p>`)
         .join('')}`
     : '';
@@ -36,7 +36,7 @@ table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:3px 6px;
 .note{color:#555;font-size:10px;margin-top:18px}
 </style></head><body>
 <h1>Health summary</h1>
-<p>${esc(b.person.name ?? 'Name not provided')}${b.person.dateOfBirth ? ' · Date of birth ' + esc(b.person.dateOfBirth) : ''} · Prepared ${esc(briefDate(b.preparedOn))}</p>
+<p>${esc(b.person.name ?? 'Name not provided')}${b.person.dateOfBirth ? ' · Born ' + esc(briefDate(b.person.dateOfBirth)) : ''} · Prepared ${esc(briefDate(b.preparedOn))}</p>
 <p>${b.reportCount} report${b.reportCount === 1 ? '' : 's'} · ${b.resultCount} result${b.resultCount === 1 ? '' : 's'}${b.heldReports ? ` · ${b.heldReports} report${b.heldReports === 1 ? '' : 's'} with results not yet checked (not included)` : ''}</p>
 ${outside}${trends}
 ${list('Medications listed on reports', b.medications)}${list('Conditions stated on reports', b.conditions)}${list('Allergies stated on reports', b.allergies)}

@@ -26,6 +26,8 @@ export type BriefResult = {
   documentId: string;
   /** "Blood test · 15 Jan 2026", or the file name when the kind isn't clear. */
   reportTitle: string;
+  /** The same test on the report before this one (same printed unit), when there is one. */
+  previous: { value: string; date: string } | null;
 };
 
 export type BriefReport = { documentId: string; title: string; date: string | null; results: BriefResult[] };
@@ -64,6 +66,17 @@ export function buildDoctorBrief(input: {
   const trusted = trustedResults(input.results);
   const names = reportNames(trusted);
 
+  const series = buildComparisons(input.results).numeric;
+  const previousOf = (r: RecordedObservation): BriefResult['previous'] => {
+    const key = (n: string) => n.trim().toLowerCase();
+    const unit = (u: string | null | undefined) => (u ?? '').replace(/\s+/g, '').toLowerCase();
+    const s = series.find((c) => key(c.name) === key(r.name) && unit(c.unit) === unit(r.unit));
+    if (!s || !r.date) return null;
+    const at = s.points.findIndex((p) => p.resultId === r.id);
+    const before = at > 0 ? s.points[at - 1] : null;
+    return before ? { value: before.valueText, date: before.date } : null;
+  };
+
   const toResult = (r: RecordedObservation): BriefResult => ({
     id: r.id,
     name: r.name,
@@ -74,6 +87,7 @@ export function buildDoctorBrief(input: {
     date: r.date,
     documentId: r.source.documentId,
     reportTitle: names.get(r.source.documentId) ?? r.source.documentName,
+    previous: previousOf(r),
   });
 
   const all = trusted.map(toResult);
@@ -94,7 +108,7 @@ export function buildDoctorBrief(input: {
     .sort((a, b) => byDateDesc(a.date, b.date) || a.title.localeCompare(b.title));
 
   // Same test, same printed unit, two or more dates — shown as values by date, never a verdict.
-  const trends: BriefTrend[] = buildComparisons(input.results).numeric.map((c) => ({
+  const trends: BriefTrend[] = series.map((c) => ({
     name: c.name,
     unit: c.unit,
     points: c.points.map((p) => ({ date: p.date, value: p.valueText, position: p.position })),

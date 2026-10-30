@@ -24,6 +24,7 @@ export default function DoctorScreen() {
   const [handover, setHandover] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareError, setShareError] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(async () => {
     setError(false);
@@ -65,20 +66,29 @@ export default function DoctorScreen() {
   const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary }] as const;
   const bigBody = big ? { fontSize: 20, lineHeight: 28 } : null;
 
-  const Row = ({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }) => (
-    <Pressable
-      onPress={() => router.push(`/documents/${r.documentId}`)}
-      accessibilityRole="button"
-      accessibilityLabel={`${r.name}, ${r.value}${r.range ? `, printed range ${r.range}` : ''}, ${r.reportTitle}`}
-      testID={`doctor-${scope}-${r.id}`}
-      style={{ paddingVertical: theme.spacing.xs }}
-    >
-      <Text style={[...body, bigBody, { fontWeight: '600' }]}>{r.name}  {r.value}</Text>
-      <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>
-        {[r.range ? `Printed range ${r.range}` : null, r.position === 'above' ? 'Above range' : r.position === 'below' ? 'Below range' : null, briefDate(r.date)].filter(Boolean).join(' · ')}
-      </Text>
-    </Pressable>
-  );
+  const Row = ({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }) => {
+    const side = r.position === 'above' ? 'Above' : r.position === 'below' ? 'Below' : null;
+    const line = [r.range ? `Report range ${r.range}` : null, side, r.reportTitle].filter(Boolean).join(' · ');
+    return (
+      <Pressable
+        onPress={() => router.push(`/documents/${r.documentId}`)}
+        accessibilityRole="button"
+        accessibilityLabel={`${r.name}, ${r.value}${r.range ? `, report range ${r.range}` : ''}, ${r.reportTitle}`}
+        testID={`doctor-${scope}-${r.id}`}
+        style={{ paddingVertical: theme.spacing.xs }}
+      >
+        <Text style={[...body, bigBody, { fontWeight: '600' }]}>{r.name}  {r.value}</Text>
+        <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>
+          {line} · {briefDate(r.date)}
+        </Text>
+        {r.previous ? (
+          <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }, big ? { fontSize: 16 } : null]}>
+            was {r.previous.value} in {briefDate(r.previous.date)}
+          </Text>
+        ) : null}
+      </Pressable>
+    );
+  };
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <View style={{ gap: theme.spacing.xs }}>
@@ -97,7 +107,8 @@ export default function DoctorScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Doctor</Text>
+      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your doctor</Text>
+      <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>Built only from your own reports, ready to show or send before a visit.</Text>
 
       {error ? (
         <ErrorState description="We couldn’t prepare your summary. Please try again." onRetry={load} />
@@ -114,7 +125,7 @@ export default function DoctorScreen() {
         <View style={{ gap: theme.spacing.md }} testID="doctor-brief">
           <View style={{ gap: 2 }}>
             <Text style={[...body, bigBody, { fontWeight: '600' }]} testID="doctor-person">
-              {brief.person.name ?? 'Name not provided'}{brief.person.dateOfBirth ? ` · Born ${brief.person.dateOfBirth}` : ''}
+              {brief.person.name ?? 'Name not provided'}{brief.person.dateOfBirth ? ` · Born ${briefDate(brief.person.dateOfBirth)}` : ''}
             </Text>
             <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>
               {brief.reportCount} {brief.reportCount === 1 ? 'report' : 'reports'} · {brief.resultCount} {brief.resultCount === 1 ? 'result' : 'results'} · Prepared {briefDate(brief.preparedOn)}
@@ -124,17 +135,25 @@ export default function DoctorScreen() {
                 {brief.heldReports} {brief.heldReports === 1 ? 'report has' : 'reports have'} results not yet checked — not included here.
               </Text>
             ) : null}
+            {brief.heldReports > 0 && !big ? (
+              <Pressable onPress={() => router.push({ pathname: '/documents', params: { filter: 'verify' } })} accessibilityRole="link" testID="doctor-review-link">
+                <Text style={[theme.typography.caption, { color: theme.colors.brandPrimary, fontWeight: '600' }]}>Review</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           {!big ? (
             <View style={{ gap: theme.spacing.xs }}>
-              <Button label="Hand-over view" onPress={() => setHandover(true)} testID="doctor-handover" />
-              <Button label={sharing ? 'Preparing PDF…' : 'Share as PDF'} variant="secondary" onPress={sharePdf} loading={sharing} testID="doctor-share-pdf" />
+              <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
+                <View style={{ flex: 1 }}><Button label="Show to doctor" onPress={() => setHandover(true)} testID="doctor-handover" /></View>
+                <View style={{ flex: 1 }}><Button label={sharing ? 'Preparing…' : 'Send PDF'} variant="secondary" onPress={sharePdf} loading={sharing} testID="doctor-share-pdf" /></View>
+              </View>
               {shareError ? <Text style={[theme.typography.caption, { color: theme.colors.danger }]} testID="doctor-share-error">We couldn’t create the PDF. Please try again.</Text> : null}
             </View>
           ) : null}
 
-          <Section title="Outside the printed range">
+          <Section title={`Results to mention (${brief.outsideRange.length})`}>
+            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>Outside the range printed on the report.</Text>
             {brief.outsideRange.length ? (
               brief.outsideRange.map((r) => <Row key={r.id} r={r} scope="outside" />)
             ) : (
@@ -143,7 +162,7 @@ export default function DoctorScreen() {
           </Section>
 
           {brief.trends.length ? (
-            <Section title="Repeated tests">
+            <Section title="Changes over time">
               {brief.trends.map((t) => (
                 <View key={`${t.name}|${t.unit ?? ''}`} style={{ paddingVertical: theme.spacing.xs }}>
                   <Text style={[...body, bigBody, { fontWeight: '600' }]}>{t.name}</Text>
@@ -159,14 +178,23 @@ export default function DoctorScreen() {
           {brief.conditions.length ? <Section title="Conditions stated on reports"><Plain items={brief.conditions} /></Section> : null}
           {brief.allergies.length ? <Section title="Allergies stated on reports"><Plain items={brief.allergies} /></Section> : null}
 
-          <Section title="Reports">
-            {brief.reports.map((rep) => (
-              <View key={rep.documentId} style={{ paddingVertical: theme.spacing.xs, gap: 2 }}>
-                <Text style={[...body, bigBody, { fontWeight: '700' }]}>{rep.title}</Text>
-                {rep.results.map((r) => <Row key={r.id} r={r} scope="report" />)}
-              </View>
-            ))}
-          </Section>
+          {!big ? (
+            <Pressable onPress={() => setShowAll((v) => !v)} accessibilityRole="button" testID="doctor-see-all">
+              <Text style={[theme.typography.bodyMedium, { color: theme.colors.brandPrimary, fontWeight: '600' }]}>
+                {showAll ? 'Hide all results' : 'See all results'}
+              </Text>
+            </Pressable>
+          ) : null}
+          {showAll || big ? (
+            <Section title="All results by report">
+              {brief.reports.map((rep) => (
+                <View key={rep.documentId} style={{ paddingVertical: theme.spacing.xs, gap: 2 }}>
+                  <Text style={[...body, bigBody, { fontWeight: '700' }]}>{rep.title}</Text>
+                  {rep.results.map((r) => <Row key={r.id} r={r} scope="report" />)}
+                </View>
+              ))}
+            </Section>
+          ) : null}
 
           <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
             Built from your own reports, as written on them. Ranges are the ones printed on each report. Not a diagnosis.
