@@ -44,13 +44,23 @@ export function formatPercent(p: number): string {
 
 type Tile = { key: string; value: number; label: string; icon: keyof typeof Ionicons.glyphMap; tint: string; ink: string; onPress?: () => void };
 
-/** Reports | Results | Needs review — three tinted tiles. */
-export function SummaryTiles({ counts, onReports, onResults, onReview }: { counts: HomeCounts; onReports: () => void; onResults: () => void; onReview: () => void }) {
+/** Reports | Results | Reports to verify — three tinted tiles. The third
+ * counts REPORTS (documents) whose results are held until the person checks
+ * them — a data-verification step, not a health concern. */
+export function SummaryTiles({ counts, onReports, onResults, onVerify }: { counts: HomeCounts; onReports: () => void; onResults: () => void; onVerify: () => void }) {
   const theme = useTheme();
   const tiles: Tile[] = [
     { key: 'reports', value: counts.reports, label: counts.reports === 1 ? 'Report' : 'Reports', icon: 'document-text-outline', tint: theme.colors.accentSubtle, ink: theme.colors.accent, onPress: onReports },
     { key: 'results', value: counts.results, label: counts.results === 1 ? 'Result' : 'Results', icon: 'bar-chart-outline', tint: theme.colors.infoSubtle, ink: theme.colors.info, onPress: onResults },
-    { key: 'review', value: counts.needsReview, label: 'Needs review', icon: 'time-outline', tint: theme.colors.warningSubtle, ink: theme.colors.warning, onPress: counts.needsReview ? onReview : undefined },
+    {
+      key: 'review',
+      value: counts.needsReview,
+      label: counts.needsReview === 1 ? 'Report to verify' : 'Reports to verify',
+      icon: 'time-outline',
+      tint: theme.colors.warningSubtle,
+      ink: theme.colors.warning,
+      onPress: counts.needsReview ? onVerify : undefined,
+    },
   ];
   return (
     <View style={{ flexDirection: 'row', gap: theme.spacing.xs }} testID="home-summary">
