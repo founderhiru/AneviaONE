@@ -91,10 +91,14 @@ describe('launch routing', () => {
   });
 
   it('plays the launch sequence once, and not again when navigating', async () => {
-    jest.spyOn(authService, 'getCurrentUser').mockResolvedValue(null);
+    // The splash only leaves once sign-in has been checked, so hold that check
+    // open: the test then doesn't depend on how fast the machine renders.
+    let finishSignInCheck: (user: null) => void = () => {};
+    jest.spyOn(authService, 'getCurrentUser').mockImplementation(() => new Promise((resolve) => { finishSignInCheck = resolve; }));
     const view = await render(<RootLayout />);
     const splash = `Loading ${BRAND.wordmark}`;
     expect(screen.getByLabelText(splash)).toBeTruthy();
+    finishSignInCheck(null);
     await waitFor(() => expect(screen.queryByLabelText(splash)).toBeNull());
 
     for (const segments of [['(auth)', 'welcome'], ['explore'], ['explore', 'memory'], ['(auth)', 'login']]) {
