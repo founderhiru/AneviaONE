@@ -31,7 +31,7 @@ export default function TabsLayout() {
         tabBarLabelStyle: theme.typography.labelSmall,
         tabBarIcon: ({ color, size }) =>
           route.name === 'doctor' ? (
-            // Raised red badge with a white plus, so the doctor hand-over is easy to find.
+            // Raised red badge with a white plus, so the Doctor hand-over is easy to find.
             <View
               testID="doctor-tab-badge"
               style={{
@@ -59,7 +59,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="home" options={{ title: 'Home' }} />
       <Tabs.Screen name="timeline" options={{ title: 'Timeline' }} />
       <Tabs.Screen name="health" options={{ title: 'Health' }} />
-      <Tabs.Screen name="doctor" options={{ title: 'For doctor' }} />
+      <Tabs.Screen name="doctor" options={{ title: 'For Doctor' }} />
       <Tabs.Screen name="me" options={{ title: 'Me' }} />
     </Tabs>
   );

@@ -19,7 +19,7 @@ export function FaqSection() {
           <h2 id="hfaq-title" className="h2">
             Straight answers.
           </h2>
-          <p className="lede">What it does today, what is coming next, and what it doesn’t do.</p>
+          <p className="lede">What it does, what it doesn’t do, and how it handles your health information.</p>
           <Link href="/faq" className="link-arrow hfaq__all">
             All questions <Icon name="arrow" size={16} />
           </Link>

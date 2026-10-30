@@ -48,15 +48,17 @@ describe('shared FAQ content', () => {
     expect(text).not.toMatch(/medical-grade|100%|guarantee|HIPAA|GDPR|SOC 2|ISO 27001|end-to-end|clinically (proven|validated)/i);
   });
 
-  it('gives the app the 14 priority questions, in order, with the brand filled in', () => {
+  it('gives the app its priority questions, in order, with the brand filled in', () => {
     const entries = mobileFaq();
     expect(entries.map((e) => e.id)).toEqual([
       'what-is',
       'what-can-i-do',
+      'doctor-summary',
       'storage',
       'understand-reports',
+      'verify',
       'what-changed',
-      'ask',
+      'no-questions',
       'diagnose',
       'how-ai-works',
       'private',
@@ -73,11 +75,14 @@ describe('shared FAQ content', () => {
 
   it('labels capabilities that are not available yet', () => {
     const byId = Object.fromEntries(mobileFaq().map((e) => [e.id, e]));
-    for (const id of ['understand-reports', 'what-changed', 'ask', 'delete', 'export', 'platforms']) {
+    for (const id of ['export', 'platforms']) {
       expect(byId[id].statusLabel).toBe('Not yet available');
     }
-    expect(byId.whatsapp.statusLabel).toBe('Preview only');
-    expect(byId['what-can-i-do'].statusLabel).toBe('Partly available');
+    expect(byId.whatsapp.statusLabel).toBe('Partly available');
+    // What works today carries no label.
+    for (const id of ['understand-reports', 'what-changed', 'doctor-summary', 'delete']) {
+      expect(byId[id].statusLabel).toBeUndefined();
+    }
   });
 });
 
@@ -198,9 +203,12 @@ describe('Help & FAQ screen', () => {
 });
 
 describe('Terms screen', () => {
-  it('says plainly that the Terms are not published yet', async () => {
+  it('shows the full Terms, with no draft or placeholder wording', async () => {
     await renderWithProviders(<TermsScreen />);
     expect(screen.getByText('Terms of Service')).toBeTruthy();
-    expect(screen.getByText(/will be published before/)).toBeTruthy();
+    expect(screen.getByText(/Last updated/)).toBeTruthy();
+    expect(screen.getByText(`What ${BRAND.productName} is`)).toBeTruthy();
+    expect(screen.getByText('Report reading and AI')).toBeTruthy();
+    expect(screen.queryByText(/not published|being finalized|draft/i)).toBeNull();
   });
 });

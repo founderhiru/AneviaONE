@@ -187,7 +187,7 @@ describe('Health Signals — deterministic and evidence-based', () => {
       value: '1.005',
       headline: 'Below the reported range',
       referenceRange: '1.010–1.030',
-      advice: 'Consider discussing this result with your doctor.',
+      advice: 'Consider discussing this result with your Doctor.',
     });
   });
 
@@ -210,7 +210,7 @@ describe('Health Signals — deterministic and evidence-based', () => {
         id: 'g3',
         kind: 'repeated',
         detail: 'This result has remained outside the reported range across 3 reports.',
-        advice: 'Consider discussing this pattern with your doctor.',
+        advice: 'Consider discussing this pattern with your Doctor.',
       }),
     ]);
   });
@@ -263,8 +263,8 @@ describe('Health Signals — deterministic and evidence-based', () => {
   it('all signal copy is non-diagnostic and suggests only professional follow-up', () => {
     const copy = Object.values(SIGNAL_COPY).map((v) => (typeof v === 'function' ? v(2 as never) : v));
     for (const text of copy) expect(text).not.toMatch(UNSAFE);
-    expect(SIGNAL_COPY.discussResult).toMatch(/doctor/);
-    expect(SIGNAL_COPY.discussPattern).toMatch(/doctor/);
+    expect(SIGNAL_COPY.discussResult).toMatch(/Doctor/);
+    expect(SIGNAL_COPY.discussPattern).toMatch(/Doctor/);
   });
 });
 

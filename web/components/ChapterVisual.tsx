@@ -13,7 +13,7 @@ export type ChapterVisualKey =
   | 'understand'
   | 'remember'
   | 'compare'
-  | 'ask'
+  | 'doctor'
   | 'memory'
   | 'evidence'
   | 'time'
@@ -91,13 +91,13 @@ export function ChapterVisual({ kind }: { kind: ChapterVisualKey }) {
       );
     }
 
-    case 'ask':
+    case 'doctor':
       return (
-        <div className="cv-ask" aria-label="Asking a question in plain language (sample)">
-          <p className="cv-ask__q">When was my last HbA1c test, and how did it compare?</p>
+        <div className="cv-ask" aria-label="A one-page summary for your Doctor (sample)">
+          <p className="cv-ask__q">Summary for your Doctor</p>
           <p className="cv-ask__a">
-            <span className="badge badge--brand">Sample answer</span>
-            Your most recent HbA1c was 5.9% in March 2026 — lower than 6.2% in March 2024.
+            <span className="badge badge--brand">Sample data</span>
+            LDL Cholesterol 146 mg/dL — report range &lt; 130, above. Was 131 in Mar 2024.
           </p>
         </div>
       );

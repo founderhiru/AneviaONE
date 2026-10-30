@@ -49,8 +49,8 @@ export function Hero() {
             )}
           </div>
           <p className="fine hero__status">
-            The app lets you add health reports and keep them together in private storage. Reading and comparing them,
-            and answering questions, are in development and not yet available to everyone.
+            Add your health reports and {BRAND.name} reads them, keeps your results in order, shows what changed, and
+            prepares a one-page summary for your Doctor.
           </p>
         </div>
 

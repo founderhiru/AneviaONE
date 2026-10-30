@@ -251,3 +251,23 @@
 .dash__cmp-note { font-size: 0.56em; color: var(--d-ink2); }
 .dash .bubble--user { background: var(--d-forest); }
 .dash .badge--brand { background: var(--d-accent-bg); color: var(--d-accent); }
+
+/* For Doctor tab: raised red badge with a white plus */
+.tabbar__item--doctor { color: var(--ink-500); }
+.tabbar__badge { display: grid; place-items: center; width: 2.5em; height: 2.5em; margin-top: -1.1em; border-radius: 0.8em; background: #b0483f; color: #fff; box-shadow: 0 0.25em 0.6em rgba(0, 0, 0, 0.22); }
+.tabbar__badge svg { width: 1.5em; height: 1.5em; }
+
+/* For Doctor screen */
+.docm__person { display: grid; gap: 0.15em; padding: 0.55em 0.7em; margin: 0.5em 0; border-radius: 0.7em; background: #fff; border: 1px solid var(--line-soft); font-size: 0.78em; }
+.docm__person span { color: var(--ink-500); font-size: 0.9em; }
+.docm__buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45em; margin-bottom: 0.6em; }
+.docm__btn { padding: 0.55em 0.3em; border-radius: 0.7em; text-align: center; font-size: 0.74em; font-weight: 700; border: 1px solid var(--line); background: #fff; color: var(--navy-800); }
+.docm__btn--primary { background: var(--navy-800); border-color: var(--navy-800); color: #fff; }
+.docm__section { padding: 0.6em 0.7em; border-radius: 0.7em; background: #fff; border: 1px solid var(--line-soft); font-size: 0.78em; }
+.docm__h { margin: 0; font-weight: 700; display: flex; align-items: center; gap: 0.5em; }
+.docm__pill { padding: 0 0.55em; border-radius: 99px; background: #f6e7e5; color: #b0483f; font-size: 0.9em; }
+.docm__note { margin: 0.15em 0 0.4em; color: var(--ink-500); font-size: 0.88em; }
+.docm__row { display: grid; gap: 0.05em; padding: 0.35em 0; border-top: 1px solid var(--line-soft); }
+.docm__row b span { margin-left: 0.4em; }
+.docm__row > span { color: var(--ink-500); font-size: 0.88em; }
+.docm__link { margin: 0.6em 0 0; font-size: 0.78em; font-weight: 700; color: var(--navy-800); }

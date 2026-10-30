@@ -69,7 +69,7 @@ const SHARING_OPTIONS: DataSharingSetting[] = [
   {
     id: 'share-doctor-brief',
     label: 'Allow sharing a Doctor Brief',
-    description: 'Lets you generate and share a summary with a doctor when you choose to.',
+    description: 'Lets you generate and share a summary with a Doctor when you choose to.',
     enabled: false,
   },
   {

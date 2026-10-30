@@ -28,7 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { title: 'Health Memory', description: 'Your longitudinal health history.', href: '/product#memory' },
       { title: 'Timeline', description: 'Your health journey over time.', href: '/product#timeline' },
       { title: 'What Changed', description: 'Meaningful changes across records.', href: '/product#changes' },
-      { title: 'Ask My Health', description: 'Questions grounded in your history.', href: '/product#ask' },
+      { title: 'For Doctor', description: 'A one-page summary for your visit.', href: '/product#doctor' },
     ],
   },
   {
@@ -39,7 +39,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { title: 'Understand', description: 'Turn records into structured health information.', href: '/ai-intelligence#evidence' },
       { title: 'Remember', description: 'Build a longitudinal health history.', href: '/ai-intelligence#memory' },
       { title: 'Compare', description: 'See meaningful changes over time.', href: '/ai-intelligence#time' },
-      { title: 'Ask', description: 'Explore your health history conversationally.', href: '/ai-intelligence#ask' },
+      { title: 'Share', description: 'Show your Doctor your history in one page.', href: '/ai-intelligence#share' },
     ],
   },
 ];
@@ -59,7 +59,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: 'Health Memory', href: '/product#memory' },
       { label: 'Timeline', href: '/product#timeline' },
       { label: 'What Changed', href: '/product#changes' },
-      { label: 'Ask My Health', href: '/product#ask' },
+      { label: 'For Doctor', href: '/product#doctor' },
     ],
   },
   {
@@ -67,7 +67,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       { label: 'Understand', href: '/ai-intelligence#evidence' },
       { label: 'Compare', href: '/ai-intelligence#time' },
-      { label: 'Ask', href: '/ai-intelligence#ask' },
+      { label: 'Share', href: '/ai-intelligence#share' },
       { label: 'How It Works', href: '/how-it-works' },
     ],
   },

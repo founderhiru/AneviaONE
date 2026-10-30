@@ -44,7 +44,7 @@ export const BRAND = {
   /** No logo asset yet — render a text wordmark using the product name. */
   logo: null as null,
   /** Core product loop, used in a few explanatory/empty-state contexts. */
-  loop: ['Capture', 'Remember', 'Understand', 'Compare', 'Ask'] as const,
+  loop: ['Capture', 'Understand', 'Remember', 'Compare', 'Share'] as const,
 } as const;
 
 /**
@@ -73,7 +73,6 @@ export function wordmarkParts(name: string = BRAND.wordmark): [string, string] {
  */
 export const PRODUCT_TERMS = {
   healthMemory: 'Health Memory',
-  askMyHealth: 'Ask My Health',
   whatChanged: 'What Changed',
   healthTimeline: 'Health Timeline',
   healthTrends: 'Health Trends',

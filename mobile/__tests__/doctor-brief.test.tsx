@@ -138,7 +138,7 @@ describe('Doctor screen', () => {
   it('with no records, offers to add a report instead of an empty summary', async () => {
     jest.spyOn(healthService, 'getRecordedObservations').mockResolvedValue([]);
     await renderWithAuth(<DoctorScreen />);
-    await waitFor(() => expect(screen.getByText('Nothing to show a doctor yet.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Nothing to show a Doctor yet.')).toBeTruthy());
   });
 
   it('lists all results only after See all, and the hand-over view shows them', async () => {

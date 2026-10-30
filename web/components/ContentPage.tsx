@@ -52,7 +52,7 @@ function CardGrid({ items, columns = 3 }: { items: Item[]; columns?: 2 | 3 | 4 }
   );
 }
 
-function SplitCard({ card }: { card?: 'trend' | 'change' | 'pattern' | 'ask' }) {
+function SplitCard({ card }: { card?: 'trend' | 'change' | 'pattern' }) {
   if (card === 'trend') return <TrendCard />;
   if (card === 'change') return <ChangeCard />;
   if (card === 'pattern') return <PatternCard />;

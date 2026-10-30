@@ -307,36 +307,6 @@ export function ChangeRow({ change, onViewTrend }: { change: HealthChange | null
   );
 }
 
-// ------------------------------------------------------------------- ask --
-
-export function AskRow({ title, onPress }: { title: string; onPress: () => void }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      testID="home-ask"
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing.xs,
-        minHeight: 48,
-        paddingHorizontal: theme.spacing.md,
-        borderRadius: theme.radius.pill,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: theme.colors.surfaceAlt,
-        opacity: pressed ? 0.8 : 1,
-      })}
-    >
-      <Ionicons name="sparkles-outline" size={16} color={theme.colors.accent} />
-      <Text style={[theme.typography.bodyMedium, { flex: 1, color: theme.colors.textPrimary }]}>Ask about your health records</Text>
-      <Ionicons name="arrow-forward" size={16} color={theme.colors.brandPrimary} />
-    </Pressable>
-  );
-}
-
 // ---------------------------------------------------------- recent reports --
 
 export function ReportRows({ documents, onPressDocument }: { documents: StoredDocument[]; onPressDocument: (d: StoredDocument) => void }) {

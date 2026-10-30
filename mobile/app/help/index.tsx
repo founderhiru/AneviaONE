@@ -42,8 +42,8 @@ export default function HelpFaqScreen() {
 
       <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>
         {activeTopic
-          ? `How ${BRAND.productName} handles your records and data today, and what is still to come.`
-          : `Straight answers about what ${BRAND.productName} does today, what’s coming next, and what it doesn’t do.`}
+          ? `How ${BRAND.productName} handles your records and data.`
+          : `Straight answers about what ${BRAND.productName} does, what it doesn’t do, and how it handles your records.`}
       </Text>
 
       <View style={{ gap: theme.spacing.sm }}>

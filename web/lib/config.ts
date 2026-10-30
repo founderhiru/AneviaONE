@@ -24,9 +24,8 @@ export const BRAND = {
   promise: 'Your health has a history. Now it has intelligence.',
   /** Brand signature (matches mobile `launchTagline`). Footer only. */
   signature: 'Healthier generations. Brighter lives.',
-  // Describes what exists today and what is being built, in that order.
   description:
-    `${NAME} is a Personal Health Intelligence app being built to bring your health records into one connected history. Today you can add reports and keep them in private storage.`,
+    `${NAME} is a Personal Health Intelligence app that brings your health records into one connected history, and into a one-page summary for your Doctor.`,
   title: `${NAME} | ${CATEGORY}`,
 } as const;
 
