@@ -1,5 +1,7 @@
 # AI data flow — report reading (Gate 1) and Ask My Health (Gate 3)
 
+> **Update:** the Ask tab was removed from the app and replaced by **Doctor**, a summary built from stored facts with **no AI call**. The `ask-health` function is no longer called by the app and is to be undeployed (`supabase functions delete ask-health`); the Ask section below describes the retired design. Report reading (Gate 1) is unchanged.
+
 Status: **implementation-complete, deployment-unverified.** The provider/data-flow
 gate has **not** passed. Do not send real user health documents to the AI
 provider until the open items below are resolved and signed off.

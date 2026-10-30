@@ -7,10 +7,8 @@ import React from 'react';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import AskScreen from '../app/(tabs)/ask';
 import ChangesScreen from '../app/changes/index';
 import TrendScreen from '../app/trends/[metric]';
-import { aiService, toAskResult } from '../services/ai/aiService';
 import { presentDocumentStatus } from '../services/documents/documentsService';
 import { invalidateHealthMemory, toChange, toTrend } from '../services/health/healthMemoryApi';
 import { healthService, productionHealthService } from '../services/health/healthService';
@@ -152,46 +150,6 @@ describe('Gate 2 screens with real data', () => {
     await waitFor(() => expect(screen.getByText(trend.summary)).toBeTruthy());
     expect(screen.getByText('Range printed on the latest report: 4.0 - 5.6')).toBeTruthy();
     expect(screen.getByText(/Also recorded in mmol\/mol — shown separately, not converted/)).toBeTruthy();
-  });
-});
-
-describe('Ask My Health', () => {
-  const answered = {
-    status: 'answered' as const,
-    answer: 'Medications recorded in your reports: Telmisartan 40 mg — 15 Sep 2026.',
-    sources: [{ documentId: 'c', documentName: 'Report C.pdf', pageNumber: 2, excerpt: 'Telmisartan 40 mg once daily' }],
-    generatedBy: 'records' as const,
-  };
-
-  it('maps grounded answers to record answers with evidence; limitations to explanations', () => {
-    expect(toAskResult(answered).recordAnswer).toEqual({
-      text: answered.answer,
-      wordedByAi: false,
-      evidence: [{ documentId: 'c', documentTitle: 'Report C.pdf', pageNumber: 2, excerpt: 'Telmisartan 40 mg once daily' }],
-    });
-    expect(toAskResult({ status: 'safety', answer: 'I can’t give treatment advice.', sources: [], generatedBy: 'none' })).toEqual({ aiExplanation: { text: 'I can’t give treatment advice.' } });
-  });
-
-  it('shows each source (report, page, excerpt) and opens the report', async () => {
-    jest.spyOn(aiService, 'getSuggestedQuestions').mockResolvedValue(['What medications have I taken?']);
-    jest.spyOn(aiService, 'askQuestion').mockResolvedValue({ ...toAskResult({ ...answered, generatedBy: 'ai' }) });
-    await renderWithAuth(<AskScreen />);
-    await waitFor(() => expect(screen.getByText('What medications have I taken?')).toBeTruthy());
-    await fireEvent.press(screen.getByText('What medications have I taken?'));
-    await waitFor(() => expect(screen.getByText(answered.answer)).toBeTruthy());
-    expect(screen.getByText('From your records · worded by AI')).toBeTruthy();
-    expect(screen.getByText('“Telmisartan 40 mg once daily”')).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText('Source: Report C.pdf, page 2'));
-    expect(router.push).toHaveBeenCalledWith('/documents/c');
-  });
-
-  it('an unreachable server never leaves the screen stuck', async () => {
-    jest.spyOn(aiService, 'getSuggestedQuestions').mockResolvedValue(['Show my recent health history.']);
-    jest.spyOn(aiService, 'askQuestion').mockRejectedValue(new Error('offline'));
-    await renderWithAuth(<AskScreen />);
-    await waitFor(() => expect(screen.getByText('Show my recent health history.')).toBeTruthy());
-    await fireEvent.press(screen.getByText('Show my recent health history.'));
-    await waitFor(() => expect(screen.getByText('I couldn’t reach your records just now. Please try again.')).toBeTruthy());
   });
 });
 

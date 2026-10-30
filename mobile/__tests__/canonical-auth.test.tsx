@@ -16,7 +16,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import LoginScreen from '../app/(auth)/login';
 import OtpScreen from '../app/(auth)/otp';
 import WelcomeScreen from '../app/(auth)/welcome';
-import AskScreen from '../app/explore/ask';
 import ChangesScreen from '../app/explore/changes';
 import MakeItYoursScreen from '../app/explore/make-it-yours';
 import MemoryScreen from '../app/explore/memory';
@@ -197,7 +196,6 @@ describe('every signed-out entry point opens Welcome', () => {
     ['Memory', MemoryScreen],
     ['Changes', ChangesScreen],
     ['Timeline', TimelineScreen],
-    ['Ask', AskScreen],
   ])('%s → Make it yours → Get started opens Welcome', async (_name, Screen) => {
     await renderWithProviders(<Screen />);
     expect(screen.queryByTestId('mobile-number-input')).toBeNull();

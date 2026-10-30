@@ -1,5 +1,5 @@
 /**
- * Covers the 5 bottom-tab screens (Home, Timeline, Health, Ask, Me) — per
+ * Covers the 5 bottom-tab screens (Home, Timeline, Health, Doctor, Me) — per
  * spec section 36 ("navigation ... major flows"). Each screen loads its
  * mock data on mount and renders it; navigation is verified via the mocked
  * `router.push` calls (see jest.setup.js).
@@ -8,7 +8,6 @@ import React from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
-import AskScreen from '../app/(tabs)/ask';
 import HealthScreen from '../app/(tabs)/health';
 import HomeScreen from '../app/(tabs)/home';
 import MeScreen from '../app/(tabs)/me';
@@ -55,22 +54,6 @@ describe('Health screen', () => {
       fireEvent.press(screen.getByText('View All'));
     });
     expect(router.push).toHaveBeenCalledWith('/medications');
-  });
-});
-
-describe('Ask My Health screen', () => {
-  it('shows suggested questions and asks one on press', async () => {
-    await renderWithAuth(<AskScreen />);
-    await waitFor(() => expect(screen.getAllByRole('button').length).toBeGreaterThan(0));
-
-    const suggestions = screen.getAllByRole('button');
-    await act(async () => {
-      fireEvent.press(suggestions[0]);
-    });
-
-    // The question the user asked appears as a message bubble, and an
-    // assistant reply is appended once the mock AI service resolves.
-    await waitFor(() => expect(screen.queryAllByText(/From your records|AI explanation/).length).toBeGreaterThan(0));
   });
 });
 
