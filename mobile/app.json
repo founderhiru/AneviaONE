@@ -71,6 +71,17 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.962876896960-vlqdlnaq86tlf0dq3vuh5p56baekquk3"
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsFileWithMaxCount": 1
+          },
+          "androidIntentFilters": [
+            "application/pdf"
+          ]
+        }
       ]
     ],
     "experiments": {
