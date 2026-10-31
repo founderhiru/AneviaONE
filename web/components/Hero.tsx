@@ -24,6 +24,7 @@ export function Hero() {
 
   return (
     <section className="hero" aria-labelledby="hero-title">
+      <div className="hero__dots" aria-hidden="true" />
       <div className="container hero__grid">
         <div className="hero__main">
           <p className="eyebrow hero__eyebrow">

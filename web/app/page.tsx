@@ -5,13 +5,14 @@ import { FaqSection } from '@/components/home/FaqSection';
 import { HowPreview } from '@/components/home/HowPreview';
 import { IntelligencePreview } from '@/components/home/IntelligencePreview';
 import { ProblemSection } from '@/components/home/ProblemSection';
+import { ReportFlow } from '@/components/home/ReportFlow';
 import { ProductSection } from '@/components/home/ProductSection';
 import { TrustSection } from '@/components/home/TrustSection';
 
 /**
  * The homepage is the concise story; each section has one job and hands off
  * to a dedicated page for depth:
- *   Hero → what it is · App bar → get the app · Problem → why it exists · Product → what you get
+ *   Hero → what it is · App bar → get the app · Problem → why it exists · Report flow → how a report becomes a history · Product → what you get
  *   How it works → the five-stage concept (/how-it-works has the detail)
  *   Intelligence → three ideas (/ai-intelligence has the detail)
  *   Trust → principles (/privacy, /security have the specifics)
@@ -23,6 +24,7 @@ export default function Home() {
       <Hero />
       <AppBar />
       <ProblemSection />
+      <ReportFlow />
       <ProductSection />
       <HowPreview />
       <IntelligencePreview />

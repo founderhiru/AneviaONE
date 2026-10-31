@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import { DashboardScreen } from './PhoneScreens';
+import { PhoneCycle, PhoneCycleDots } from './home/PhoneCycle';
 import { Phone } from './Phone';
 import { Icon } from './Icon';
 import { RECORD_CHIPS } from '@/lib/sample';
@@ -10,7 +10,8 @@ import { BRAND } from '@/lib/config';
  * Hero visual: six different records around one phone, tied to it by thin
  * teal/blue lines — "Different records. One connected story."
  * Coordinates are in a 100 × 106 space so lines and chips stay aligned at any size.
- * Static by design: no float/bob loops, so the hero never repaints on idle.
+ * The phone shows the four main screens in turn (PhoneCycle). Motion is CSS opacity only and
+ * pauses off screen; the chips and lines stay still, so the hero stays light.
  */
 const H = 106;
 // [centre x, centre y, phone-edge y] for each chip in RECORD_CHIPS order.
@@ -53,9 +54,10 @@ export function RecordScatter() {
       </svg>
 
       <div className="scatter__phone">
-        <Phone label={`${BRAND.name} Home dashboard: report and result counts, what changed, latest results and recent documents (sample data)`}>
-          <DashboardScreen />
+        <Phone label={`${BRAND.name} Home, Timeline, Health and For Doctor screens shown in turn (sample data)`}>
+          <PhoneCycle />
         </Phone>
+        <PhoneCycleDots />
       </div>
 
       {RECORD_CHIPS.map((c, i) => {
