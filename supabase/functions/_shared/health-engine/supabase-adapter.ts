@@ -83,10 +83,10 @@ export function supabaseEngineDb(admin: SupabaseClient): EngineDb {
     async recordRunDiagnostics(runId, userId, diagnostics) {
       ensure(await admin.rpc('engine_record_run_diagnostics', { p_run_id: runId, p_user_id: userId, p_diagnostics: diagnostics }), 'diagnostics');
     },
-    async getAccountIdentity(userId): Promise<AccountIdentity> {
+    async getAccountIdentity(userId, documentId): Promise<AccountIdentity> {
       // The identity the person entered (Identity details), read server-side
       // only — never the sign-in provider's name.
-      const identity = ensure(await admin.rpc('engine_account_identity', { p_user_id: userId }), 'identity') as
+      const identity = ensure(await admin.rpc('engine_document_identity', { p_document_id: documentId, p_user_id: userId }), 'identity') as
         | { full_name: string | null; date_of_birth: string | null }
         | null;
       return { fullName: identity?.full_name ?? null, dateOfBirth: identity?.date_of_birth ?? null };

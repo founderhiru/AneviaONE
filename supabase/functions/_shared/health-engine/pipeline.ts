@@ -53,7 +53,8 @@ export interface EngineDb {
   startRun(args: { documentId: string; userId: string; pipelineVersion: string; provider: string; model: string; promptVersion: string; consentVersion: string }): Promise<string>;
   completeDocument(runId: string, userId: string, payload: Record<string, unknown>): Promise<CompletionCounts>;
   failDocument(args: FailureArgs): Promise<void>;
-  getAccountIdentity(userId: string): Promise<AccountIdentity>;
+  /** The identity of the person the REPORT is for (the account holder, or a relative they manage). */
+  getAccountIdentity(userId: string, documentId: string): Promise<AccountIdentity>;
   /** Counts-only diagnostics for a run (never content). */
   recordRunDiagnostics(runId: string, userId: string, diagnostics: RunDiagnostics): Promise<void>;
 }
@@ -275,7 +276,7 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
 
     identityCheck = checkReportPerson(
       { patientName: validation.patientName, patientDateOfBirth: validation.patientDateOfBirth },
-      await db.getAccountIdentity(userId),
+      await db.getAccountIdentity(userId, doc.id),
     );
     if (identityCheck === 'mismatch') {
       throw new EngineError('identity_mismatch', 'identity_mismatch', USER_MESSAGES.identity);

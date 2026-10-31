@@ -39,6 +39,10 @@ echo "▸ Running family access test (invites, approval, revocation, granted rea
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/family_access_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 
+echo "▸ Running family uploads test (a relative's reports: person, facts, original file, identity check)"
+PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/family_uploads_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
     echo "▸ Applying PROPOSED $(basename "$migration")"
