@@ -35,6 +35,10 @@ for migration in "$SUPABASE_DIR"/migrations/*.sql; do
   "${PSQL[@]}" -f "$migration"
 done
 
+echo "▸ Running family access test (invites, approval, revocation, granted reads, rate limit)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/family_access_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+
 if $WITH_PROPOSED; then
   for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
     echo "▸ Applying PROPOSED $(basename "$migration")"
