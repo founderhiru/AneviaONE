@@ -1,0 +1,190 @@
+/* ==========================================================================
+   Motion — everything here is CSS, opacity / transform only, and pauses off screen
+   (MotionGate). With reduced motion the first screen and the finished timeline show, still.
+   ========================================================================== */
+[data-motion='paused'] *,
+[data-motion='paused'] *::before,
+[data-motion='paused'] *::after { animation-play-state: paused !important; }
+
+/* ---------- Hero background: two slow colour fields and a faint dotted grid ---------- */
+.hero::before,
+.hero::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  width: min(760px, 70vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.55;
+}
+.hero::before { left: -14%; top: -30%; background: radial-gradient(closest-side, rgba(17, 168, 200, 0.2), rgba(17, 168, 200, 0)); }
+.hero::after { right: -16%; bottom: -34%; background: radial-gradient(closest-side, rgba(46, 109, 180, 0.2), rgba(46, 109, 180, 0)); }
+.hero__grid { z-index: 1; }
+.hero__dots {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(8, 43, 87, 0.13) 1.1px, transparent 1.3px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(60% 65% at 72% 48%, #000, transparent);
+  mask-image: radial-gradient(60% 65% at 72% 48%, #000, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes hero-drift { to { transform: translate(7%, 5%) scale(1.12); } }
+  .hero::before { animation: hero-drift 26s ease-in-out infinite alternate; }
+  .hero::after { animation: hero-drift 34s ease-in-out infinite alternate-reverse; }
+}
+
+/* ---------- Hero phone: the four main screens in turn ---------- */
+.cycle { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.cycle__stack { position: relative; flex: 1; min-height: 0; }
+.cycle__layer { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; }
+.cycle__layer > .app { height: 100%; }
+.cycle__layer--0 { opacity: 1; }
+.cycle__dotsgate { position: absolute; left: 0; right: 0; top: calc(100% + 8px); }
+.cycle__dots {
+  position: static;
+  display: flex;
+  justify-content: center;
+  gap: 2.4cqw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cycle__dot { position: relative; display: block; width: 2.2cqw; height: 2.2cqw; border-radius: 99px; background: rgba(8, 43, 87, 0.18); overflow: hidden; }
+.cycle__dot > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cycle__dot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--teal-500); opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cyc0 { 0%,23.5%{opacity:1}26.5%,96.5%{opacity:0}100%{opacity:1} }
+  .cycle__layer--0 { animation: cyc0 20s linear infinite both; }
+  .cycle__dot--0::after { animation: cyc0 20s linear infinite both; }
+  @keyframes cyc1 { 0%,23.5%{opacity:0}26.5%,48.5%{opacity:1}51.5%,100%{opacity:0} }
+  .cycle__layer--1 { animation: cyc1 20s linear infinite both; }
+  .cycle__dot--1::after { animation: cyc1 20s linear infinite both; }
+  @keyframes cyc2 { 0%,48.5%{opacity:0}51.5%,73.5%{opacity:1}76.5%,100%{opacity:0} }
+  .cycle__layer--2 { animation: cyc2 20s linear infinite both; }
+  .cycle__dot--2::after { animation: cyc2 20s linear infinite both; }
+  @keyframes cyc3 { 0%,73.5%{opacity:0}76.5%,96.5%{opacity:1}100%{opacity:0} }
+  .cycle__layer--3 { animation: cyc3 20s linear infinite both; }
+  .cycle__dot--3::after { animation: cyc3 20s linear infinite both; }
+  .cycle__dot--0::after { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cycle__layer:not(.cycle__layer--0) { display: none; }
+  .cycle__dotsgate { display: none; }
+}
+
+/* ---------- From report to history ---------- */
+.flow { background: var(--ivory); }
+.flow__grid { display: grid; gap: clamp(28px, 5vw, 64px); align-items: center; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .flow__grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
+.flow__copy .lede { max-width: 46ch; }
+.flow__steps { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 18px; }
+.flow__steps li { display: flex; gap: 14px; align-items: flex-start; }
+.flow__steps li > span:last-child { display: grid; gap: 2px; }
+.flow__steps b { color: var(--navy-800); font-size: 1.02rem; letter-spacing: -0.01em; }
+.flow__steps li > span:last-child > span { color: var(--ink-500); font-size: 0.95rem; line-height: 1.45; }
+.flow__num { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--navy-800); color: #fff; font-weight: 700; font-size: 0.9rem; }
+
+.flow__stagebox { min-width: 0; }
+.flow__stage { container-type: inline-size; width: 100%; max-width: 640px; margin-inline: auto; background: var(--white); border: 1px solid var(--line-soft); border-radius: var(--r-lg); box-shadow: var(--sh-md, 0 10px 30px rgba(8, 43, 87, 0.08)); overflow: hidden; }
+.flow__canvas { position: relative; font-size: calc(100cqw / 56); width: 56em; height: 40em; background: radial-gradient(60% 50% at 80% 90%, rgba(17, 168, 200, 0.07), transparent), var(--white); }
+.flow__rail { position: absolute; left: 3em; right: 3em; top: 31.8em; height: 0.2em; border-radius: 1em; background: var(--line); }
+.flow__lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.flow__seg { fill: none; stroke: url(#flow-grad); stroke-width: 0.32; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.flow__sheet {
+  position: absolute; left: 0; top: 1em; width: 10.4em; height: 13.4em; padding: 0.9em;
+  background: var(--white); border: 1px solid var(--line); border-radius: 1.1em;
+  box-shadow: 0 1em 2.4em rgba(8, 43, 87, 0.14); opacity: 0; will-change: transform, opacity;
+}
+.flow__sheet b { display: block; font-size: 1.15em; color: var(--navy-800); margin-bottom: 0.7em; }
+.flow__sheet i { display: block; height: 0.5em; border-radius: 0.3em; background: var(--line); margin: 0.5em 0; width: 90%; }
+.flow__sheet i.s { width: 60%; }
+.flow__sheet p { position: relative; margin: 0.9em -0.4em; padding: 0.5em 0.6em; display: grid; font-size: 1em; color: var(--ink-500); line-height: 1.25; }
+.flow__sheet em { font-style: normal; font-weight: 700; font-size: 1.6em; color: var(--ink-900); }
+.flow__sheet .rg { font-size: 0.85em; }
+.flow__ring { position: absolute; inset: -0.2em; border: 0.22em solid var(--teal-500); border-radius: 0.8em; opacity: 0; }
+.flow__dot { position: absolute; width: 1.6em; height: 1.6em; margin: -0.8em 0 0 -0.8em; border-radius: 50%; background: var(--blue-600); border: 0.3em solid var(--white); box-shadow: 0 0 0 0.2em var(--blue-600); }
+.flow__label { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+.flow__label b { display: block; font-size: 1.5em; color: var(--ink-900); }
+.flow__label span { font-size: 1.15em; color: var(--ink-500); }
+.flow__caption { position: absolute; left: 3em; top: 36.4em; margin: 0; font-size: 1.15em; color: var(--ink-500); }
+/* The source reports stay on the shelf; a copy of each lifts off and its result lands on the timeline. */
+.flow__page {
+  position: absolute; top: 1em; width: 10.4em; height: 13.4em; padding: 0.9em;
+  background: var(--ivory); border: 1px solid var(--line); border-radius: 1.1em; opacity: 0.8;
+}
+.flow__page b { display: block; font-size: 1.1em; color: var(--ink-500); margin-bottom: 0.7em; }
+.flow__page i { display: block; height: 0.5em; border-radius: 0.3em; background: var(--line); margin: 0.5em 0; width: 90%; }
+.flow__page i.s { width: 60%; }
+.flow__page p { margin: 0.9em 0; display: grid; color: var(--ink-500); font-size: 1em; }
+.flow__page em { font-style: normal; font-weight: 700; font-size: 1.5em; color: var(--ink-500); }
+.flow__page small { position: absolute; left: 0.9em; bottom: 0.7em; font-size: 0.95em; color: var(--ink-500); }
+/* Without motion (or before it runs): the finished timeline, still. */
+.flow__sheet { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .flow__sheet { display: block; }
+  .flow__dot, .flow__label { opacity: 0; }
+  .flow__seg { opacity: 0; stroke-dashoffset: 1; }
+  @keyframes fsheet0 {
+    0%,4% { opacity:0; transform: translate(0em,0.6em) scale(1); }
+    7%,17% { opacity:1; transform: translate(0em,0em) scale(1.03); }
+    22% { opacity:0.9; transform: translate(0em,20.0em) scale(0.12); }
+    23%,100% { opacity:0; transform: translate(0em,20.0em) scale(0.08); }
+  }
+  @keyframes fring0 { 0%,10% { opacity:0; transform:scale(.7); } 12%,17% { opacity:1; transform:scale(1); } 19%,100% { opacity:0; transform:scale(1); } }
+  @keyframes fdot0 { 0%,20% { opacity:0; transform:scale(0); } 23% { opacity:1; transform:scale(1.25); } 25%,94% { opacity:1; transform:scale(1); } 98%,100% { opacity:0; transform:scale(1); } }
+  @keyframes flabel0 { 0%,22% { opacity:0; transform:translate(-50%,0.4em); } 26%,94% { opacity:1; transform:translate(-50%,0); } 98%,100% { opacity:0; transform:translate(-50%,0); } }
+  .flow__sheet--0 { animation: fsheet0 12s linear infinite both; }
+  .flow__ring--0 { animation: fring0 12s linear infinite both; }
+  .flow__dot--0 { animation: fdot0 12s linear infinite both; }
+  .flow__label--0 { animation: flabel0 12s linear infinite both; }
+  @keyframes fsheet1 {
+    0%,22% { opacity:0; transform: translate(0em,0.6em) scale(1); }
+    25%,35% { opacity:1; transform: translate(0em,0em) scale(1.03); }
+    40% { opacity:0.9; transform: translate(0em,18.2em) scale(0.12); }
+    41%,100% { opacity:0; transform: translate(0em,18.2em) scale(0.08); }
+  }
+  @keyframes fring1 { 0%,28% { opacity:0; transform:scale(.7); } 30%,35% { opacity:1; transform:scale(1); } 37%,100% { opacity:0; transform:scale(1); } }
+  @keyframes fdot1 { 0%,38% { opacity:0; transform:scale(0); } 41% { opacity:1; transform:scale(1.25); } 43%,94% { opacity:1; transform:scale(1); } 98%,100% { opacity:0; transform:scale(1); } }
+  @keyframes flabel1 { 0%,40% { opacity:0; transform:translate(-50%,0.4em); } 44%,94% { opacity:1; transform:translate(-50%,0); } 98%,100% { opacity:0; transform:translate(-50%,0); } }
+  .flow__sheet--1 { animation: fsheet1 12s linear infinite both; }
+  .flow__ring--1 { animation: fring1 12s linear infinite both; }
+  .flow__dot--1 { animation: fdot1 12s linear infinite both; }
+  .flow__label--1 { animation: flabel1 12s linear infinite both; }
+  @keyframes fseg1 { 0%,38% { opacity:1; stroke-dashoffset:1; } 44%,94% { opacity:1; stroke-dashoffset:0; } 98%,100% { opacity:0; stroke-dashoffset:0; } }
+  .flow__seg--1 { animation: fseg1 12s linear infinite both; }
+  @keyframes fsheet2 {
+    0%,40% { opacity:0; transform: translate(0em,0.6em) scale(1); }
+    43%,53% { opacity:1; transform: translate(0em,0em) scale(1.03); }
+    58% { opacity:0.9; transform: translate(0em,16.4em) scale(0.12); }
+    59%,100% { opacity:0; transform: translate(0em,16.4em) scale(0.08); }
+  }
+  @keyframes fring2 { 0%,46% { opacity:0; transform:scale(.7); } 48%,53% { opacity:1; transform:scale(1); } 55%,100% { opacity:0; transform:scale(1); } }
+  @keyframes fdot2 { 0%,56% { opacity:0; transform:scale(0); } 59% { opacity:1; transform:scale(1.25); } 61%,94% { opacity:1; transform:scale(1); } 98%,100% { opacity:0; transform:scale(1); } }
+  @keyframes flabel2 { 0%,58% { opacity:0; transform:translate(-50%,0.4em); } 62%,94% { opacity:1; transform:translate(-50%,0); } 98%,100% { opacity:0; transform:translate(-50%,0); } }
+  .flow__sheet--2 { animation: fsheet2 12s linear infinite both; }
+  .flow__ring--2 { animation: fring2 12s linear infinite both; }
+  .flow__dot--2 { animation: fdot2 12s linear infinite both; }
+  .flow__label--2 { animation: flabel2 12s linear infinite both; }
+  @keyframes fseg2 { 0%,56% { opacity:1; stroke-dashoffset:1; } 62%,94% { opacity:1; stroke-dashoffset:0; } 98%,100% { opacity:0; stroke-dashoffset:0; } }
+  .flow__seg--2 { animation: fseg2 12s linear infinite both; }
+  @keyframes fsheet3 {
+    0%,58% { opacity:0; transform: translate(0em,0.6em) scale(1); }
+    61%,71% { opacity:1; transform: translate(0em,0em) scale(1.03); }
+    76% { opacity:0.9; transform: translate(0em,13.6em) scale(0.12); }
+    77%,100% { opacity:0; transform: translate(0em,13.6em) scale(0.08); }
+  }
+  @keyframes fring3 { 0%,64% { opacity:0; transform:scale(.7); } 66%,71% { opacity:1; transform:scale(1); } 73%,100% { opacity:0; transform:scale(1); } }
+  @keyframes fdot3 { 0%,74% { opacity:0; transform:scale(0); } 77% { opacity:1; transform:scale(1.25); } 79%,94% { opacity:1; transform:scale(1); } 98%,100% { opacity:0; transform:scale(1); } }
+  @keyframes flabel3 { 0%,76% { opacity:0; transform:translate(-50%,0.4em); } 80%,94% { opacity:1; transform:translate(-50%,0); } 98%,100% { opacity:0; transform:translate(-50%,0); } }
+  .flow__sheet--3 { animation: fsheet3 12s linear infinite both; }
+  .flow__ring--3 { animation: fring3 12s linear infinite both; }
+  .flow__dot--3 { animation: fdot3 12s linear infinite both; }
+  .flow__label--3 { animation: flabel3 12s linear infinite both; }
+  @keyframes fseg3 { 0%,74% { opacity:1; stroke-dashoffset:1; } 80%,94% { opacity:1; stroke-dashoffset:0; } 98%,100% { opacity:0; stroke-dashoffset:0; } }
+  .flow__seg--3 { animation: fseg3 12s linear infinite both; }
+}

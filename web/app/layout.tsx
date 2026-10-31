@@ -11,6 +11,7 @@ import './styles/header.css';
 import './styles/footer.css';
 import './styles/home.css';
 import './styles/pages.css';
+import './styles/motion.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
