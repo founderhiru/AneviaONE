@@ -151,6 +151,21 @@ begin
   perform pg_temp.act_as(d);
   perform pg_temp.expect_true('a stranger still sees nothing of A''s reports', not exists (select 1 from public.documents where id = doc));
 
+  -- ------------------------------------------------ current_* views --------
+  -- (the viewer's grant is revoked above only later; here b is still approved)
+  perform pg_temp.act_as(a);
+  insert into public.observations (origin, name_as_written, value_as_written) values ('user_entered', 'Weight', '72');
+  perform pg_temp.expect_true('current_observations exposes subject_id for the owner',
+    (select count(*) from public.current_observations where subject_id = self_a) = 1);
+  perform pg_temp.expect_true('filtering by another person returns nothing',
+    (select count(*) from public.current_observations where subject_id = kid) = 0);
+  perform pg_temp.act_as(b);
+  perform pg_temp.expect_true('an approved viewer can read the current facts, scoped to that person',
+    (select count(*) from public.current_observations where subject_id = self_a) = 1);
+  perform pg_temp.act_as(d);
+  perform pg_temp.expect_true('a stranger sees none of it through the views',
+    (select count(*) from public.current_observations) = 0);
+
   -- ------------------------------------------------ expiry and revoke ------
   perform pg_temp.as_admin();
   update public.subject_access set expires_at = now() - interval '1 minute' where id = g;

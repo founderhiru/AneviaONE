@@ -57,6 +57,31 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- The current_* views were created with `select *` before subject_id existed,
+-- so they do not expose it. Recreate them (same definition, same grants) so the
+-- app can ask for ONE person's current facts. They stay security_invoker, so
+-- they follow the table policies above.
+-- -----------------------------------------------------------------------------
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['encounters', 'observations', 'conditions', 'medications', 'procedures', 'allergies'] loop
+    execute format('drop view public.%I', 'current_' || t);
+    execute format($ddl$
+      create view public.%1$I with (security_invoker = true) as
+        select * from public.%2$I
+         where superseded_at is null
+           and review_status <> 'rejected'
+           and (confidence_gate = 'passed' or review_status = 'confirmed')
+    $ddl$, 'current_' || t, t);
+    execute format('revoke all on public.%1$I from anon, authenticated', 'current_' || t);
+    execute format('grant select on public.%1$I to authenticated', 'current_' || t);
+  end loop;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- Invites: one-time codes, stored only as a hash. Never readable by the app.
 -- -----------------------------------------------------------------------------
 create table private.access_invites (
