@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { EmptyState, ErrorState, FadeInView, LoadingState, ScreenContainer, TimelineEvent } from '../../components';
+import { EmptyState, ErrorState, FadeInView, LoadingState, ScreenContainer, TimelineEvent, PersonBar } from '../../components';
 import { useTheme } from '../../design/theme';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { healthService } from '../../services/health/healthService';
@@ -65,6 +65,7 @@ export default function TimelineScreen() {
 
   return (
     <ScreenContainer>
+      <PersonBar />
       <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]} accessibilityRole="header">
         Health Timeline
       </Text>

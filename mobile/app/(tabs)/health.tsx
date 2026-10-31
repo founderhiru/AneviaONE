@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Card, ErrorState, LoadingState, ScreenContainer, SectionHeader, StatusBadge, TrendCard } from '../../components';
+import { Card, ErrorState, LoadingState, ScreenContainer, SectionHeader, StatusBadge, TrendCard, PersonBar } from '../../components';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
@@ -83,6 +83,7 @@ export default function HealthScreen() {
 
   return (
     <ScreenContainer>
+      <PersonBar />
       <Text style={[theme.typography.displayMedium, { color: theme.colors.textPrimary }]} accessibilityRole="header">
         Health
       </Text>

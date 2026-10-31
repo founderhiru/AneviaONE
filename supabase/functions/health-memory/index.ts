@@ -11,7 +11,7 @@ import { authenticateJwt, userClient } from '../_shared/user-client.ts';
 Deno.serve(
   createHealthMemoryHandler({
     authenticate: authenticateJwt,
-    sourceFor: (jwt) => supabaseRecordSource(userClient(jwt)),
+    sourceFor: (jwt, subjectId) => supabaseRecordSource(userClient(jwt), subjectId),
     log: consoleLogger,
   }),
 );

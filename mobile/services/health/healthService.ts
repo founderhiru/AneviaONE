@@ -26,6 +26,7 @@ import {
   toVaccination,
 } from './healthMemoryApi';
 import { documentsService } from '../documents/documentsService';
+import { getActiveSubjectId } from '../people/activeSubject';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 
@@ -104,6 +105,8 @@ async function loadObservations(filter: { documentId?: string }): Promise<Record
   let query = filter.documentId
     ? client.from('observations').select(OBSERVATION_COLUMNS).eq('document_id', filter.documentId).is('superseded_at', null).neq('review_status', 'rejected')
     : client.from('current_observations').select(OBSERVATION_COLUMNS);
+  const subjectId = getActiveSubjectId();
+  if (subjectId) query = query.eq('subject_id', subjectId);
   query = query.order('effective_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(500);
   const { data, error } = await query;
   if (error) throw toServiceError(error, LOAD_ERROR);

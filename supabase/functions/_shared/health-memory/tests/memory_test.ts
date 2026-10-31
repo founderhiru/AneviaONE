@@ -207,3 +207,24 @@ Deno.test('timeline labels: one classified area names the event; unclassified or
   assertEquals(label('other'), NEUTRAL_REPORT_LABEL);
   assertEquals(label(null), NEUTRAL_REPORT_LABEL);
 });
+
+Deno.test('handler: passes a valid subject_id to the record source and refuses a malformed one', async () => {
+  const seen: (string | undefined)[] = [];
+  const handler = createHealthMemoryHandler({
+    authenticate: () => Promise.resolve(USER),
+    sourceFor: (_jwt, subjectId) => {
+      seen.push(subjectId);
+      return MemorySource.seeded(USER);
+    },
+    log: silent,
+  });
+  const call = (body: string) =>
+    handler(new Request('http://local/health-memory', { method: 'POST', headers: { authorization: 'Bearer t' }, body }));
+  const id = '3f1c2d4e-5a6b-4c7d-8e9f-0a1b2c3d4e5f';
+  assertEquals((await call(JSON.stringify({ subject_id: id }))).status, 200);
+  assertEquals((await call('{}')).status, 200);
+  assertEquals((await call('')).status, 200);
+  assertEquals((await call(JSON.stringify({ subject_id: "x' or 1=1" }))).status, 400);
+  assertEquals((await call(JSON.stringify({ subject_id: 42 }))).status, 400);
+  assertEquals(seen, [id, undefined, undefined]);
+});

@@ -13,6 +13,7 @@ import {
   READING_COPY,
   readingSteps,
   ScreenContainer,
+  PersonBar,
 } from '../../components';
 import { HomeSection } from '../../components/home/HomeDashboard';
 import { DocumentRows, FilterChips, ReviewCard, SnapshotByReport, SummaryTiles, WhatChangedHero } from '../../components/home/WhatChangedUI';
@@ -225,6 +226,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      <PersonBar />
       {header}
 
       <View testID="home-greeting" style={{ gap: 2 }}>

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { useTheme } from '../../design/theme';
+import { peopleService } from '../../services/people/peopleService';
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   home: 'home',
@@ -17,6 +18,11 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
  * do not add more here. */
 export default function TabsLayout() {
   const theme = useTheme();
+
+  // Who is on this account (yourself, relatives, people who shared theirs).
+  useEffect(() => {
+    peopleService.refresh().catch(() => undefined);
+  }, []);
 
   return (
     <Tabs

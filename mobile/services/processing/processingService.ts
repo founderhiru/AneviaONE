@@ -185,10 +185,15 @@ export const supabaseProcessingService: ProcessingService = {
 
   async listAutoReads() {
     const client = requireClient();
-    // RLS: only the signed-in person's rows. Completed documents aren't even asked for.
+    // Only reports this account owns: a report shared by someone else can be read,
+    // but reading it is never started from here. Completed documents aren't even asked for.
+    const { data: session } = await client.auth.getSession();
+    const me = session.session?.user.id;
+    if (!me) return [];
     const { data: docs, error } = await client
       .from('documents')
       .select('id, status, failure_kind, processing_attempts')
+      .eq('user_id', me)
       .in('status', ['uploaded', 'failed']);
     if (error) throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t check your reports. Please try again.', retryable: true });
     return selectAutoReads((docs ?? []) as AutoReadDocumentRow[]);
