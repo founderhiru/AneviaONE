@@ -3,7 +3,8 @@ import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
-import { EmptyState, ErrorState, LoadingState, ScreenContainer, ScreenHeader } from '../../components';
+import { EmptyState, ErrorState, LoadingState, ScreenContainer, ScreenHeader, PersonBar } from '../../components';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { StoredDocumentCard } from '../../components/StoredDocumentCard';
 import { useTheme } from '../../design/theme';
 import { documentsService } from '../../services/documents/documentsService';
@@ -40,10 +41,14 @@ export default function MyDocumentsScreen() {
     }, [load])
   );
 
+  // Choosing another person reloads this list.
+  useHealthMemoryUpdates(load);
+
   const shown = verifyOnly ? (documents ?? []).filter(needsReview) : (documents ?? []);
 
   return (
     <ScreenContainer>
+      <PersonBar />
       <ScreenHeader title={verifyOnly ? 'Reports to verify' : 'My documents'} />
       {verifyOnly ? (
         <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]} testID="verify-intro">

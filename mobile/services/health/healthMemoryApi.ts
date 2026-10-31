@@ -1,4 +1,5 @@
 import type { Allergy, Condition, HealthChange, HealthEvent, Medication, Procedure, Trend, TrendDirection, Vaccination } from '../../types';
+import { getActiveSubjectId, onActiveSubjectChanged } from '../people/activeSubject';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 
@@ -62,7 +63,7 @@ export type HealthSnapshot = {
 };
 
 const CACHE_MS = 30_000;
-let cache: { at: number; promise: Promise<HealthSnapshot> } | null = null;
+let cache: { at: number; subjectId: string | null; promise: Promise<HealthSnapshot> } | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -72,6 +73,9 @@ export function invalidateHealthMemory() {
   listeners.forEach((listener) => listener());
 }
 
+// Choosing another person drops the snapshot and tells every screen to reload.
+onActiveSubjectChanged(() => invalidateHealthMemory());
+
 /** Home, Health, Timeline, Trends and What Changed reload when this fires. */
 export function onHealthMemoryChanged(listener: () => void): () => void {
   listeners.add(listener);
@@ -80,18 +84,20 @@ export function onHealthMemoryChanged(listener: () => void): () => void {
   };
 }
 
-async function fetchSnapshot(): Promise<HealthSnapshot> {
+async function fetchSnapshot(subjectId: string | null): Promise<HealthSnapshot> {
   const client = getSupabaseClient();
   if (!client) throw new ServiceError('not_configured', 'Your Health Memory isn’t available right now.');
-  const { data, error } = await client.functions.invoke('health-memory', { body: {} });
+  const { data, error } = await client.functions.invoke('health-memory', { body: subjectId ? { subject_id: subjectId } : {} });
   if (error || !data) throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t load your Health Memory. Please try again.', retryable: true });
   return data as HealthSnapshot;
 }
 
 export function getSnapshot(): Promise<HealthSnapshot> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.promise;
-  const promise = fetchSnapshot();
-  cache = { at: Date.now(), promise };
+  // The snapshot belongs to one person; never serve another person's from the cache.
+  const subjectId = getActiveSubjectId();
+  if (cache && cache.subjectId === subjectId && Date.now() - cache.at < CACHE_MS) return cache.promise;
+  const promise = fetchSnapshot(subjectId);
+  cache = { at: Date.now(), subjectId, promise };
   promise.catch(() => {
     if (cache?.promise === promise) cache = null;
   });

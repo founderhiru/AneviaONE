@@ -3,7 +3,7 @@ import { Pressable, Share, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Print from 'expo-print';
 
-import { Button, Card, EmptyState, ErrorState, LoadingState, ScreenContainer } from '../../components';
+import { Button, Card, EmptyState, ErrorState, LoadingState, PersonBar, ScreenContainer } from '../../components';
 import { useTheme } from '../../design/theme';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { documentsService } from '../../services/documents/documentsService';
@@ -11,6 +11,7 @@ import { buildDoctorBrief, briefDate, type BriefResult, type DoctorBrief } from 
 import { doctorBriefHtml } from '../../services/doctor/briefHtml';
 import { healthService } from '../../services/health/healthService';
 import { profileService } from '../../services/profile/profileService';
+import { getActivePerson, isOwnRecord } from '../../services/people/peopleService';
 
 /**
  * For Doctor: a one-page summary of the person's own trusted records, for a visit.
@@ -37,7 +38,10 @@ export default function DoctorScreen() {
         healthService.getAllergies(),
         profileService.getMyIdentity().catch(() => ({ fullName: null, dateOfBirth: null })),
       ]);
-      setBrief(buildDoctorBrief({ person: { name: identity.fullName, dateOfBirth: identity.dateOfBirth }, results, documents, medications, conditions, allergies }));
+      // For someone else's records the summary names THAT person, never the signed-in account.
+      const viewed = getActivePerson();
+      const person = isOwnRecord(viewed) || !viewed ? { name: identity.fullName, dateOfBirth: identity.dateOfBirth } : { name: viewed.name, dateOfBirth: viewed.dateOfBirth };
+      setBrief(buildDoctorBrief({ person, results, documents, medications, conditions, allergies }));
     } catch {
       setError(true);
     }
@@ -107,6 +111,7 @@ export default function DoctorScreen() {
 
   return (
     <ScreenContainer>
+      <PersonBar />
       <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your Doctor</Text>
       <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>Built only from your own reports, ready to show or send before a visit.</Text>
 

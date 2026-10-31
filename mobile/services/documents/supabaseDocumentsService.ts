@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { DocumentStatus, PickedFile, StoredDocument, StoredDocumentSource, StoredDocumentType } from '../../types';
 import { invalidateHealthMemory } from '../health/healthMemoryApi';
+import { getActiveSubjectId } from '../people/activeSubject';
+import { getActivePerson, isOwnRecord } from '../people/peopleService';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { isListedStatus, hasStoredOriginal } from './documentStatus';
@@ -155,11 +157,11 @@ export const supabaseDocumentsService: DocumentsService = {
   async listDocuments() {
     const client = requireClient();
     await requireUserId(client);
-    const { data, error } = await client
-      .from('documents')
-      .select(DOCUMENT_COLUMNS)
-      .neq('status', 'pending_upload')
-      .order('created_at', { ascending: false });
+    // Only the person being viewed: a relative's reports never mix into yours.
+    const subjectId = getActiveSubjectId();
+    let query = client.from('documents').select(DOCUMENT_COLUMNS).neq('status', 'pending_upload');
+    if (subjectId) query = query.eq('subject_id', subjectId);
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) {
       throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t load your documents. Please try again.', retryable: true });
     }
@@ -182,6 +184,11 @@ export const supabaseDocumentsService: DocumentsService = {
   },
 
   async uploadDocument(file: PickedFile, onStage) {
+    // A report is always stored on the signed-in person's own record. Never let it
+    // land there silently while someone else's records are on screen.
+    if (!isOwnRecord(getActivePerson())) {
+      throw new ServiceError('not_available', 'Reports can only be added to your own records. Switch back to your own records first.');
+    }
     // 1. validate
     onStage?.('validating');
     const picked = validatePickedFile(file);

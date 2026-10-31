@@ -3,7 +3,9 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
-import { Avatar, Card, LoadingState, ScreenContainer } from '../../components';
+import { Avatar, Card, LoadingState, PersonBar, ScreenContainer } from '../../components';
+import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
+import { usePeople } from '../../hooks/usePeople';
 import { PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
@@ -88,12 +90,21 @@ export default function MeScreen() {
     }, []),
   );
 
-  useEffect(() => {
+  const { people } = usePeople();
+  const loadProfile = useCallback(() => {
     healthService
       .getHealthProfile()
-      .then(setProfile)
+      .then((p) => {
+        setProfileError(false);
+        setProfile(p);
+      })
       .catch(() => setProfileError(true));
   }, []);
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+  // The counts follow whose records are chosen.
+  useHealthMemoryUpdates(loadProfile);
 
   const displayIdentity =
     user?.linkedIdentities.find((i) => i.provider === 'mobile_otp')?.displayValue ??
@@ -102,6 +113,7 @@ export default function MeScreen() {
 
   return (
     <ScreenContainer>
+      <PersonBar />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
         <Avatar name={user?.fullName} />
         <View>
@@ -144,6 +156,8 @@ export default function MeScreen() {
       <RowList
         rows={[
           { label: 'My documents', onPress: () => router.push('/documents') },
+          // Only once this account has the family tables (nobody to manage before that).
+          ...(people.length > 0 ? [{ label: 'Family', detail: people.length > 1 ? `${people.length} people` : undefined, onPress: () => router.push('/family'), testID: 'me-family' }] : []),
         ]}
       />
 

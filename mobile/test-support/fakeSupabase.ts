@@ -33,8 +33,20 @@ export function createFakeSupabase(options: { userId?: string | null } = {}) {
     getPublicUrl: jest.fn(),
   };
 
+  const rpcQueue: Response[] = [];
+  const rpcCalls: { name: string; args: unknown }[] = [];
+
   const client = {
     calls,
+    rpcCalls,
+    /** Queue the response for the next `rpc` call. */
+    respondRpc(response: Response) {
+      rpcQueue.push(response);
+    },
+    rpc: jest.fn(async (name: string, args?: unknown): Promise<Response> => {
+      rpcCalls.push({ name, args });
+      return rpcQueue.shift() ?? { data: null, error: null };
+    }),
     storageBucket,
     storage: { from: jest.fn((_bucket: string) => storageBucket) },
     functions: { invoke: jest.fn(async (_name: string, _options?: unknown): Promise<Response> => ({ data: null, error: null })) },

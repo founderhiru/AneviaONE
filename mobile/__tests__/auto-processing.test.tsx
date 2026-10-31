@@ -29,7 +29,7 @@ import {
   toProcessingState,
 } from '../services/processing/processingService';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { createFakeSupabase, pdfBytes } from '../test-support/fakeSupabase';
+import { createFakeSupabase, pdfBytes, TEST_USER_ID } from '../test-support/fakeSupabase';
 import type { StoredDocument } from '../types';
 import { renderWithAuth } from './testUtils';
 
@@ -337,13 +337,14 @@ describe('4. completed documents are never read again automatically', () => {
     expect(fake.functions.invoke).not.toHaveBeenCalled();
   });
 
-  it('asks only for the signed-in person’s unread or consent-blocked rows (RLS) — no user id, no run history', async () => {
+  it('asks only for reports this account owns that are unread or consent-blocked — never a shared report, no run history', async () => {
     const fake = createFakeSupabase();
     (getSupabaseClient as jest.Mock).mockReturnValue(fake);
     fake.respond('select', { data: [doc(PDF_ID, 'uploaded')], error: null });
     await expect(supabaseProcessingService.listAutoReads()).resolves.toEqual([{ documentId: PDF_ID }]);
-    expect(JSON.stringify(fake.calls)).not.toMatch(/user_id/);
-    expect(fake.calls.map((c) => [c.table, c.filters])).toEqual([['documents', [['in', 'status', ['uploaded', 'failed']]]]]);
+    expect(fake.calls.map((c) => [c.table, c.filters])).toEqual([
+      ['documents', [['eq', 'user_id', TEST_USER_ID], ['in', 'status', ['uploaded', 'failed']]]],
+    ]);
   });
 
   it('opening an already-read report does not reload Health Memory or read anything', async () => {

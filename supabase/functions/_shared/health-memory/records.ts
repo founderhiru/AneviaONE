@@ -234,13 +234,14 @@ export function compareRecords(a: TrustedRecord, b: TrustedRecord): number {
 
 /** Supabase implementation — `client` MUST be created with the caller's JWT (RLS applies). */
 // deno-lint-ignore no-explicit-any
-export function supabaseRecordSource(client: any): TrustedRecordSource {
+export function supabaseRecordSource(client: any, subjectId?: string): TrustedRecordSource {
   const fail = (op: string) => {
     throw new Error(`records_query_failed:${op}`);
   };
   return {
     async facts(view, columns, options) {
       let q = client.from(view).select(columns);
+      if (subjectId) q = q.eq('subject_id', subjectId);
       if (options.procedureKind) q = q.eq('procedure_kind', options.procedureKind);
       if (options.nameContains) q = q.ilike(options.nameColumn, `%${options.nameContains.replace(/[%_\\]/g, (c: string) => `\\${c}`)}%`);
       const { data, error } = await q.limit(2000);

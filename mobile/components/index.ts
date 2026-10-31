@@ -26,3 +26,4 @@ export * from './SuccessCheck';
 export * from './TextInput';
 export * from './TimelineEvent';
 export * from './TrendCard';
+export * from './people/PersonBar';
