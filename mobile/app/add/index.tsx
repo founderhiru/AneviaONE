@@ -8,6 +8,7 @@ import {
   Card,
   ErrorState,
   LoadingState,
+  PersonBar,
   ProcessingState,
   READING_COPY,
   ReadReportPanel,
@@ -20,6 +21,8 @@ import {
 import { BRAND } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
+import { usePeople } from '../../hooks/usePeople';
+import { canAddReports, isOwnRecord } from '../../services/people/peopleService';
 import { useReadReport } from '../../hooks/useReadReport';
 import { useSingleFlight } from '../../hooks/useSingleFlight';
 import {
@@ -88,6 +91,8 @@ export default function AddRecordScreen() {
   const [step, setStep] = useState<FlowStep>('choose');
   // The identity note is offered once, before the first upload, to someone
   // who hasn't added a name or date of birth. It never blocks adding a record.
+  const { active: viewed } = usePeople();
+  const forRelative = Boolean(viewed) && !isOwnRecord(viewed);
   const [identityHint, setIdentityHint] = useState<'unknown' | 'show' | 'done'>('unknown');
   const checkingIdentity = Boolean(user && !user.identityUploadPromptSeen) && identityHint === 'unknown';
   const [stage, setStage] = useState<UploadStage>('validating');
@@ -209,7 +214,7 @@ export default function AddRecordScreen() {
     );
   }
 
-  if (step === 'choose' && identityHint === 'show') {
+  if (step === 'choose' && identityHint === 'show' && !forRelative) {
     return (
       <ScreenContainer scroll={false} contentStyle={{ justifyContent: 'space-between' }}>
         <ScreenHeader title="Add Health Record" />
@@ -320,11 +325,26 @@ export default function AddRecordScreen() {
     );
   }
 
+  if (!canAddReports(viewed)) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="Add Health Record" />
+        <PersonBar />
+        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]} testID="add-view-only">
+          {viewed?.name}&rsquo;s records are shared with you to view only. Switch to your own records, or to a relative you manage, to add a report.
+        </Text>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer>
       <ScreenHeader title="Add Health Record" />
-      <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>
-        Add a report, prescription or scan. It&rsquo;s stored privately in your Health Memory.
+      <PersonBar />
+      <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]} testID="add-record-target">
+        {forRelative
+          ? `This report will be added to ${viewed?.name}\u2019s records, not yours. It\u2019s stored privately.`
+          : 'Add a report, prescription or scan. It\u2019s stored privately in your Health Memory.'}
       </Text>
       <View style={{ gap: theme.spacing.sm }} testID="add-record-options">
         {CAPTURE_METHODS.map(({ method, label, description }) => (

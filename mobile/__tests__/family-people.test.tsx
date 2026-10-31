@@ -6,8 +6,10 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
+import AddScreen from '../app/add';
 import DoctorScreen from '../app/(tabs)/doctor';
 import FamilyScreen from '../app/family';
+import { readLocalFile } from '../services/documents/fileAccess';
 import { documentsService } from '../services/documents/documentsService';
 import { healthService } from '../services/health/healthService';
 import { profileService } from '../services/profile/profileService';
@@ -19,10 +21,11 @@ import { setActiveSubjectId } from '../services/people/activeSubject';
 import { toIsoDate } from '../services/people/dates';
 import { getActivePerson, peopleService as appPeopleService, productionPeopleService as peopleService, type PeopleService } from '../services/people/peopleService';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { createFakeSupabase, emptyHealthSnapshot, TEST_USER_ID, type FakeSupabase } from '../test-support/fakeSupabase';
+import { createFakeSupabase, emptyHealthSnapshot, pdfBytes, TEST_USER_ID, type FakeSupabase } from '../test-support/fakeSupabase';
 import { renderWithAuth } from './testUtils';
 
 jest.mock('../services/supabaseClient', () => ({ getSupabaseClient: jest.fn(), isSupabaseConfigured: true }));
+jest.mock('../services/documents/fileAccess', () => ({ readLocalFile: jest.fn() }));
 jest.mock('expo-router', () => ({ ...jest.requireActual('expo-router'), router: { push: jest.fn(), back: jest.fn() } }));
 
 const ME = '33333333-3333-4333-8333-333333333331';
@@ -128,14 +131,31 @@ describe('every read is limited to the person on screen', () => {
     expect(invoke).toHaveBeenCalledTimes(2);
   });
 
-  it('a report can only be added to my own record, never silently while viewing someone else', async () => {
+  it('a report is never added to a record that was only shared with me', async () => {
     await loadPeople();
-    peopleService.switchTo(DAD);
+    peopleService.switchTo(SHARED);
     supabase.calls.length = 0;
     await expect(
       supabaseDocumentsService.uploadDocument({ uri: 'file:///a.pdf', name: 'a.pdf', mimeType: 'application/pdf', size: 100 }),
     ).rejects.toMatchObject({ code: 'not_available' });
     expect(supabase.calls).toHaveLength(0);
+  });
+
+  it('a report added while viewing a relative I manage is filed under that relative; on my own record the person is left to the database', async () => {
+    (readLocalFile as jest.Mock).mockResolvedValue(pdfBytes());
+    const upload = async () => {
+      supabase.calls.length = 0;
+      supabase.respond('insert', { data: null, error: { message: 'stop here' } });
+      await supabaseDocumentsService
+        .uploadDocument({ uri: 'file:///a.pdf', name: 'a.pdf', mimeType: 'application/pdf', size: 100 })
+        .catch(() => undefined);
+      return supabase.calls.find((c) => c.table === 'documents' && c.op === 'insert')?.payload as Record<string, unknown>;
+    };
+    await loadPeople();
+    peopleService.switchTo(DAD);
+    expect(await upload()).toMatchObject({ subject_id: DAD });
+    peopleService.switchTo(ME);
+    expect(await upload()).not.toHaveProperty('subject_id');
   });
 });
 
@@ -239,5 +259,24 @@ describe('For Doctor names the person on screen', () => {
     expect(who).toHaveTextContent(/Born.*1952/);
     expect(who).not.toHaveTextContent(/1985/);
     expect(who).not.toHaveTextContent(/Asha/);
+  });
+});
+
+describe('Add Health Record', () => {
+  it('says plainly which record a report goes to, and offers nothing on a record shared with me', async () => {
+    await loadPeople();
+    peopleService.switchTo(DAD);
+    await renderWithAuth(<AddScreen />);
+    expect(await screen.findByText(/added to Dad’s records, not yours/)).toBeTruthy();
+    expect(screen.getByTestId('add-record-options')).toBeTruthy();
+  });
+
+  it('a record shared with me is view only: no way to add a report', async () => {
+    await loadPeople();
+    peopleService.switchTo(SHARED);
+    await renderWithAuth(<AddScreen />);
+    expect(await screen.findByTestId('add-view-only')).toBeTruthy();
+    expect(screen.getByText(/shared with you to view only/)).toBeTruthy();
+    expect(screen.queryByTestId('add-record-options')).toBeNull();
   });
 });

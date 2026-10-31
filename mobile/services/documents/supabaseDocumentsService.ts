@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DocumentStatus, PickedFile, StoredDocument, StoredDocumentSource, StoredDocumentType } from '../../types';
 import { invalidateHealthMemory } from '../health/healthMemoryApi';
 import { getActiveSubjectId } from '../people/activeSubject';
-import { getActivePerson, isOwnRecord } from '../people/peopleService';
+import { canAddReports, getActivePerson, isOwnRecord } from '../people/peopleService';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import { isListedStatus, hasStoredOriginal } from './documentStatus';
@@ -184,10 +184,11 @@ export const supabaseDocumentsService: DocumentsService = {
   },
 
   async uploadDocument(file: PickedFile, onStage) {
-    // A report is always stored on the signed-in person's own record. Never let it
-    // land there silently while someone else's records are on screen.
-    if (!isOwnRecord(getActivePerson())) {
-      throw new ServiceError('not_available', 'Reports can only be added to your own records. Switch back to your own records first.');
+    // A report goes to the person on screen: yourself, or a relative you manage. A record
+    // shared with you is view only, and the report must never land elsewhere silently.
+    const person = getActivePerson();
+    if (!canAddReports(person)) {
+      throw new ServiceError('not_available', 'Records shared with you are view only. Switch to your own records, or a relative you manage, to add a report.');
     }
     // 1. validate
     onStage?.('validating');
@@ -211,6 +212,8 @@ export const supabaseDocumentsService: DocumentsService = {
     const { data: reserved, error: reserveError } = await client
       .from('documents')
       .insert({
+        // Naming the person only for a relative; your own record is filled in by the database.
+        ...(person && !isOwnRecord(person) ? { subject_id: person.id } : {}),
         source: file.source ?? 'upload',
         original_filename: sanitizeFilename(file.name),
         mime_type: content.mimeType,

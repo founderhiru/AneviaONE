@@ -69,7 +69,9 @@ export interface PeopleService {
 let cached: Person[] = [];
 export const getCachedPeople = (): Person[] => cached;
 export const getActivePerson = (): Person | null => cached.find((p) => p.id === getActiveSubjectId()) ?? null;
-/** The signed-in person's own record: the only one reports can be added to from here. */
+/** Reports can be added to your own record and to relatives you manage; never to a record shared with you. */
+export const canAddReports = (p: Person | null): boolean => p === null || p.access === 'owner';
+/** The signed-in person's own record. */
 export const isOwnRecord = (p: Person | null): boolean => p === null || (p.relationship === 'self' && p.access === 'owner');
 
 export const productionPeopleService: PeopleService = {
