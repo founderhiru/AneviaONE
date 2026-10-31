@@ -227,8 +227,10 @@ export const FAQ_ENTRIES: FaqEntry[] = [
     id: 'family',
     category: 'health-records',
     question: 'Can I keep records for my family?',
-    answer: ['Not yet. Family Health — keeping track of parents, children and dependents — is planned.'],
-    status: 'planned',
+    answer: [
+      'Yes. Add a parent, child or other relative you look after, and keep their reports in their own records, never mixed with yours.',
+      'Adults with their own phone can invite you instead: they approve your request first and can remove your access at any time.',
+    ],
     webVisible: true,
     mobileVisible: false,
     sortOrder: 45,

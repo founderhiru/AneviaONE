@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Redirect } from 'expo-router';
 
 import { Button, Card, LoadingState, ScreenContainer, ScreenHeader, SecondaryButton, StatusBadge, TextInput } from '../../components';
+import { isDemoMode } from '../../config/appMode';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { whatsappService } from '../../services/whatsapp/whatsappService';
 import type { WhatsAppConnection } from '../../types';
 
-export default function WhatsAppScreen() {
+/** Parked: the connection is a preview with no service behind it, so a real build never shows it (not even through a deep link). */
+export default function WhatsAppRoute() {
+  if (!isDemoMode) return <Redirect href="/(tabs)/home" />;
+  return <WhatsAppPreview />;
+}
+
+function WhatsAppPreview() {
   const theme = useTheme();
   const { user } = useAuth();
   const [connection, setConnection] = useState<WhatsAppConnection | null>(null);
