@@ -37,25 +37,24 @@ export default function TabsLayout() {
         tabBarLabelStyle: theme.typography.labelSmall,
         tabBarIcon: ({ color, size }) =>
           route.name === 'doctor' ? (
-            // Raised red badge with a white plus, so the Doctor hand-over is easy to find.
+            // Red badge with a white plus, level with the other tabs, so the Doctor hand-over is easy to find.
             <View
               testID="doctor-tab-badge"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 13,
-                marginTop: -10,
+                width: 28,
+                height: 28,
+                borderRadius: 9,
                 backgroundColor: theme.colors.danger,
                 alignItems: 'center',
                 justifyContent: 'center',
                 shadowColor: '#000',
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                shadowOffset: { width: 0, height: 2 },
-                elevation: 4,
+                shadowOpacity: 0.15,
+                shadowRadius: 2,
+                shadowOffset: { width: 0, height: 1 },
+                elevation: 2,
               }}
             >
-              <Ionicons name="add" size={28} color="#FFFFFF" />
+              <Ionicons name="add" size={22} color="#FFFFFF" />
             </View>
           ) : (
             <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={size} color={color} />

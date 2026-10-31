@@ -254,8 +254,8 @@
 
 /* For Doctor tab: raised red badge with a white plus */
 .tabbar__item--doctor { color: var(--ink-500); }
-.tabbar__badge { display: grid; place-items: center; width: 2.5em; height: 2.5em; margin-top: -1.1em; border-radius: 0.8em; background: #b0483f; color: #fff; box-shadow: 0 0.25em 0.6em rgba(0, 0, 0, 0.22); }
-.tabbar__badge svg { width: 1.5em; height: 1.5em; }
+.tabbar__badge { display: grid; place-items: center; width: 1.8em; height: 1.8em; border-radius: 0.55em; background: #b0483f; color: #fff; box-shadow: 0 0.1em 0.25em rgba(0, 0, 0, 0.18); }
+.tabbar__badge svg { width: 1.35em; height: 1.35em; }
 
 /* For Doctor screen */
 .docm__person { display: grid; gap: 0.15em; padding: 0.55em 0.7em; margin: 0.5em 0; border-radius: 0.7em; background: #fff; border: 1px solid var(--line-soft); font-size: 0.78em; }
