@@ -41,7 +41,7 @@ Rollback (only with approval): run `supabase/release/family-uploads/rollback.sql
 
 ```sh
 cd ~/aneviaone/mobile
-npx eas-cli@latest build --platform ios --profile production
+npx eas-cli@24 build --platform ios --profile production
 ```
 The build number increases automatically. When it finishes, install it from TestFlight and walk through `docs/TESTFLIGHT_E2E_CHECKLIST.md`, plus the family flows below. Use **synthetic reports only**.
 
@@ -54,7 +54,7 @@ Family flows (two test accounts, A and B):
 
 ## 4. App Store Connect
 
-Submit: `npx eas-cli@latest submit --platform ios --profile production --latest` (app id `6819075705`).
+Submit: `npx eas-cli@24 submit --platform ios --profile production --latest` (app id `6819075705`).
 
 | Item | What to enter |
 |---|---|
