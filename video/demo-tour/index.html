@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>AneviaONE demo tour</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--navy:#061f44;--navy2:#123a6d;--teal:#11a8c8;--teal2:#34bfdc;--ivory:#f8f7f1;--ink:#0b2a55;--mute:#5b6f8c;--good:#2e9e6b;--watch:#d79a2b;--alert:#c4543b;--forest:#0e2a1b;--gold:#f2d58a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;height:100%;overflow:hidden;font-family:Inter,"Helvetica Neue",Arial,sans-serif}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:var(--ivory);color:var(--ink)}
+.abs{position:absolute}
+#s1,#s9,#side{left:0;top:0;width:1920px;height:1080px}
+#bgA{inset:0;background:radial-gradient(60% 70% at 78% 45%,#e3eef6 0,#f4f4ee 55%,#f8f7f1 100%)}
+#dots{inset:0;background-image:radial-gradient(#c9d4e0 1.4px,transparent 1.6px);background-size:44px 44px;opacity:.45}
+#bgG{inset:0;background:radial-gradient(85% 70% at 50% 36%,#2c5a36 0,#22492c 25%,#183a23 50%,#11301d 75%,#0a2215 100%);opacity:0}
+#bgG:after{content:"";position:absolute;inset:0;background:radial-gradient(75% 70% at 50% 42%,rgba(4,17,10,0) 55%,rgba(4,17,10,.55) 100%)}
+.eyebrow{font-size:26px;font-weight:700;letter-spacing:.2em;color:var(--teal);text-transform:uppercase}
+.h{font-size:92px;line-height:1.02;font-weight:800;letter-spacing:-.035em;color:var(--navy)}
+.h em{font-style:normal;color:var(--teal)}
+.sub{font-size:36px;line-height:1.35;color:#3b4f6e;font-weight:500;max-width:760px}
+.copy{left:130px;top:0;width:900px;height:1080px}
+.copy .blk{position:absolute;left:0;top:330px;width:880px}
+.copy .eyebrow{margin-bottom:26px}.copy .sub{margin-top:30px}
+/* phone */
+#phone{left:1150px;top:70px;width:480px;height:940px;border-radius:70px;background:#0b1424;box-shadow:0 50px 100px rgba(6,31,68,.28),0 0 0 3px #1c2a44 inset}
+#screen{left:14px;top:14px;width:452px;height:912px;border-radius:58px;background:#fff;overflow:hidden}
+#island{left:166px;top:14px;width:120px;height:34px;border-radius:20px;background:#0b1424;z-index:30}
+.status{position:absolute;left:34px;right:34px;top:18px;display:flex;justify-content:space-between;font-size:17px;font-weight:700;color:var(--ink);z-index:20}
+.scr{position:absolute;inset:0;background:#fff}
+.hdr{position:absolute;left:28px;top:78px;font-size:36px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
+.hsub{position:absolute;left:28px;top:126px;font-size:17px;color:var(--mute)}
+.card{position:absolute;left:24px;right:24px;background:#fff;border:1px solid #e3e9f1;border-radius:22px;box-shadow:0 6px 18px rgba(6,31,68,.06);padding:18px 20px}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:96px;background:#fff;border-top:1px solid #e8edf4;display:flex;justify-content:space-around;padding-top:14px;font-size:13px;color:#8796ad;z-index:15}
+.tabs div{text-align:center;width:80px}.tabs i{display:block;width:26px;height:26px;border-radius:8px;border:2.5px solid #9aa9bf;margin:0 auto 6px}
+.tabs .on{color:var(--navy2);font-weight:700}.tabs .on i{border-color:var(--navy2);background:#dfe9f7}
+.tabs .doc i{background:#c0443a;border-color:#c0443a;position:relative}.tabs .doc i:after{content:"+";position:absolute;inset:0;color:#fff;font-style:normal;font-weight:800;font-size:22px;line-height:21px;text-align:center}
+.pill{display:inline-block;border-radius:99px;padding:5px 13px;font-size:15px;font-weight:700}
+.row{display:flex;align-items:center;gap:14px}
+.ic{width:52px;height:52px;border-radius:16px;background:#e5f4f9;flex:none;position:relative}
+.t1{font-size:21px;font-weight:700;color:var(--navy)}.t2{font-size:16px;color:var(--mute);margin-top:3px}
+.btn{display:inline-block;border-radius:16px;padding:15px 26px;font-size:19px;font-weight:700}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:34px 34px 0 0;box-shadow:0 -20px 50px rgba(6,31,68,.22);padding:30px 28px 40px;z-index:25}
+.scrim{position:absolute;inset:0;background:rgba(6,31,68,.45);z-index:24}
+/* chips on the left of phone */
+.chip{position:absolute;background:#fff;border:1px solid #dfe7f1;border-radius:22px;padding:16px 26px;font-size:28px;font-weight:700;color:var(--navy);box-shadow:0 14px 34px rgba(6,31,68,.12);display:flex;align-items:center;gap:14px}
+.chip b{display:inline-block;width:20px;height:20px;border-radius:7px;background:var(--teal)}
+.doc{position:absolute;width:210px;height:270px;background:#fff;border-radius:22px;border:1px solid #dfe7f1;box-shadow:0 18px 40px rgba(6,31,68,.12);padding:22px}
+.doc .bar{height:12px;border-radius:6px;background:#e4ebf4;margin-top:12px}.doc .tt{font-size:22px;font-weight:800;color:var(--navy);margin-top:10px}.doc .yy{font-size:17px;color:var(--teal);font-weight:800;letter-spacing:.12em}
+#caps{left:130px;top:790px;width:900px;z-index:50}
+#caps .card2{position:relative;background:#061f44;color:#fff;border-radius:22px;padding:26px 34px 28px 44px;box-shadow:0 22px 60px rgba(6,31,68,.35),0 0 0 2px rgba(52,191,220,.35);overflow:hidden}#caps .card2:before{content:'';position:absolute;left:0;top:0;bottom:0;width:12px;background:linear-gradient(#34bfdc,#11a8c8)}#caps .lab{font-size:17px;font-weight:700;letter-spacing:.18em;color:#34bfdc;margin-bottom:10px;display:flex;align-items:center;gap:10px}#caps .lab i{width:11px;height:11px;border-radius:50%;background:#34bfdc;display:inline-block}#caps #capt{display:block;font-size:46px;font-weight:700;line-height:1.22;letter-spacing:-.01em}#caps .card2{height:176px;box-sizing:border-box}
+#samp{left:50px;bottom:56px;font-size:20px;color:#6b7d99;font-weight:600;letter-spacing:.04em;z-index:40}
+.mark{width:200px;height:200px}
+.word{font-size:84px;font-weight:800;letter-spacing:-.03em}
+.tag{font-size:34px;font-weight:700;letter-spacing:.3em;text-transform:uppercase}
+</style></head><body>
+<div id="stage">
+ <div class="abs" id="bgA"></div><div class="abs" id="dots"></div><div class="abs" id="bgG"></div>
+ <div class="abs" id="s1"></div>
+ <div class="abs copy" id="copy"></div>
+ <div class="abs" id="phone"><div class="abs" id="island"></div><div class="abs" id="screen"></div></div>
+ <div class="abs" id="side"></div>
+ <div class="abs" id="s9"></div>
+ <div class="abs" id="samp">Sample data. Not a real person.</div>
+ <div class="abs" id="caps"><div class="card2"><div class="lab"><i id="capdot"></i>NARRATION</div><span id="capt"></span></div></div>
+</div>
+<script src="timeline.js"></script>
+</body></html>

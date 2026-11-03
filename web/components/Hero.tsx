@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { DemoTour } from './DemoTour';
 import { Icon } from './Icon';
 import { RecordScatter } from './RecordScatter';
 import { BRAND, LINKS, PRIMARY_CTA, SECONDARY_CTA } from '@/lib/config';
@@ -17,8 +18,8 @@ function splitLast(text: string) {
  * interaction, and is skipped under prefers-reduced-motion.
  */
 export function Hero() {
-  // Until a 1-minute walkthrough exists (NEXT_PUBLIC_DEMO_VIDEO_URL), the
-  // secondary CTA goes to the How It Works preview rather than a promised video.
+  // The demo tour plays in a dialog on this page. NEXT_PUBLIC_DEMO_VIDEO_URL,
+  // when set, overrides it with an external link.
   const video = LINKS.demoVideo;
   const promise = splitLast(BRAND.promise);
 
@@ -41,12 +42,10 @@ export function Hero() {
             </Link>
             {video ? (
               <a href={video} className="btn btn--ghost btn--lg" target="_blank" rel="noopener noreferrer">
-                <Icon name="play" size={16} /> Watch how it works (1 min)
+                <Icon name="play" size={16} /> See demo tour
               </a>
             ) : (
-              <Link href={SECONDARY_CTA.href} className="btn btn--ghost btn--lg">
-                {SECONDARY_CTA.label} <Icon name="arrowDown" size={16} />
-              </Link>
+              <DemoTour label={SECONDARY_CTA.label} />
             )}
           </div>
           <p className="fine hero__status">
