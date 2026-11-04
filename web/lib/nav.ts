@@ -2,7 +2,7 @@
  * Site navigation. The header dropdowns, the mobile drawer and the footer are
  * all rendered from these structures.
  *
- * Primary nav: Product ▾ · Intelligence ▾ · How It Works · About · FAQ.
+ * Primary nav: Product ▾ · Intelligence ▾ · How It Works · FAQ. About lives in the footer only.
  * Trust and legal pages (Privacy, Security, Data & AI Principles, Terms) live
  * in the footer and the homepage Trust section, not the primary nav.
  */
@@ -46,7 +46,6 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export const NAV_LINKS: NavLink[] = [
   { id: 'how', label: 'How It Works', href: '/how-it-works' },
-  { id: 'about', label: 'About', href: '/about' },
   { id: 'faq', label: 'FAQ', href: '/faq' },
 ];
 

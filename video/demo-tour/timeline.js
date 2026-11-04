@@ -31,8 +31,19 @@ const el = (html, parent, cls = '', style = '') => { const d = document.createEl
 const ABS = 'position:absolute;';
 
 /* ---------- marks ---------- */
-const mark = (ring = '#a9cf86', a = '#f2d58a', leaf = '#8fcf9a', bg = '#0e2a1b', size = 200) =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 64 64"><circle cx="32" cy="32" r="31" fill="${bg}"/><circle cx="32" cy="32" r="27" fill="none" stroke="${ring}" stroke-width="2.2"/><path d="M20 46 L32 16 L44 46" fill="none" stroke="${a}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 37 H39" stroke="${a}" stroke-width="3.4" stroke-linecap="round"/><path d="M17 44 C14 36 18 30 25 29 C25 36 22 41 17 44Z" fill="${leaf}"/></svg>`;
+let markN = 0;
+const mark = (_r, _a, _l, _b, size = 200) => { const id = 'vm' + (++markN), f = (n) => id + n; return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><defs>
+<radialGradient id="${f('F')}" cx="50" cy="46" r="56" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2C5A36"/><stop offset=".55" stop-color="#183A23"/><stop offset="1" stop-color="#0A2215"/></radialGradient>
+<linearGradient id="${f('R')}" gradientUnits="userSpaceOnUse" x1="94" y1="6" x2="6" y2="94"><stop offset="0" stop-color="#F2D58A"/><stop offset=".35" stop-color="#F1E3B0"/><stop offset=".7" stop-color="#A9CF86"/><stop offset="1" stop-color="#F2D58A"/></linearGradient>
+<radialGradient id="${f('X')}"><stop offset="0" stop-color="#FBF6E4" stop-opacity=".95"/><stop offset=".25" stop-color="#F2D58A" stop-opacity=".55"/><stop offset="1" stop-color="#F2D58A" stop-opacity="0"/></radialGradient>
+<linearGradient id="${f('L')}" gradientUnits="userSpaceOnUse" x1="51" y1="20" x2="18" y2="77"><stop offset="0" stop-color="#fff"/><stop offset=".6" stop-color="#F3EBC8"/><stop offset="1" stop-color="#F2D58A"/></linearGradient>
+<linearGradient id="${f('I')}" gradientUnits="userSpaceOnUse" x1="50" y1="18" x2="74" y2="77"><stop offset="0" stop-color="#E9E1BD"/><stop offset="1" stop-color="#D6E3C6"/></linearGradient>
+<linearGradient id="${f('O')}" gradientUnits="userSpaceOnUse" x1="52" y1="16" x2="82" y2="77"><stop offset="0" stop-color="#FBF6E4"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#E7F2DC"/></linearGradient>
+<linearGradient id="${f('U')}" gradientUnits="userSpaceOnUse" x1="18" y1="77" x2="62" y2="53"><stop offset="0" stop-color="#F2D58A"/><stop offset=".45" stop-color="#8FD6A2"/><stop offset="1" stop-color="#D3F0CC"/></linearGradient>
+<linearGradient id="${f('W')}" gradientUnits="userSpaceOnUse" x1="18" y1="77" x2="62" y2="53"><stop offset="0" stop-color="#B9B85E"/><stop offset=".5" stop-color="#2E9A68"/><stop offset="1" stop-color="#5FC08A"/></linearGradient></defs>
+<circle cx="50" cy="50" r="50" fill="url(#${f('F')})"/><circle cx="50" cy="50" r="44" fill="none" stroke="#A9CF86" stroke-opacity=".16" stroke-width="4"/><circle cx="50" cy="50" r="44" fill="none" stroke="url(#${f('R')})" stroke-width="1.3"/><circle cx="77.1" cy="15.3" r="9" fill="url(#${f('X')})"/>
+<path d="M 51.2 19.8 L 17.6 77.4 L 26 72 L 50.8 30.2 Z" fill="url(#${f('L')})"/><path d="M 51.8 16.5 L 76.6 77.2 L 73 76.3 L 47.2 26.9 Z" fill="url(#${f('I')})"/><path d="M 51.8 16.5 L 83.9 77 L 76.6 77.2 Z" fill="url(#${f('O')})"/><path d="M 51.8 16.5 L 76.6 77.2" stroke="#fff" stroke-opacity=".7" stroke-width=".4" fill="none"/>
+<path d="M 17.6 77.4 C 28 66 42 58 62.5 52.6 C 50 60 33 74.5 17.6 77.4 Z" fill="url(#${f('W')})" opacity=".95"/><path d="M 17.6 77.4 C 21 63 31 50.5 62.5 52.6 C 42 58 28 66 17.6 77.4 Z" fill="url(#${f('U')})" opacity=".95"/><path d="M 17.6 77.4 C 28 66 42 58 62.5 52.6" stroke="#FBF6E4" stroke-opacity=".55" stroke-width=".5" fill="none"/></svg>`; };
 
 /* ---------- scene 1 ---------- */
 const s1 = $('#s1');
