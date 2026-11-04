@@ -77,4 +77,4 @@ export const SIGN_IN = {
 } as const;
 
 /** Secondary call to action, used alongside the primary one in the hero. */
-export const SECONDARY_CTA = { label: 'See demo tour', href: '/how-it-works' } as const;
+export const SECONDARY_CTA = { label: 'See Demo', href: '/how-it-works' } as const;
