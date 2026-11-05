@@ -244,7 +244,7 @@ describe('date of birth', () => {
 });
 
 describe('For Doctor names the person on screen', () => {
-  it('uses the relative’s name and date of birth, never the signed-in account’s', async () => {
+  it('uses the relative’s name only (no date of birth), never the signed-in account’s', async () => {
     await loadPeople();
     peopleService.switchTo(DAD);
     jest.spyOn(healthService, 'getRecordedObservations').mockResolvedValue([]);
@@ -256,8 +256,7 @@ describe('For Doctor names the person on screen', () => {
     await renderWithAuth(<DoctorScreen />);
     const who = await screen.findByTestId('doctor-person');
     expect(who).toHaveTextContent(/Dad/);
-    expect(who).toHaveTextContent(/Born.*1952/);
-    expect(who).not.toHaveTextContent(/1985/);
+    expect(who).not.toHaveTextContent(/Born|1952|1985/);
     expect(who).not.toHaveTextContent(/Asha/);
   });
 });

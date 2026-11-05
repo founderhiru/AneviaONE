@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, Share, Text, View } from 'react-native';
+import { Pressable, Share, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Print from 'expo-print';
@@ -17,7 +17,6 @@ import { profileService } from '../../services/profile/profileService';
 import { getActivePerson, isOwnRecord } from '../../services/people/peopleService';
 
 const BigContext = React.createContext(false);
-const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 /** A date is added only when the report's own title doesn't already carry it. */
 const where = (r: BriefResult) => {
@@ -55,7 +54,7 @@ function ResultRow({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }
         {r.previous ? <Text style={[...small, { color: theme.colors.textSecondary }]}>was {r.previous.value} in {briefDate(r.previous.date)}</Text> : null}
       </View>
       <View style={{ alignItems: 'flex-end', gap: 2, maxWidth: '45%' }}>
-        <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, fontFamily: SERIF }, big ? { fontSize: 24 } : null]} numberOfLines={2}>{r.value}</Text>
+        <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary,  }, big ? { fontSize: 24 } : null]} numberOfLines={2}>{r.value}</Text>
         {side ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: theme.colors.warningSubtle }}>
             <Text style={[theme.typography.labelSmall, { color: theme.colors.warning }, big ? { fontSize: 14 } : null]}>{side === 'Above' ? '▲ Above range' : '▼ Below range'}</Text>
@@ -97,7 +96,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   const { theme, big } = useType();
   return (
     <View style={{ flex: 1, gap: 2 }}>
-      <Text style={{ fontFamily: SERIF, fontSize: big ? 34 : 28, color: FOREST.text }}>{value}</Text>
+      <Text style={{ fontSize: big ? 34 : 28, color: FOREST.text }}>{value}</Text>
       <Text style={[theme.typography.caption, { color: FOREST.textMuted }, big ? { fontSize: 15 } : null]}>{label}</Text>
     </View>
   );
@@ -157,7 +156,6 @@ export default function DoctorScreen() {
   }
 
   const big = handover;
-  const serif = SERIF;
   const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary }] as const;
   const bigBody = big ? { fontSize: 20, lineHeight: 28 } : null;
   const small = [theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16, lineHeight: 22 } : null];
@@ -166,7 +164,7 @@ export default function DoctorScreen() {
     <BigContext.Provider value={big}>
     <ScreenContainer>
       <PersonBar />
-      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, fontFamily: serif }]} accessibilityRole="header">Summary for your Doctor</Text>
+      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your Doctor</Text>
 
       {error ? (
         <ErrorState description="We couldn’t prepare your summary. Please try again." onRetry={load} />
@@ -184,8 +182,8 @@ export default function DoctorScreen() {
           <View style={{ gap: theme.spacing.md, padding: theme.spacing.md, borderRadius: theme.radius.xl, backgroundColor: FOREST.field }}>
             <View style={{ gap: 4 }}>
               <Text style={[theme.typography.labelSmall, { color: FOREST.gold, letterSpacing: 1.4 }]}>HEALTH SUMMARY · PREPARED {briefDate(brief.preparedOn).toUpperCase()}</Text>
-              <Text style={{ fontFamily: serif, fontSize: big ? 30 : 24, lineHeight: big ? 38 : 30, color: FOREST.text }} testID="doctor-person">
-                {brief.person.name ?? 'Name not provided'}{brief.person.dateOfBirth ? ` · Born ${briefDate(brief.person.dateOfBirth)}` : ''}
+              <Text style={{ fontSize: big ? 30 : 24, lineHeight: big ? 38 : 30, color: FOREST.text }} testID="doctor-person">
+                {brief.person.name ?? 'Name not provided'}
               </Text>
             </View>
             <View style={{ flexDirection: 'row' }}>
@@ -259,6 +257,24 @@ export default function DoctorScreen() {
             </Section>
           ) : null}
 
+          <Section title="Latest reports" hint="The first results from each report. The full list is under See all results.">
+            {brief.reports.slice(0, 6).map((rep, n) => (
+              <View key={rep.documentId}>
+                {n > 0 ? <Hairline /> : null}
+                <Pressable onPress={() => router.push(`/documents/${rep.documentId}`)} accessibilityRole="button" accessibilityLabel={`${rep.title}, open the report`} testID={`doctor-latest-${rep.documentId}`} style={{ gap: 2, paddingVertical: theme.spacing.xs }}>
+                  <Text style={[...body, { fontWeight: '600' }]}>{rep.title}</Text>
+                  {rep.highlights.map((h) => (
+                    <View key={h.id} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm }}>
+                      <Text style={[...small, { flex: 1 }]} numberOfLines={1}>{h.name}</Text>
+                      <Text style={[...small, { color: theme.colors.textPrimary, fontWeight: '600', maxWidth: '50%' }]} numberOfLines={1}>{h.value}</Text>
+                    </View>
+                  ))}
+                  {rep.results.length > rep.highlights.length ? <Text style={small}>{rep.results.length} results in this report</Text> : null}
+                </Pressable>
+              </View>
+            ))}
+          </Section>
+
           {brief.medications.length ? <Section title="Medications listed on reports"><Plain items={brief.medications} /></Section> : null}
           {brief.conditions.length ? <Section title="Conditions stated on reports"><Plain items={brief.conditions} /></Section> : null}
           {brief.allergies.length ? <Section title="Allergies stated on reports"><Plain items={brief.allergies} /></Section> : null}
@@ -271,12 +287,12 @@ export default function DoctorScreen() {
               <Ionicons name={showAll ? 'chevron-up' : 'chevron-down'} size={16} color={theme.colors.brandPrimary} />
             </Pressable>
           ) : null}
-          {showAll || big ? (
+          {showAll ? (
             <Section title="All results by report">
               {brief.reports.map((rep, n) => (
                 <View key={rep.documentId} style={{ gap: 2 }}>
                   {n > 0 ? <Hairline /> : null}
-                  <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, fontFamily: serif, paddingTop: theme.spacing.xs }, big ? { fontSize: 22 } : null]}>{rep.title}</Text>
+                  <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, paddingTop: theme.spacing.xs }, big ? { fontSize: 22 } : null]}>{rep.title}</Text>
                   {rep.results.map((r) => <ResultRow key={r.id} r={r} scope="report" />)}
                 </View>
               ))}

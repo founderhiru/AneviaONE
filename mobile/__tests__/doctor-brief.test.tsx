@@ -82,6 +82,16 @@ describe('PDF html', () => {
     expect(html).toContain('&lt;img src=x onerror=1&gt;');
   });
 
+  it('is a summary: name only, no date of birth, and long reports show a few results, not all', () => {
+    const many = Array.from({ length: 12 }, (_, i) => obs({ id: `r${i}`, name: `Finding ${i}`, value: 'NORMAL' }));
+    const html = doctorBriefHtml(buildDoctorBrief({ person, results: many, documents: [], medications: [], conditions: [], allergies: [] }));
+    expect(html).toContain('Asha Testwell');
+    expect(html).not.toMatch(/Born|1985/);
+    expect(html).toContain('12 results in this report');
+    expect(html).not.toContain('Finding 11');
+    expect(html).not.toContain('Georgia');
+  });
+
   it('states what it is and that it is not a diagnosis', () => {
     const html = doctorBriefHtml(buildDoctorBrief({ person, results: RESULTS, documents: [], medications: [], conditions: [], allergies: [] }));
     expect(html).toContain('not a diagnosis');
@@ -103,7 +113,8 @@ describe('Doctor screen', () => {
   it('shows the person, what is outside the printed range, and never a held result', async () => {
     await renderWithAuth(<DoctorScreen />);
     await waitFor(() => expect(screen.getByTestId('doctor-brief')).toBeTruthy());
-    expect(screen.getByTestId('doctor-person').props.children.join('')).toContain('Asha Testwell');
+    expect(screen.getByTestId('doctor-person')).toHaveTextContent('Asha Testwell');
+    expect(screen.getByTestId('doctor-person')).not.toHaveTextContent(/Born|1985/); // name only
     expect(screen.getByTestId('doctor-outside-hb')).toBeTruthy();
     expect(screen.queryByTestId('doctor-outside-plt')).toBeNull(); // within its printed range
     expect(screen.queryByText(/Secret held result/)).toBeNull();
@@ -148,7 +159,7 @@ describe('Doctor screen', () => {
     await waitFor(() => expect(screen.getByText('Nothing to show a Doctor yet.')).toBeTruthy());
   });
 
-  it('lists all results only after See all, and the hand-over view shows them', async () => {
+  it('lists all results only after See all; the hand-over view stays a short summary', async () => {
     await renderWithAuth(<DoctorScreen />);
     await waitFor(() => expect(screen.getByTestId('doctor-see-all')).toBeTruthy());
     expect(screen.queryByTestId('doctor-report-plt')).toBeNull();
@@ -157,7 +168,8 @@ describe('Doctor screen', () => {
     await act(async () => { fireEvent.press(screen.getByTestId('doctor-see-all')); });
     expect(screen.queryByTestId('doctor-report-plt')).toBeNull();
     await act(async () => { fireEvent.press(screen.getByTestId('doctor-handover')); });
-    expect(screen.getByTestId('doctor-report-plt')).toBeTruthy();
+    expect(screen.queryByTestId('doctor-report-plt')).toBeNull();
+    expect(screen.getByTestId('doctor-latest-d1')).toBeTruthy();
   });
 
   it('shows a Review link when reports are held', async () => {

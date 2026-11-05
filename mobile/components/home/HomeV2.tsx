@@ -15,8 +15,7 @@ import {
   ScreenContainer,
   PersonBar,
 } from '../index';
-import { HomeSection } from './HomeDashboard';
-import { FilterChips, SnapshotByReport, SummaryTiles } from './WhatChangedUI';
+import { SummaryTiles } from './WhatChangedUI';
 import { CheckCard, ChangeSummaryCard, DoctorShortcut, HealthStoryCard, KeyMeasureTiles } from './HomeV2UI';
 import { BRAND, wordmarkParts } from '../../config/brand';
 import { FOREST } from '../../design/brandSurface';
@@ -27,7 +26,7 @@ import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { documentsService } from '../../services/documents/documentsService';
 import { isProcessing } from '../../services/documents/documentStatus';
 import { healthService } from '../../services/health/healthService';
-import { healthSnapshot, homeStage, trustedResults } from '../../services/health/homeDashboard';
+import { homeStage, trustedResults } from '../../services/health/homeDashboard';
 import { buildHealthStory } from '../../services/health/homeStory';
 import { startReading } from '../../services/processing/processingService';
 import { reportNames } from '../../services/documents/reportName';
@@ -35,15 +34,9 @@ import {
   buildComparisons,
   couldNotRead,
   homeCounts,
-  inGroup,
   needsReview,
-  resultGroup,
-  type GroupFilter,
 } from '../../services/health/whatChanged';
 import type { RecordedObservation, StoredDocument } from '../../types';
-
-/** Snapshot rows on Home; the Health screen has everything. */
-const MAX_SNAPSHOT = 4;
 
 const [wordLead, wordAccent] = wordmarkParts();
 
@@ -75,7 +68,6 @@ export function HomeV2() {
   const [resultsError, setResultsError] = useState(false);
   const [documents, setDocuments] = useState<StoredDocument[] | null>(null);
   const [documentsError, setDocumentsError] = useState(false);
-  const [filter, setFilter] = useState<GroupFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [readingAgain, setReadingAgain] = useState(false);
   // Reports waiting to be read are read automatically (consent once).
@@ -182,13 +174,6 @@ export function HomeV2() {
   const counts = homeCounts(docs, allResults);
   const comparisons = buildComparisons(allResults).numeric;
 
-  // Snapshot: latest result per test; chip counts cover every test, rows show a few.
-  const latestPerTest = healthSnapshot(allResults, { max: Number.MAX_SAFE_INTEGER, perArea: Number.MAX_SAFE_INTEGER });
-  const groupCount = (g: GroupFilter) => latestPerTest.filter(inGroup(g)).length;
-  const snapshot =
-    filter === 'all'
-      ? healthSnapshot(allResults, { max: MAX_SNAPSHOT, perArea: 2 })
-      : healthSnapshot(allResults.filter((r) => resultGroup(r) === filter), { max: MAX_SNAPSHOT, perArea: MAX_SNAPSHOT });
   const hasTrusted = trustedResults(allResults).length > 0;
 
   const reviewDocs = docs.filter((d) => needsReview(d) || couldNotRead(d));
@@ -278,48 +263,16 @@ export function HomeV2() {
 
           <KeyMeasureTiles comparisons={comparisons} onOpen={() => router.push('/changes')} />
 
-          {comparisons.length === 0 ? (
-            <HomeSection
-              title="Latest results"
-              actionLabel={hasTrusted ? 'View all' : undefined}
-              onActionPress={() => router.push('/(tabs)/health')}
-              testID="home-latest-results"
-            >
-              {hasTrusted ? (
-                <View style={{ gap: theme.spacing.sm }}>
-                  <FilterChips
-                    options={[
-                      { key: 'all' as GroupFilter, label: 'All', count: latestPerTest.length },
-                      { key: 'lab' as GroupFilter, label: 'Lab', count: groupCount('lab') },
-                      { key: 'imaging' as GroupFilter, label: 'Imaging', count: groupCount('imaging') },
-                      { key: 'other' as GroupFilter, label: 'Other', count: groupCount('other') },
-                    ]}
-                    selected={filter}
-                    onSelect={setFilter}
-                    testID="home-snapshot-filter"
-                  />
-                  {snapshot.length ? (
-                    <SnapshotByReport
-                      items={snapshot}
-                      names={names}
-                      onPressResult={(r) => router.push(`/documents/${r.source.documentId}`)}
-                      onOpenReport={(id) => router.push(`/documents/${id}`)}
-                      testID="home-snapshot"
-                    />
-                  ) : (
-                    <Text style={quiet} testID="home-snapshot-empty">No results of this kind yet.</Text>
-                  )}
-                </View>
-              ) : resultsError ? (
-                <Pressable onPress={loadResults} accessibilityRole="button" testID="home-results-retry">
-                  <Text style={quiet}>We couldn&rsquo;t load your results. Tap to try again.</Text>
-                </Pressable>
-              ) : (
-                <Text style={quiet} testID="home-no-results">
-                  {stillReading ? 'Your results appear here once your report has been read.' : 'No test results have been added to your Health Memory yet.'}
-                </Text>
-              )}
-            </HomeSection>
+          {comparisons.length === 0 && !hasTrusted ? (
+            resultsError ? (
+              <Pressable onPress={loadResults} accessibilityRole="button" testID="home-results-retry">
+                <Text style={quiet}>We couldn&rsquo;t load your results. Tap to try again.</Text>
+              </Pressable>
+            ) : (
+              <Text style={quiet} testID="home-no-results">
+                {stillReading ? 'Your results appear here once your report has been read.' : 'No test results have been added to your Health Memory yet.'}
+              </Text>
+            )
           ) : null}
 
           <CheckCard unclear={counts.needsReview} couldNotRead={counts.couldNotRead} onPress={openReview} onReadAgain={heldDocs.length ? () => readHeldAgain(heldDocs) : undefined} readingAgain={readingAgain} />
