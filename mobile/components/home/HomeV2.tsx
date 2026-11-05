@@ -17,7 +17,7 @@ import {
 } from '../index';
 import { HomeSection } from './HomeDashboard';
 import { FilterChips, SnapshotByReport, SummaryTiles } from './WhatChangedUI';
-import { CheckCard, ChangeSummaryCard, DoctorShortcut, KeyMeasureTiles } from './HomeV2UI';
+import { CheckCard, ChangeSummaryCard, DoctorShortcut, HealthStoryCard, KeyMeasureTiles } from './HomeV2UI';
 import { BRAND, wordmarkParts } from '../../config/brand';
 import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
@@ -28,6 +28,8 @@ import { documentsService } from '../../services/documents/documentsService';
 import { isProcessing } from '../../services/documents/documentStatus';
 import { healthService } from '../../services/health/healthService';
 import { healthSnapshot, homeStage, trustedResults } from '../../services/health/homeDashboard';
+import { buildHealthStory } from '../../services/health/homeStory';
+import { startReading } from '../../services/processing/processingService';
 import { reportNames } from '../../services/documents/reportName';
 import {
   buildComparisons,
@@ -75,6 +77,7 @@ export function HomeV2() {
   const [documentsError, setDocumentsError] = useState(false);
   const [filter, setFilter] = useState<GroupFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [readingAgain, setReadingAgain] = useState(false);
   // Reports waiting to be read are read automatically (consent once).
   const autoRead = useAutoRead();
 
@@ -126,6 +129,18 @@ export function HomeV2() {
     readingCount.current = autoRead.reading;
     loadDocuments();
   }, [autoRead.reading, loadDocuments]);
+
+  // Reports held under the old identity rule are read again with the current one; confirmed results are kept.
+  async function readHeldAgain(held: StoredDocument[]) {
+    if (readingAgain) return;
+    setReadingAgain(true);
+    try {
+      for (const d of held) await startReading(d.id, { reprocess: true }).catch(() => undefined);
+    } finally {
+      setReadingAgain(false);
+      await load();
+    }
+  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -181,6 +196,8 @@ export function HomeV2() {
   // "Reports to verify": the same reports the tile counts (needsReview), listed on their own.
   const openVerify = () => router.push({ pathname: '/documents', params: { filter: 'verify' } });
   const names = reportNames(trustedResults(allResults));
+  const story = buildHealthStory(allResults, names);
+  const heldDocs = docs.filter((d) => d.status === 'completed' && needsReview(d));
   const stillReading = autoRead.reading > 0 || docs.some((d) => d.status === 'uploaded' || isProcessing(d.status));
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   const quiet = [theme.typography.bodySmall, { color: theme.colors.textTertiary }];
@@ -253,13 +270,17 @@ export function HomeV2() {
         <>
           <SummaryTiles counts={counts} onReports={() => router.push('/documents')} onResults={() => router.push('/(tabs)/health')} onVerify={openVerify} />
 
-          <ChangeSummaryCard comparisons={comparisons} onOpen={() => router.push('/changes')} />
+          {comparisons.length > 0 ? (
+            <ChangeSummaryCard comparisons={comparisons} onOpen={() => router.push('/changes')} />
+          ) : (
+            <HealthStoryCard story={story} onOpenReport={(id) => router.push(`/documents/${id}`)} onOpenTimeline={() => router.push('/(tabs)/timeline')} />
+          )}
 
           <KeyMeasureTiles comparisons={comparisons} onOpen={() => router.push('/changes')} />
 
           {comparisons.length === 0 ? (
             <HomeSection
-              title="Latest health snapshot"
+              title="Latest results"
               actionLabel={hasTrusted ? 'View all' : undefined}
               onActionPress={() => router.push('/(tabs)/health')}
               testID="home-latest-results"
@@ -301,7 +322,7 @@ export function HomeV2() {
             </HomeSection>
           ) : null}
 
-          <CheckCard unclear={counts.needsReview} couldNotRead={counts.couldNotRead} onPress={openReview} />
+          <CheckCard unclear={counts.needsReview} couldNotRead={counts.couldNotRead} onPress={openReview} onReadAgain={heldDocs.length ? () => readHeldAgain(heldDocs) : undefined} readingAgain={readingAgain} />
 
           <DoctorShortcut onPress={() => router.push('/(tabs)/doctor')} />
         </>

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, Share, Text, View } from 'react-native';
+import { Platform, Pressable, Share, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Print from 'expo-print';
 
-import { Button, Card, EmptyState, ErrorState, LoadingState, PersonBar, ScreenContainer } from '../../components';
+import { Button, EmptyState, ErrorState, LoadingState, PersonBar, ScreenContainer } from '../../components';
+import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
+import { TrendLine } from '../../components/home/HomeV2UI';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { documentsService } from '../../services/documents/documentsService';
 import { buildDoctorBrief, briefDate, type BriefResult, type DoctorBrief } from '../../services/doctor/doctorBrief';
@@ -12,6 +15,93 @@ import { doctorBriefHtml } from '../../services/doctor/briefHtml';
 import { healthService } from '../../services/health/healthService';
 import { profileService } from '../../services/profile/profileService';
 import { getActivePerson, isOwnRecord } from '../../services/people/peopleService';
+
+const BigContext = React.createContext(false);
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+
+/** A date is added only when the report's own title doesn't already carry it. */
+const where = (r: BriefResult) => {
+  const d = briefDate(r.date);
+  return r.reportTitle.includes(d) || d === 'Date not clear' ? r.reportTitle : `${r.reportTitle} · ${d}`;
+};
+
+function useType() {
+  const theme = useTheme();
+  const big = React.useContext(BigContext);
+  const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary }, big ? { fontSize: 20, lineHeight: 28 } : null];
+  const small = [theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16, lineHeight: 22 } : null];
+  return { theme, big, body, small };
+}
+
+function Hairline() {
+  const theme = useTheme();
+  return <View style={{ height: 1, backgroundColor: theme.colors.border }} />;
+}
+
+function ResultRow({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }) {
+  const { theme, big, body, small } = useType();
+  const side = r.position === 'above' ? 'Above' : r.position === 'below' ? 'Below' : null;
+  return (
+    <Pressable
+      onPress={() => router.push(`/documents/${r.documentId}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`${r.name}, ${r.value}${r.range ? `, report range ${r.range}` : ''}, ${r.reportTitle}`}
+      testID={`doctor-${scope}-${r.id}`}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.sm, paddingVertical: theme.spacing.xs }}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[...body, { fontWeight: '600' }]}>{r.name}</Text>
+        <Text style={small}>{[r.range ? `Printed range ${r.range}` : null, where(r)].filter(Boolean).join(' · ')}</Text>
+        {r.previous ? <Text style={[...small, { color: theme.colors.textSecondary }]}>was {r.previous.value} in {briefDate(r.previous.date)}</Text> : null}
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 2, maxWidth: '45%' }}>
+        <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, fontFamily: SERIF }, big ? { fontSize: 24 } : null]} numberOfLines={2}>{r.value}</Text>
+        {side ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: theme.colors.warningSubtle }}>
+            <Text style={[theme.typography.labelSmall, { color: theme.colors.warning }, big ? { fontSize: 14 } : null]}>{side === 'Above' ? '▲ Above range' : '▼ Below range'}</Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  const { theme, big, small } = useType();
+  return (
+    <View style={{ gap: theme.spacing.xs }}>
+      <View style={{ gap: 2 }}>
+        <Text style={[theme.typography.labelMedium, { color: theme.colors.accent, letterSpacing: 1.2 }, big ? { fontSize: 15 } : null]} accessibilityRole="header">{title.toUpperCase()}</Text>
+        {hint ? <Text style={small}>{hint}</Text> : null}
+      </View>
+      <View style={{ padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.xs }}>{children}</View>
+    </View>
+  );
+}
+
+function Plain({ items }: { items: string[] }) {
+  const { theme, body } = useType();
+  return (
+    <View>
+      {items.map((i, n) => (
+        <View key={i}>
+          {n > 0 ? <Hairline /> : null}
+          <Text style={[...body, { paddingVertical: theme.spacing.xs }]}>{i}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  const { theme, big } = useType();
+  return (
+    <View style={{ flex: 1, gap: 2 }}>
+      <Text style={{ fontFamily: SERIF, fontSize: big ? 34 : 28, color: FOREST.text }}>{value}</Text>
+      <Text style={[theme.typography.caption, { color: FOREST.textMuted }, big ? { fontSize: 15 } : null]}>{label}</Text>
+    </View>
+  );
+}
 
 /**
  * For Doctor: a one-page summary of the person's own trusted records, for a visit.
@@ -67,53 +157,16 @@ export default function DoctorScreen() {
   }
 
   const big = handover;
+  const serif = SERIF;
   const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary }] as const;
   const bigBody = big ? { fontSize: 20, lineHeight: 28 } : null;
-
-  const Row = ({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }) => {
-    const side = r.position === 'above' ? 'Above' : r.position === 'below' ? 'Below' : null;
-    const line = [r.range ? `Report range ${r.range}` : null, side, r.reportTitle].filter(Boolean).join(' · ');
-    return (
-      <Pressable
-        onPress={() => router.push(`/documents/${r.documentId}`)}
-        accessibilityRole="button"
-        accessibilityLabel={`${r.name}, ${r.value}${r.range ? `, report range ${r.range}` : ''}, ${r.reportTitle}`}
-        testID={`doctor-${scope}-${r.id}`}
-        style={{ paddingVertical: theme.spacing.xs }}
-      >
-        <Text style={[...body, bigBody, { fontWeight: '600' }]}>{r.name}  {r.value}</Text>
-        <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>
-          {line} · {briefDate(r.date)}
-        </Text>
-        {r.previous ? (
-          <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }, big ? { fontSize: 16 } : null]}>
-            was {r.previous.value} in {briefDate(r.previous.date)}
-          </Text>
-        ) : null}
-      </Pressable>
-    );
-  };
-
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <View style={{ gap: theme.spacing.xs }}>
-      <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary }, big ? { fontSize: 22 } : null]}>{title}</Text>
-      <Card>{children}</Card>
-    </View>
-  );
-
-  const Plain = ({ items }: { items: string[] }) => (
-    <View style={{ gap: 4 }}>
-      {items.map((i) => (
-        <Text key={i} style={[...body, bigBody]}>{i}</Text>
-      ))}
-    </View>
-  );
+  const small = [theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16, lineHeight: 22 } : null];
 
   return (
+    <BigContext.Provider value={big}>
     <ScreenContainer>
       <PersonBar />
-      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your Doctor</Text>
-      <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>Built only from your own reports, ready to show or send before a visit.</Text>
+      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary, fontFamily: serif }]} accessibilityRole="header">Summary for your Doctor</Text>
 
       {error ? (
         <ErrorState description="We couldn’t prepare your summary. Please try again." onRetry={load} />
@@ -128,24 +181,34 @@ export default function DoctorScreen() {
         />
       ) : (
         <View style={{ gap: theme.spacing.md }} testID="doctor-brief">
-          <View style={{ gap: 2 }}>
-            <Text style={[...body, bigBody, { fontWeight: '600' }]} testID="doctor-person">
-              {brief.person.name ?? 'Name not provided'}{brief.person.dateOfBirth ? ` · Born ${briefDate(brief.person.dateOfBirth)}` : ''}
-            </Text>
-            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>
-              {brief.reportCount} {brief.reportCount === 1 ? 'report' : 'reports'} · {brief.resultCount} {brief.resultCount === 1 ? 'result' : 'results'} · Prepared {briefDate(brief.preparedOn)}
-            </Text>
-            {brief.heldReports > 0 ? (
-              <Text style={[theme.typography.caption, { color: theme.colors.warning }, big ? { fontSize: 16 } : null]} testID="doctor-held-note">
+          <View style={{ gap: theme.spacing.md, padding: theme.spacing.md, borderRadius: theme.radius.xl, backgroundColor: FOREST.field }}>
+            <View style={{ gap: 4 }}>
+              <Text style={[theme.typography.labelSmall, { color: FOREST.gold, letterSpacing: 1.4 }]}>HEALTH SUMMARY · PREPARED {briefDate(brief.preparedOn).toUpperCase()}</Text>
+              <Text style={{ fontFamily: serif, fontSize: big ? 30 : 24, lineHeight: big ? 38 : 30, color: FOREST.text }} testID="doctor-person">
+                {brief.person.name ?? 'Name not provided'}{brief.person.dateOfBirth ? ` · Born ${briefDate(brief.person.dateOfBirth)}` : ''}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row' }}>
+              <Stat value={brief.reportCount} label={brief.reportCount === 1 ? 'Report' : 'Reports'} />
+              <Stat value={brief.resultCount} label={brief.resultCount === 1 ? 'Result' : 'Results'} />
+              <Stat value={brief.outsideRange.length} label="To mention" />
+            </View>
+            <Text style={[theme.typography.caption, { color: FOREST.textFaint }]}>Built only from your own reports, as written on them. Not a diagnosis.</Text>
+          </View>
+
+          {brief.heldReports > 0 ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, padding: theme.spacing.sm, borderRadius: theme.radius.md, backgroundColor: theme.colors.warningSubtle }}>
+              <Ionicons name="information-circle-outline" size={big ? 22 : 18} color={theme.colors.warning} />
+              <Text style={[theme.typography.bodySmall, { flex: 1, color: theme.colors.textSecondary }, big ? { fontSize: 16 } : null]} testID="doctor-held-note">
                 {brief.heldReports} {brief.heldReports === 1 ? 'report has' : 'reports have'} results not yet checked — not included here.
               </Text>
-            ) : null}
-            {brief.heldReports > 0 && !big ? (
-              <Pressable onPress={() => router.push({ pathname: '/documents', params: { filter: 'verify' } })} accessibilityRole="link" testID="doctor-review-link">
-                <Text style={[theme.typography.caption, { color: theme.colors.brandPrimary, fontWeight: '600' }]}>Review</Text>
-              </Pressable>
-            ) : null}
-          </View>
+              {!big ? (
+                <Pressable onPress={() => router.push({ pathname: '/documents', params: { filter: 'verify' } })} accessibilityRole="link" testID="doctor-review-link" hitSlop={8}>
+                  <Text style={[theme.typography.labelMedium, { color: theme.colors.brandPrimary }]}>Review</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
           {!big ? (
             <View style={{ gap: theme.spacing.xs }}>
@@ -157,25 +220,42 @@ export default function DoctorScreen() {
             </View>
           ) : null}
 
-          <Section title={`Results to mention (${brief.outsideRange.length})`}>
-            <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16 } : null]}>Outside the range printed on the report.</Text>
+          <Section title={`Results to mention (${brief.outsideRange.length})`} hint="Outside the range printed on the report.">
             {brief.outsideRange.length ? (
-              brief.outsideRange.map((r) => <Row key={r.id} r={r} scope="outside" />)
+              brief.outsideRange.map((r, n) => (
+                <View key={r.id}>
+                  {n > 0 ? <Hairline /> : null}
+                  <ResultRow r={r} scope="outside" />
+                </View>
+              ))
             ) : (
-              <Text style={[...body, bigBody]} testID="doctor-none-outside">No result is outside the range printed on its own report.</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}>
+                <Ionicons name="checkmark-circle" size={big ? 26 : 20} color={theme.colors.success} />
+                <Text style={[...body, bigBody, { flex: 1 }]} testID="doctor-none-outside">No result is outside the range printed on its own report.</Text>
+              </View>
             )}
           </Section>
 
           {brief.trends.length ? (
-            <Section title="Changes over time">
-              {brief.trends.map((t) => (
-                <View key={`${t.name}|${t.unit ?? ''}`} style={{ paddingVertical: theme.spacing.xs }}>
-                  <Text style={[...body, bigBody, { fontWeight: '600' }]}>{t.name}</Text>
-                  <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }, big ? { fontSize: 18, lineHeight: 26 } : null]}>
-                    {t.points.map((p) => `${briefDate(p.date)}: ${p.value}${t.unit ? ' ' + t.unit : ''}`).join('  →  ')}
-                  </Text>
-                </View>
-              ))}
+            <Section title="Changes over time" hint="The same test on different dates, as printed.">
+              {brief.trends.map((t, n) => {
+                const nums = t.points.map((p) => Number(p.value.replace(/[^0-9.\-]/g, '')));
+                const chart = nums.length >= 2 && nums.every((v) => Number.isFinite(v));
+                return (
+                  <View key={`${t.name}|${t.unit ?? ''}`}>
+                    {n > 0 ? <Hairline /> : null}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.xs }}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[...body, bigBody, { fontWeight: '600' }]}>{t.name}</Text>
+                        <Text style={[...small, { color: theme.colors.textSecondary }]}>
+                          {t.points.map((p) => `${p.value}${t.unit ? ' ' + t.unit : ''} (${briefDate(p.date)})`).join('  →  ')}
+                        </Text>
+                      </View>
+                      {chart ? <TrendLine values={nums} width={72} height={32} color={theme.colors.accent} /> : null}
+                    </View>
+                  </View>
+                );
+              })}
             </Section>
           ) : null}
 
@@ -184,24 +264,26 @@ export default function DoctorScreen() {
           {brief.allergies.length ? <Section title="Allergies stated on reports"><Plain items={brief.allergies} /></Section> : null}
 
           {!big ? (
-            <Pressable onPress={() => setShowAll((v) => !v)} accessibilityRole="button" testID="doctor-see-all">
+            <Pressable onPress={() => setShowAll((v) => !v)} accessibilityRole="button" testID="doctor-see-all" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Text style={[theme.typography.bodyMedium, { color: theme.colors.brandPrimary, fontWeight: '600' }]}>
                 {showAll ? 'Hide all results' : 'See all results'}
               </Text>
+              <Ionicons name={showAll ? 'chevron-up' : 'chevron-down'} size={16} color={theme.colors.brandPrimary} />
             </Pressable>
           ) : null}
           {showAll || big ? (
             <Section title="All results by report">
-              {brief.reports.map((rep) => (
-                <View key={rep.documentId} style={{ paddingVertical: theme.spacing.xs, gap: 2 }}>
-                  <Text style={[...body, bigBody, { fontWeight: '700' }]}>{rep.title}</Text>
-                  {rep.results.map((r) => <Row key={r.id} r={r} scope="report" />)}
+              {brief.reports.map((rep, n) => (
+                <View key={rep.documentId} style={{ gap: 2 }}>
+                  {n > 0 ? <Hairline /> : null}
+                  <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, fontFamily: serif, paddingTop: theme.spacing.xs }, big ? { fontSize: 22 } : null]}>{rep.title}</Text>
+                  {rep.results.map((r) => <ResultRow key={r.id} r={r} scope="report" />)}
                 </View>
               ))}
             </Section>
           ) : null}
 
-          <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>
+          <Text style={small}>
             Built from your own reports, as written on them. Ranges are the ones printed on each report. Not a diagnosis.
           </Text>
 
@@ -209,5 +291,6 @@ export default function DoctorScreen() {
         </View>
       )}
     </ScreenContainer>
+    </BigContext.Provider>
   );
 }
