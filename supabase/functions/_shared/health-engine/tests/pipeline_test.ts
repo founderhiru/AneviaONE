@@ -235,7 +235,7 @@ Deno.test('low confidence: stored for review, kept out of trusted (current) resu
   const env = makeContext();
   env.extractor.respond = (pages) => {
     const r = honestExtraction(pages);
-    (r.observations[1] as { confidence: number }).confidence = 0.6; // LDL read with low confidence
+    (r.observations[1] as { confidence: number }).confidence = 0.55; // LDL read with low confidence
     return r;
   };
   const outcome = await upload(env, DOC_A, buildTextPdf(REPORT_A));
