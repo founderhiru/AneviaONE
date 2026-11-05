@@ -23,7 +23,7 @@ import type { Page } from './validate.ts';
 export const OCR_PROMPT_VERSION = 'g1-ocr-1';
 
 /** Pages at or above this legibility can pass the normal confidence gate. */
-export const OCR_PASS_LEGIBILITY = 0.85;
+export const OCR_PASS_LEGIBILITY = 0.7;
 /** Anthropic accepts PDFs up to 32 MB per request (base64 grows it by a third). */
 export const OCR_MAX_BYTES = 22 * 1024 * 1024;
 export const OCR_MAX_PAGES = 20;
