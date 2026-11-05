@@ -157,5 +157,6 @@ describe('Home (new)', () => {
     expect(within(card).getByText('Imaging 2')).toBeTruthy();
     expect(within(card).getByText('Lab 1')).toBeTruthy();
     expect(screen.queryByTestId('home-change-card')).toBeNull();
+    expect(screen.queryByText('Latest results')).toBeNull(); // no long results list on Home; the Health tab has it
   });
 });

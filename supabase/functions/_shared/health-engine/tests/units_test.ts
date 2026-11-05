@@ -68,7 +68,10 @@ Deno.test('report-person check: only strong evidence is "consistent"', () => {
   assertEquals(checkReportPerson({ patientName: 'Asha Rani Verma', patientDateOfBirth: null }, account), 'consistent');
   // One shared word or an initial is weak: identifiers exist but don't establish ownership.
   assertEquals(checkReportPerson({ patientName: 'A. Verma', patientDateOfBirth: null }, account), 'unverifiable');
-  assertEquals(checkReportPerson({ patientName: 'Asha Sharma', patientDateOfBirth: null }, account), 'unverifiable');
+  assertEquals(checkReportPerson({ patientName: 'Asha Sharma', patientDateOfBirth: null }, account), 'unverifiable'); // first name matches
+  // A shared surname alone is not enough: relatives share one, so the report is parked for review.
+  assertEquals(checkReportPerson({ patientName: 'Rahul Verma', patientDateOfBirth: null }, account), 'mismatch');
+  assertEquals(checkReportPerson({ patientName: 'Mr. Rahul Verma', patientDateOfBirth: null }, account), 'mismatch');
   // A conflict anywhere wins over a match elsewhere.
   assertEquals(checkReportPerson({ patientName: 'Asha Verma', patientDateOfBirth: '15/08/1985' }, account), 'mismatch');
   // Nothing entered by the person: nothing to establish ownership with.

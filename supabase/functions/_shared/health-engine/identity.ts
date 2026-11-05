@@ -9,13 +9,13 @@
  * sign-in provider or email. No fuzzy matching beyond what is justified:
  *
  *   mismatch      — an identifier contradicts the account: a different exact
- *                   date of birth, or a name with NO word in common.
+ *                   date of birth, or a name that does not carry the person's
+ *                   FIRST name (a shared surname alone is not enough).
  *   consistent    — strong evidence: the exact date of birth matches, or the
- *                   full name matches (every word of the shorter name, at
- *                   least two words, is in the other), and nothing conflicts.
+ *                   first AND last name both match, and nothing conflicts.
  *   unverifiable  — identifiers were found but can't establish ownership
- *                   (only a partial name overlap such as one shared word or
- *                   an initial, or the account has nothing to compare with).
+ *                   (the first name alone, an initial, or the account has
+ *                   nothing to compare with).
  *   no_identifiers — the report names no one.
  *
  * Only `mismatch` stops a report: it is rejected as "not yours". Every other
@@ -51,6 +51,18 @@ export function nameTokens(name: string): Set<string> {
   );
 }
 
+/** Single-letter name parts ("A. Verma" → a). */
+function initials(name: string): Set<string> {
+  return new Set(
+    name
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((t) => t.length === 1),
+  );
+}
+
 export function checkReportPerson(
   report: { patientName: string | null; patientDateOfBirth: string | null },
   account: AccountIdentity,
@@ -69,14 +81,19 @@ export function checkReportPerson(
 
   if (report.patientName && account.fullName) {
     const reportTokens = nameTokens(report.patientName);
-    const accountTokens = nameTokens(account.fullName);
-    if (reportTokens.size > 0 && accountTokens.size > 0) {
-      const shared = [...reportTokens].filter((t) => accountTokens.has(t)).length;
-      if (shared === 0) return 'mismatch';
-      // A full-name match: the shorter name (two or more words) is wholly
-      // contained in the other. One shared word alone is not enough.
-      const shorter = Math.min(reportTokens.size, accountTokens.size);
-      if (shorter >= 2 && shared === shorter) strongMatch = true;
+    const accountTokens = [...nameTokens(account.fullName)];
+    if (reportTokens.size > 0 && accountTokens.length > 0) {
+      // The person's FIRST name must appear on the report, in either order
+      // ("Asha Verma" / "Verma Asha"). A shared surname alone is not enough:
+      // relatives share one. An initial ("A. Verma") stands in for the first
+      // name only when the surname is also on the report.
+      const first = accountTokens[0];
+      const rest = accountTokens.slice(1);
+      const surnameShared = rest.some((t) => reportTokens.has(t));
+      const initialOnly = [...initials(report.patientName)].includes(first[0]) && surnameShared;
+      if (!reportTokens.has(first) && !initialOnly) return 'mismatch';
+      // First and last name both present is strong; the first name alone is accepted but weaker.
+      if (reportTokens.has(first) && surnameShared) strongMatch = true;
     }
   }
 

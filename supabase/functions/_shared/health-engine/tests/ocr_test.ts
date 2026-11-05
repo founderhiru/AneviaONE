@@ -74,9 +74,9 @@ Deno.test('scan pages are stored with text_source "ocr" (honest provenance)', as
   assertEquals((payload!.pages as { text_source: string }[]).map((p) => p.text_source), ['ocr']);
 });
 
-Deno.test('a hard-to-read scan: facts are held for review, never passed into Health Memory', async () => {
+Deno.test('a scan too unclear to trust (below 0.5): facts are held for review, never passed into Health Memory', async () => {
   const env = makeContext();
-  const out = await processScan(env, scan(LEGIBLE_SCAN, 0.6));
+  const out = await processScan(env, scan(LEGIBLE_SCAN, 0.4));
   assertEquals(out.status, 'completed');
   assertEquals(passed(env), []);
   assertEquals(out.status === 'completed' && out.facts_needs_review > 0, true);

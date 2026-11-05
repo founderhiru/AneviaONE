@@ -30,7 +30,24 @@ export type BriefResult = {
   previous: { value: string; date: string } | null;
 };
 
-export type BriefReport = { documentId: string; title: string; date: string | null; results: BriefResult[] };
+export type BriefReport = {
+  documentId: string;
+  title: string;
+  date: string | null;
+  results: BriefResult[];
+  /** A few results worth reading first: outside the printed range, then the rest as written. */
+  highlights: BriefResult[];
+};
+
+/** ALL-CAPS names ("AORTIC VALVE") are shown in sentence case; anything else is left exactly as written. */
+export function tidyName(name: string): string {
+  const letters = name.replace(/[^A-Za-z]/g, '');
+  if (letters.length < 4 || name !== name.toUpperCase()) return name;
+  const lower = name.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+const HIGHLIGHTS_PER_REPORT = 3;
 
 export type BriefTrend = { name: string; unit: string | null; points: Array<{ date: string; value: string; position: BriefResult['position'] }> };
 
@@ -79,7 +96,7 @@ export function buildDoctorBrief(input: {
 
   const toResult = (r: RecordedObservation): BriefResult => ({
     id: r.id,
-    name: r.name,
+    name: tidyName(r.name),
     value: withUnit(r.value, r.unit),
     range: r.referenceRange,
     position: resultPosition(r),
@@ -103,7 +120,9 @@ export function buildDoctorBrief(input: {
   const reports: BriefReport[] = [...byDocument.entries()]
     .map(([documentId, results]) => {
       const dates = results.map((r) => r.date).filter((d): d is string => Boolean(d)).sort();
-      return { documentId, title: results[0].reportTitle, date: dates.length ? dates[dates.length - 1] : null, results };
+      const flagged = (r: BriefResult) => (r.position === 'above' || r.position === 'below' ? 0 : 1);
+      const highlights = [...results].sort((a, b) => flagged(a) - flagged(b)).slice(0, HIGHLIGHTS_PER_REPORT);
+      return { documentId, title: results[0].reportTitle, date: dates.length ? dates[dates.length - 1] : null, results, highlights };
     })
     .sort((a, b) => byDateDesc(a.date, b.date) || a.title.localeCompare(b.title));
 
