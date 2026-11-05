@@ -7,6 +7,10 @@
  * own (fixture) records — never from the sample dataset.
  */
 import React from 'react';
+
+// These tests prove the classic Home, kept unchanged behind a build setting (config/homeVariant.ts).
+jest.mock('../config/homeVariant', () => ({ HOME_VARIANT: 'classic' }));
+
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
