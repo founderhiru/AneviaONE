@@ -18,14 +18,22 @@
  *                   an initial, or the account has nothing to compare with).
  *   no_identifiers — the report names no one.
  *
- * Only `consistent` lets a report's facts enter trusted Health Memory (see
- * pipeline.ts); every other outcome holds them for review.
+ * Only `mismatch` stops a report: it is rejected as "not yours". Every other
+ * outcome lets the facts in, because the person uploaded the report to their
+ * own record (or to a relative's record they manage) and nothing on the page
+ * contradicts that. Facts are held for review only when the page itself is
+ * unclear (see validate.ts), never because a report lacks a name. When the
+ * page shows no name, or one that can't be matched, the document is recorded
+ * as `owner_attested` (the person filed it under their own record).
  * Identifiers are never stored or logged; only the result is.
  */
 
 import { parseDateAsWritten } from './normalize.ts';
 
 export type IdentityCheck = 'no_identifiers' | 'consistent' | 'unverifiable' | 'mismatch';
+
+/** What is stored on the document: no_identifiers / unverifiable become owner_attested. */
+export type StoredIdentityCheck = 'consistent' | 'owner_attested' | 'mismatch';
 
 /** What the person entered as their identity (Identity details). */
 export type AccountIdentity = { fullName: string | null; dateOfBirth: string | null /* YYYY-MM-DD */ };
@@ -75,7 +83,12 @@ export function checkReportPerson(
   return strongMatch ? 'consistent' : 'unverifiable';
 }
 
-/** Only strong, non-conflicting identity evidence lets facts be trusted. */
+/** Everything except a contradiction lets the report's facts in. */
 export function identityAllowsTrust(check: IdentityCheck): boolean {
-  return check === 'consistent';
+  return check !== 'mismatch';
+}
+
+/** The value recorded on the document (identifiers themselves are never stored). */
+export function identityToStore(check: IdentityCheck): StoredIdentityCheck {
+  return check === 'no_identifiers' || check === 'unverifiable' ? 'owner_attested' : check;
 }

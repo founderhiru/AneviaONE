@@ -19,7 +19,7 @@ import { chunkPages } from './chunking.ts';
 import { EngineError, USER_MESSAGES, isEngineError, type FailureKind } from './errors.ts';
 import type { StructuredExtractor } from './extractor.ts';
 import { factFingerprint, sha256Hex } from './fingerprint.ts';
-import { checkReportPerson, identityAllowsTrust, type AccountIdentity, type IdentityCheck } from './identity.ts';
+import { checkReportPerson, identityToStore, type AccountIdentity, type IdentityCheck, type StoredIdentityCheck } from './identity.ts';
 import type { Logger } from './log.ts';
 import { OCR_PASS_LEGIBILITY, type OcrProvider } from './ocr.ts';
 import type { PageTextProvider } from './pages.ts';
@@ -133,11 +133,6 @@ function candidateCounts(d: RunDiagnostics): Record<string, number> {
   return Object.fromEntries(Object.entries(d.candidates).map(([k, n]) => [`candidates_${k}`, n]));
 }
 
-/** Holds every fact for review (identity not established); evidence is kept as read. */
-export function holdForIdentity(facts: ValidatedFact[]): ValidatedFact[] {
-  return facts.map((f) => (f.confidence_gate === 'needs_review' ? f : { ...f, confidence_gate: 'needs_review' }));
-}
-
 /** Merges per-chunk extractions into one (identity / report date: first evidence-backed value wins). */
 function mergeExtractions(parts: StructuredExtraction[]): StructuredExtraction {
   const merged: StructuredExtraction = {
@@ -171,7 +166,7 @@ export async function buildCompletionPayload(args: {
   pages: Page[];
   contentSha256: string;
   reportDate: string | null;
-  identityCheck: IdentityCheck;
+  identityCheck: StoredIdentityCheck;
   textLayer: 'present' | 'absent';
   chunkCount: number;
   discarded: number;
@@ -282,18 +277,17 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
       throw new EngineError('identity_mismatch', 'identity_mismatch', USER_MESSAGES.identity);
     }
 
-    // Extraction is not proof of ownership: without strong identity evidence
-    // every fact is stored with its evidence but held for review — none of
-    // it reaches trusted Health Memory (current_* views) on its own.
-    const trusted = identityAllowsTrust(identityCheck);
-    const facts = trusted ? validation.facts : holdForIdentity(validation.facts);
+    // A report is held for review only when the page itself is unclear (see
+    // validate.ts) — never because it names no one or can't be matched to the
+    // profile. A contradiction (mismatch) already stopped the run above.
+    const facts = validation.facts;
 
     const payload = await buildCompletionPayload({
       facts,
       pages,
       contentSha256,
       reportDate: validation.reportDate,
-      identityCheck,
+      identityCheck: identityToStore(identityCheck),
       textLayer: metadata.textLayer,
       chunkCount: chunks.length,
       discarded: validation.discarded,
@@ -314,8 +308,7 @@ export async function processClaimedDocument(ctx: EngineContext, doc: ClaimedDoc
       ...rejectionCounts(validation.rejected),
       ...candidateCounts(diagnostics),
       facts_discarded: validation.discarded,
-      identity_check: identityCheck,
-      facts_held_identity: trusted ? 0 : validation.facts.filter((f) => f.confidence_gate === 'passed').length,
+      identity_check: identityToStore(identityCheck),
       duration_ms: Date.now() - started,
     });
     return { status: 'completed', ...counts, facts_rejected: validation.rejected.length, facts_discarded: validation.discarded };

@@ -127,14 +127,13 @@ Deno.test('radiology: findings not written in the report are never stored; negat
   assertEquals(d.rejected_by_kind, { observations: { quote_not_on_page: 1 }, conditions: { negated: 1 } });
 });
 
-Deno.test('radiology: identity gates still apply — no identity entered, every finding held', async () => {
+Deno.test('radiology: no identity entered does not hold findings', async () => {
   const env = makeContext();
   env.db.identity = { fullName: null, dateOfBirth: null };
   env.extractor.respond = () => xrayResponse();
   const out = await processPhoto(env, XRAY);
   assertEquals(out.status, 'completed');
-  assertEquals(env.db.liveObservations().length, 0);
-  assertEquals(env.db.facts.length > 0 && env.db.facts.every((f) => f.gate === 'needs_review'), true);
+  assertEquals(env.db.facts.length > 0 && env.db.facts.some((f) => f.gate === 'passed'), true);
 });
 
 // ------------------------------------------------- zero facts, explained --

@@ -4,7 +4,7 @@ import { assertEquals, assertNotEquals, assertRejects, assertThrows } from '@std
 import { chunkPages } from '../chunking.ts';
 import { EngineError } from '../errors.ts';
 import { factFingerprint, sha256Hex } from '../fingerprint.ts';
-import { checkReportPerson, identityAllowsTrust } from '../identity.ts';
+import { checkReportPerson, identityAllowsTrust, identityToStore } from '../identity.ts';
 import { redact } from '../log.ts';
 import { UnpdfPageTextProvider, detectTextLayer } from '../pages.ts';
 import { MALFORMED_PDF, NOT_A_PDF, REPORT_A, SYNTHETIC_PATIENT, buildImageOnlyPdf, buildTextPdf } from './fixtures.ts';
@@ -77,9 +77,10 @@ Deno.test('report-person check: only strong evidence is "consistent"', () => {
   assertEquals(checkReportPerson({ patientName: null, patientDateOfBirth: '14/08/1985' }, { fullName: 'Asha Verma', dateOfBirth: null }), 'unverifiable');
 });
 
-Deno.test('trust needs strong identity evidence', () => {
-  assertEquals(identityAllowsTrust('consistent'), true);
-  for (const check of ['no_identifiers', 'unverifiable', 'mismatch'] as const) assertEquals(identityAllowsTrust(check), false);
+Deno.test('only a contradiction stops a report; the rest are trusted and recorded', () => {
+  for (const check of ['consistent', 'no_identifiers', 'unverifiable'] as const) assertEquals(identityAllowsTrust(check), true);
+  assertEquals(identityAllowsTrust('mismatch'), false);
+  assertEquals(['consistent', 'no_identifiers', 'unverifiable', 'mismatch'].map((c) => identityToStore(c as never)), ['consistent', 'owner_attested', 'owner_attested', 'mismatch']);
 });
 
 Deno.test('fingerprints: same report → same fingerprint; any identity change → different', async () => {

@@ -96,11 +96,11 @@ Deno.test('validation: confidence, enums, units-in-quote, dates', () => {
   assertEquals(r.rejected.map((x) => x.reason), ['invalid_confidence', 'invalid_enum', 'value_not_in_quote', 'invalid_date']);
 });
 
-Deno.test('confidence gate: discard below 0.5, review below 0.85, pass above', () => {
+Deno.test('confidence gate: discard below 0.5, review below 0.6, pass above', () => {
   const r = run({
     observations: [
       obs({ confidence: CONFIDENCE.DISCARD_BELOW - 0.01 }),
-      obs({ confidence: 0.7, source_text: 'LDL Cholesterol 128 mg/dL < 100', test_name: 'LDL Cholesterol', raw_value: '128', raw_unit: 'mg/dL', reference_range: '< 100' }),
+      obs({ confidence: 0.55, source_text: 'LDL Cholesterol 128 mg/dL < 100', test_name: 'LDL Cholesterol', raw_value: '128', raw_unit: 'mg/dL', reference_range: '< 100' }),
       obs({ confidence: 0.9 }),
     ],
   });

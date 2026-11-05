@@ -35,9 +35,11 @@ import {
 } from './normalize.ts';
 
 /** Confidence gate. Below DISCARD a fact is not stored; below PASS (or with
- * any ambiguity flag) it is stored but held for review and kept out of the
- * current_* views until the person confirms it. */
-export const CONFIDENCE = { DISCARD_BELOW: 0.5, PASS_AT: 0.85 } as const;
+ * any ambiguity flag, or read from a hard-to-read page) it is stored but held
+ * for review and kept out of the current_* views until the person confirms it.
+ * Every quote and value is already checked against the page text, so the
+ * model's own score only marks genuinely doubtful reads; PASS_AT is 0.6. */
+export const CONFIDENCE = { DISCARD_BELOW: 0.5, PASS_AT: 0.6 } as const;
 
 export type Page = { page_number: number; text: string };
 export type FactKind = 'observations' | 'medications' | 'conditions' | 'allergies' | 'procedures' | 'encounters';
