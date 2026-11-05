@@ -6,6 +6,7 @@ import Svg, { Circle, Polyline } from 'react-native-svg';
 import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
 import { shortDate } from '../../services/health/homeDashboard';
+import type { HealthStory } from '../../services/health/homeStory';
 import type { NumericComparison } from '../../services/health/whatChanged';
 import { formatPercent } from './WhatChangedUI';
 
@@ -168,7 +169,7 @@ export function KeyMeasureTiles({ comparisons, onOpen }: { comparisons: NumericC
 }
 
 /** Only when a report has unclear pages (or couldn't be read): one calm card, never a warning per result. */
-export function CheckCard({ unclear, couldNotRead, onPress }: { unclear: number; couldNotRead: number; onPress: () => void }) {
+export function CheckCard({ unclear, couldNotRead, onPress, onReadAgain, readingAgain = false }: { unclear: number; couldNotRead: number; onPress: () => void; onReadAgain?: () => void; readingAgain?: boolean }) {
   const theme = useTheme();
   if (unclear === 0 && couldNotRead === 0) return null;
   const title = unclear
@@ -178,20 +179,36 @@ export function CheckCard({ unclear, couldNotRead, onPress }: { unclear: number;
     ? 'Compare them with the original and confirm in one tap.'
     : 'Open it to see why, or try a clearer photo or the original PDF.';
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${title}. ${line}`}
-      testID="home-check-card"
-      style={({ pressed }) => ({ flexDirection: 'row', gap: theme.spacing.sm, alignItems: 'center', padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: theme.colors.warningSubtle, opacity: pressed ? 0.85 : 1 })}
-    >
-      <Ionicons name="eye-outline" size={24} color={theme.colors.warning} />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[theme.typography.labelLarge, { color: theme.colors.warning }]}>{title}</Text>
-        <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{line}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={theme.colors.warning} />
-    </Pressable>
+    <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.warningSubtle, overflow: 'hidden' }}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${title}. ${line}`}
+        testID="home-check-card"
+        style={({ pressed }) => ({ flexDirection: 'row', gap: theme.spacing.sm, alignItems: 'center', padding: theme.spacing.md, opacity: pressed ? 0.85 : 1 })}
+      >
+        <Ionicons name="eye-outline" size={24} color={theme.colors.warning} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[theme.typography.labelLarge, { color: theme.colors.warning }]}>{title}</Text>
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{line}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={theme.colors.warning} />
+      </Pressable>
+      {unclear > 0 && onReadAgain ? (
+        <Pressable
+          onPress={onReadAgain}
+          disabled={readingAgain}
+          accessibilityRole="button"
+          accessibilityLabel="Read these reports again"
+          testID="home-check-read-again"
+          style={({ pressed }) => ({ paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.md, opacity: pressed || readingAgain ? 0.6 : 1 })}
+        >
+          <Text style={[theme.typography.labelMedium, { color: theme.colors.brandPrimary }]}>
+            {readingAgain ? 'Reading again…' : 'Read them again with the latest reading'}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -213,5 +230,90 @@ export function DoctorShortcut({ onPress }: { onPress: () => void }) {
       </View>
       <Ionicons name="chevron-forward" size={20} color={theme.colors.textTertiary} />
     </Pressable>
+  );
+}
+
+const MIX_LABEL = { lab: 'Lab', imaging: 'Imaging', other: 'Other' } as const;
+const MIX_COLOR = { lab: FOREST.gold, imaging: FOREST.sage, other: FOREST.champagne } as const;
+
+/**
+ * The green "story" card for Home when no test can be charted yet: the newest
+ * report with a few results as written, a strip of reports by date (the dots
+ * rise in once), and the mix of Lab / Imaging / Other. Neutral: nothing here
+ * says good or bad.
+ */
+export function HealthStoryCard({ story, onOpenReport, onOpenTimeline }: { story: HealthStory; onOpenReport: (id: string) => void; onOpenTimeline: () => void }) {
+  const theme = useTheme();
+  const reduced = useReducedMotion();
+  const [rise] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduced) {
+      rise.setValue(1);
+      return;
+    }
+    rise.setValue(0);
+    const a = Animated.timing(rise, { toValue: 1, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    a.start();
+    return () => a.stop();
+  }, [reduced, rise]);
+  const { latest, strip, mix, total } = story;
+  if (!latest || total === 0) return null;
+  const kinds = (['lab', 'imaging', 'other'] as const).filter((g) => mix[g] > 0);
+  const strongest = strip.slice(-8);
+  return (
+    <View style={{ gap: theme.spacing.sm, padding: theme.spacing.md, borderRadius: theme.radius.xl, backgroundColor: FOREST.field }} testID="home-story-card">
+      <Text style={[theme.typography.labelSmall, { color: FOREST.gold, letterSpacing: 1.2 }]}>
+        {latest.date ? `LATEST REPORT · ${shortDate(latest.date)?.toUpperCase()}` : 'LATEST REPORT'}
+      </Text>
+      <Pressable onPress={() => onOpenReport(latest.documentId)} accessibilityRole="button" accessibilityLabel={`${latest.title}. ${latest.count} results. Open the report.`} testID="home-story-latest">
+        <Text style={[theme.typography.headingMedium, { color: FOREST.text }]} numberOfLines={2}>{latest.title}</Text>
+        <Text style={[theme.typography.bodySmall, { color: FOREST.textMuted }]}>{latest.count} {latest.count === 1 ? 'result' : 'results'} read from this report</Text>
+      </Pressable>
+      <View style={{ gap: 6 }}>
+        {latest.highlights.map((h) => (
+          <View key={h.id} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, padding: theme.spacing.xs, borderRadius: theme.radius.md, backgroundColor: 'rgba(246,249,239,0.08)' }} testID={`story-highlight-${h.id}`}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: h.outside ? FOREST.gold : FOREST.sage }} />
+            <Text style={[theme.typography.bodySmall, { flex: 1, color: FOREST.textMuted }]} numberOfLines={1}>{h.name}</Text>
+            <Text style={[theme.typography.labelLarge, { color: FOREST.text, maxWidth: '50%' }]} numberOfLines={1}>{h.value}</Text>
+          </View>
+        ))}
+      </View>
+      {strongest.length > 1 ? (
+        <View style={{ gap: 6 }} testID="story-strip">
+          <Text style={[theme.typography.labelSmall, { color: FOREST.textFaint, letterSpacing: 1 }]}>YOUR REPORTS OVER TIME</Text>
+          <View style={{ height: 40, justifyContent: 'center' }}>
+            <View style={{ position: 'absolute', left: 6, right: 6, height: 2, backgroundColor: FOREST.hairline }} />
+            <Animated.View style={{ flexDirection: 'row', justifyContent: 'space-between', opacity: rise, transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
+              {strongest.map((r) => (
+                <Pressable key={r.documentId} onPress={() => onOpenReport(r.documentId)} accessibilityRole="button" accessibilityLabel={`${r.title}, ${r.date ? shortDate(r.date) : 'date not clear'}`} hitSlop={8} testID={`story-dot-${r.documentId}`}>
+                  <View style={{ width: 14 + Math.min(10, r.count), height: 14 + Math.min(10, r.count), borderRadius: 14, backgroundColor: MIX_COLOR[r.group], borderWidth: r.documentId === latest.documentId ? 2 : 0, borderColor: FOREST.ivory }} />
+                </Pressable>
+              ))}
+            </Animated.View>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={[theme.typography.caption, { color: FOREST.textFaint }]}>{strongest[0].date ? shortDate(strongest[0].date) : ''}</Text>
+            <Text style={[theme.typography.caption, { color: FOREST.textFaint }]}>{strongest[strongest.length - 1].date ? shortDate(strongest[strongest.length - 1].date) : ''}</Text>
+          </View>
+        </View>
+      ) : null}
+      <View style={{ gap: 6 }} testID="story-mix">
+        <View style={{ flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', gap: 2 }}>
+          {kinds.map((g) => (
+            <View key={g} style={{ flex: mix[g], backgroundColor: MIX_COLOR[g] }} />
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
+          {kinds.map((g) => (
+            <Text key={g} style={[theme.typography.caption, { color: FOREST.textMuted }]}>{MIX_LABEL[g]} {mix[g]}</Text>
+          ))}
+        </View>
+      </View>
+      <Text style={[theme.typography.caption, { color: FOREST.textFaint }]}>Add another report of the same test and its line appears here.</Text>
+      <Pressable onPress={onOpenTimeline} accessibilityRole="button" testID="home-story-timeline" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Text style={[theme.typography.labelMedium, { color: FOREST.text }]}>Open your timeline</Text>
+        <Ionicons name="chevron-forward" size={16} color={FOREST.text} />
+      </Pressable>
+    </View>
   );
 }

@@ -131,7 +131,7 @@ describe('Home (new)', () => {
 
   it('with one report there is nothing to compare: an honest invitation, no chart', async () => {
     await renderHome([doc('d1')], [LDL[0]]);
-    expect(await screen.findByTestId('home-change-empty')).toBeTruthy();
+    expect(await screen.findByTestId('home-story-card')).toBeTruthy(); // a green card, even with nothing to chart
     expect(screen.queryByTestId('trend-line', { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByTestId('home-key-measures')).toBeNull();
   });
@@ -140,5 +140,22 @@ describe('Home (new)', () => {
     await renderHome(docs, LDL);
     const card = await screen.findByTestId('home-change-card');
     expect(within(card).queryByText(/diagnos|you have|disease|treatment|improv|worse|bad|good/i)).toBeNull();
+  });
+
+  it('narrative findings (no repeated test) still get the green story card, with the newest report and the mix', async () => {
+    const narrative = [
+      result('n1', 'Impression', 'Normal study', '2025-11-25', 'd1', { category: 'imaging', valueNumeric: null, unit: null }),
+      result('n2', 'Liver', 'Normal in size', '2025-11-25', 'd1', { category: 'imaging', valueNumeric: null, unit: null }),
+      result('n3', 'Haemoglobin', '13.1', '2025-06-01', 'd2', { unit: 'g/dL' }),
+    ];
+    await renderHome([doc('d1'), doc('d2')], narrative);
+    const card = await screen.findByTestId('home-story-card');
+    expect(within(card).getByText(/LATEST REPORT · 25 NOV 2025/)).toBeTruthy();
+    expect(within(card).getByText('Impression')).toBeTruthy();
+    expect(within(card).getByText('Normal study')).toBeTruthy();
+    expect(within(card).getByTestId('story-strip')).toBeTruthy();
+    expect(within(card).getByText('Imaging 2')).toBeTruthy();
+    expect(within(card).getByText('Lab 1')).toBeTruthy();
+    expect(screen.queryByTestId('home-change-card')).toBeNull();
   });
 });

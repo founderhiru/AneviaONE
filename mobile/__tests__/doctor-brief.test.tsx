@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { Share } from 'react-native';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as Print from 'expo-print';
 
 import DoctorScreen from '../app/(tabs)/doctor';
@@ -107,6 +107,13 @@ describe('Doctor screen', () => {
     expect(screen.getByTestId('doctor-outside-hb')).toBeTruthy();
     expect(screen.queryByTestId('doctor-outside-plt')).toBeNull(); // within its printed range
     expect(screen.queryByText(/Secret held result/)).toBeNull();
+  });
+
+  it('never repeats a date within one result row', async () => {
+    await renderWithAuth(<DoctorScreen />);
+    await waitFor(() => expect(screen.getByTestId('doctor-outside-hb')).toBeTruthy());
+    const texts = within(screen.getByTestId('doctor-outside-hb')).queryAllByText(/15 Jan 2026/);
+    for (const t of texts) expect((String(t.props.children).match(/15 Jan 2026/g) ?? []).length).toBeLessThanOrEqual(1);
   });
 
   it('hand-over view enlarges the page, hides actions, and Done returns', async () => {
