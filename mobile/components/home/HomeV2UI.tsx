@@ -6,6 +6,7 @@ import Svg, { Circle, Polyline } from 'react-native-svg';
 import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
 import { shortDate } from '../../services/health/homeDashboard';
+import type { FamilyDigest, KeyNumber, RangeBarModel } from '../../services/health/homeInsights';
 import type { HealthStory } from '../../services/health/homeStory';
 import type { NumericComparison } from '../../services/health/whatChanged';
 import { formatPercent } from './WhatChangedUI';
@@ -314,6 +315,82 @@ export function HealthStoryCard({ story, onOpenReport, onOpenTimeline }: { story
         <Text style={[theme.typography.labelMedium, { color: FOREST.text }]}>Open your timeline</Text>
         <Ionicons name="chevron-forward" size={16} color={FOREST.text} />
       </Pressable>
+    </View>
+  );
+}
+
+/** Where one value sits against the range printed on its own report. Colour is never the only signal. */
+export function RangeBar({ bar }: { bar: RangeBarModel }) {
+  const theme = useTheme();
+  const outside = bar.position !== 'within';
+  const pct = (x: number) => `${Math.round(x * 100)}%` as `${number}%`;
+  return (
+    <View style={{ height: 14, justifyContent: 'center' }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: theme.colors.border }} />
+      <View style={{ position: 'absolute', left: pct(bar.bandStart), width: pct(Math.max(0.02, bar.bandEnd - bar.bandStart)), height: 6, borderRadius: 3, backgroundColor: theme.colors.accent, opacity: 0.35 }} />
+      <View style={{ position: 'absolute', left: pct(bar.marker), marginLeft: -7, width: 14, height: 14, borderRadius: 7, backgroundColor: outside ? theme.colors.warning : theme.colors.accent, borderWidth: 2, borderColor: theme.colors.surface }} />
+    </View>
+  );
+}
+
+const sideWord = (p: RangeBarModel['position']) => (p === 'above' ? 'Above printed range' : p === 'below' ? 'Below printed range' : 'Within printed range');
+
+/** "Where you stand": latest numbers that have a printed range, for results not repeated yet (nothing to chart). */
+export function KeyNumbersCard({ items, onOpenReport }: { items: KeyNumber[]; onOpenReport: (documentId: string) => void }) {
+  const theme = useTheme();
+  if (items.length === 0) return null;
+  return (
+    <View style={{ gap: theme.spacing.sm }} testID="home-key-numbers">
+      <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary }]} accessibilityRole="header">Where you stand</Text>
+      <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, padding: theme.spacing.md, gap: theme.spacing.md }}>
+        {items.map((k) => (
+          <Pressable key={k.id} onPress={() => onOpenReport(k.documentId)} accessibilityRole="button" accessibilityLabel={`${k.name}, ${k.value}${k.unit ? ' ' + k.unit : ''}. ${sideWord(k.bar.position)}. ${k.when}. Open the report.`} testID={`key-number-${k.id}`} style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.xs }}>
+              <Text style={[theme.typography.labelLarge, { flex: 1, color: theme.colors.textPrimary }]} numberOfLines={1}>{k.name}</Text>
+              <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary }]}>{k.value}{k.unit ? ` ${k.unit}` : ''}</Text>
+            </View>
+            <RangeBar bar={k.bar} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={[theme.typography.caption, { color: k.bar.position === 'within' ? theme.colors.textTertiary : theme.colors.warning }]}>{sideWord(k.bar.position)}</Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>{k.when}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export type FamilyRow = { id: string; name: string; relationship: string; digest: FamilyDigest | null };
+
+/** The family at a glance: tap a person to see their records. Only facts: dates and counts from their own reports. */
+export function FamilyStrip({ rows, onOpen }: { rows: FamilyRow[]; onOpen: (id: string) => void }) {
+  const theme = useTheme();
+  if (rows.length === 0) return null;
+  return (
+    <View style={{ gap: theme.spacing.sm }} testID="home-family">
+      <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary }]} accessibilityRole="header">Your family</Text>
+      <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden' }}>
+        {rows.map((p, n) => {
+          const d = p.digest;
+          const bits = d
+            ? [d.latestDate ? `Latest report ${shortDate(d.latestDate)}` : 'No dated report yet', d.outsideCount ? `${d.outsideCount} outside printed range` : null, d.trackedCount ? `${d.trackedCount} tracked over time` : null].filter(Boolean)
+            : ['Loading…'];
+          return (
+            <Pressable key={p.id} onPress={() => onOpen(p.id)} accessibilityRole="button" accessibilityLabel={`${p.name}, ${p.relationship}. ${bits.join('. ')}. Open their records.`} testID={`family-${p.id}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, padding: theme.spacing.md, borderTopWidth: n ? 1 : 0, borderTopColor: theme.colors.border }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.accentSubtle, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={[theme.typography.labelLarge, { color: theme.colors.accent }]}>{p.name.trim().charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]} numberOfLines={1}>{p.name} <Text style={{ color: theme.colors.textTertiary, fontWeight: '400' }}>· {p.relationship}</Text></Text>
+                <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]} numberOfLines={2}>{bits.join(' · ')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

@@ -16,7 +16,7 @@ import {
   PersonBar,
 } from '../index';
 import { SummaryTiles } from './WhatChangedUI';
-import { CheckCard, ChangeSummaryCard, DoctorShortcut, HealthStoryCard, KeyMeasureTiles } from './HomeV2UI';
+import { CheckCard, ChangeSummaryCard, DoctorShortcut, FamilyStrip, HealthStoryCard, KeyMeasureTiles, KeyNumbersCard, type FamilyRow } from './HomeV2UI';
 import { BRAND, wordmarkParts } from '../../config/brand';
 import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
@@ -28,6 +28,8 @@ import { isProcessing } from '../../services/documents/documentStatus';
 import { healthService } from '../../services/health/healthService';
 import { homeStage, trustedResults } from '../../services/health/homeDashboard';
 import { buildHealthStory } from '../../services/health/homeStory';
+import { familyDigest, keyNumbers, type FamilyDigest } from '../../services/health/homeInsights';
+import { usePeople } from '../../hooks/usePeople';
 import { startReading } from '../../services/processing/processingService';
 import { reportNames } from '../../services/documents/reportName';
 import {
@@ -70,6 +72,8 @@ export function HomeV2() {
   const [documentsError, setDocumentsError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [readingAgain, setReadingAgain] = useState(false);
+  const { people, active, switchTo } = usePeople();
+  const [digests, setDigests] = useState<Record<string, FamilyDigest>>({});
   // Reports waiting to be read are read automatically (consent once).
   const autoRead = useAutoRead();
 
@@ -121,6 +125,23 @@ export function HomeV2() {
     readingCount.current = autoRead.reading;
     loadDocuments();
   }, [autoRead.reading, loadDocuments]);
+
+  // The rest of the family at a glance: each person's own reports only (RLS), counted, never merged.
+  const others = people.filter((p) => p.id !== active?.id);
+  const otherIds = others.map((p) => p.id).join(',');
+  useEffect(() => {
+    let cancelled = false;
+    others.forEach((p) => {
+      healthService
+        .getRecordedObservations(p.id)
+        .then((rs) => !cancelled && setDigests((d) => ({ ...d, [p.id]: familyDigest(rs) })))
+        .catch(() => undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otherIds, results]);
 
   // Reports held under the old identity rule are read again with the current one; confirmed results are kept.
   async function readHeldAgain(held: StoredDocument[]) {
@@ -182,6 +203,8 @@ export function HomeV2() {
   const openVerify = () => router.push({ pathname: '/documents', params: { filter: 'verify' } });
   const names = reportNames(trustedResults(allResults));
   const story = buildHealthStory(allResults, names);
+  const numbers = comparisons.length === 0 ? keyNumbers(allResults) : [];
+  const familyRows: FamilyRow[] = others.map((p) => ({ id: p.id, name: p.name, relationship: p.relationship === 'self' ? 'You' : p.relationship.charAt(0).toUpperCase() + p.relationship.slice(1), digest: digests[p.id] ?? null }));
   const heldDocs = docs.filter((d) => d.status === 'completed' && needsReview(d));
   const stillReading = autoRead.reading > 0 || docs.some((d) => d.status === 'uploaded' || isProcessing(d.status));
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
@@ -262,6 +285,10 @@ export function HomeV2() {
           )}
 
           <KeyMeasureTiles comparisons={comparisons} onOpen={() => router.push('/changes')} />
+
+          <KeyNumbersCard items={numbers} onOpenReport={(id) => router.push(`/documents/${id}`)} />
+
+          <FamilyStrip rows={familyRows} onOpen={switchTo} />
 
           {comparisons.length === 0 && !hasTrusted ? (
             resultsError ? (

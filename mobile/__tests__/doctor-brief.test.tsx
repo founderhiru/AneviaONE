@@ -177,4 +177,11 @@ describe('Doctor screen', () => {
     await renderWithAuth(<DoctorScreen />);
     await waitFor(() => expect(screen.getByTestId('doctor-review-link')).toBeTruthy());
   });
+
+  it('offers questions taken from the record, as statements of fact plus a question, never advice', async () => {
+    await renderWithAuth(<DoctorScreen />);
+    await waitFor(() => expect(screen.getByTestId('doctor-question-0')).toBeTruthy());
+    expect(screen.getByTestId('doctor-question-0')).toHaveTextContent(/range printed on the report/);
+    expect(screen.getByTestId('doctor-question-0')).toHaveTextContent(/\?$/);
+  });
 });

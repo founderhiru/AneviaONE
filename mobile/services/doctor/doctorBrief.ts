@@ -48,11 +48,14 @@ export function tidyName(name: string): string {
 }
 
 const HIGHLIGHTS_PER_REPORT = 3;
+const MAX_QUESTIONS = 4;
 
 export type BriefTrend = { name: string; unit: string | null; points: Array<{ date: string; value: string; position: BriefResult['position'] }> };
 
 export type DoctorBrief = {
   preparedOn: string;
+  /** Things worth asking, taken only from the record (outside-range results, tests that moved, medicines). */
+  questions: string[];
   person: BriefPerson;
   reportCount: number;
   resultCount: number;
@@ -138,9 +141,18 @@ export function buildDoctorBrief(input: {
 
   const unique = (items: string[]) => [...new Set(items.map((s) => s.trim()).filter(Boolean))];
 
+  // Questions come from the record itself: never advice, never a threshold of ours.
+  const medicationList = unique(input.medications.filter((m) => m.status !== 'past').map((m) => m.name));
+  const questions = unique([
+    ...outsideRange.slice(0, MAX_QUESTIONS).map((r) => `My ${r.name} was ${r.value} on ${briefDate(r.date)}, ${r.position} the range printed on the report${r.range ? ` (${r.range})` : ''}. What does this mean for me?`),
+    ...trends.slice(0, 2).map((t) => `${t.name} went from ${t.points[0].value} to ${t.points[t.points.length - 1].value}${t.unit ? ' ' + t.unit : ''} between ${briefDate(t.points[0].date)} and ${briefDate(t.points[t.points.length - 1].date)}. Is that the change you expected?`),
+    ...(medicationList.length ? [`My reports list ${medicationList.slice(0, 4).join(', ')}. Should anything about these change?`] : []),
+  ]).slice(0, MAX_QUESTIONS + 3);
+
   return {
     preparedOn: (input.now ?? new Date()).toISOString().slice(0, 10),
     person: input.person,
+    questions,
     reportCount: reports.length,
     resultCount: all.length,
     outsideRange,
