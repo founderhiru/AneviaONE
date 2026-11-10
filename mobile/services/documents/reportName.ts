@@ -10,6 +10,8 @@ import { shortDate } from '../health/homeDashboard';
  */
 
 const IMAGING_MODALITIES: Array<[RegExp, string]> = [
+  [/\b(echocardiogra\w*|2d\s?echo|echo(\s?report)?)\b/i, 'Echocardiogram'],
+  [/\b(dexa|dxa|bone\s?(mineral\s?)?density)\b/i, 'Bone density scan'],
   [/\b(x-?\s?ray|radiograph)\b/i, 'X-ray'],
   [/\b(mri|magnetic resonance)\b/i, 'MRI scan'],
   [/\b(ct|cat scan|computed tomography)\b/i, 'CT scan'],
@@ -17,9 +19,16 @@ const IMAGING_MODALITIES: Array<[RegExp, string]> = [
   [/\b(mammogra)/i, 'Mammogram'],
 ];
 
-export type ReportKind = 'Blood test' | 'Urine test' | 'Lab report' | 'X-ray' | 'MRI scan' | 'CT scan' | 'Ultrasound' | 'Mammogram' | 'Imaging report' | 'Vital signs' | 'Health report';
+export type ReportKind = 'Blood test' | 'Urine test' | 'Lab report' | 'Echocardiogram' | 'ECG' | 'Bone density scan' | 'X-ray' | 'MRI scan' | 'CT scan' | 'Ultrasound' | 'Mammogram' | 'Imaging report' | 'Vital signs' | 'Health report';
 
-function kindOfOne(r: Pick<RecordedObservation, 'category' | 'name'>): ReportKind | null {
+/** Findings that only an echocardiogram reports (valves, chambers, ejection fraction). */
+const ECHO_FINDINGS = /\b(ejection fraction|lvef|(aortic|mitral|tricuspid|pulmonary)\s+valve|ventric\w*|atri(um|al))\b/i;
+/** Measurements that only an ECG tracing reports. */
+const ECG_FINDINGS = /^(qrs|qtc?|pr(\s+interval)?|st\s+segment|p\s+wave|ecg|ekg)\b|\b(ecg|ekg)\b/i;
+
+const modalityIn = (text: string): string | null => IMAGING_MODALITIES.find(([re]) => re.test(text))?.[1] ?? null;
+
+function kindOfOne(r: Pick<RecordedObservation, 'category' | 'name'> & { source?: { documentName?: string } }): ReportKind | null {
   switch (r.category) {
     case 'blood': return 'Blood test';
     case 'urine': return 'Urine test';
@@ -27,19 +36,33 @@ function kindOfOne(r: Pick<RecordedObservation, 'category' | 'name'>): ReportKin
     case 'vital_sign':
     case 'vitals': return 'Vital signs';
     case 'imaging': {
-      const hit = IMAGING_MODALITIES.find(([re]) => re.test(r.name));
-      return (hit?.[1] as ReportKind | undefined) ?? 'Imaging report';
+      // What the results say first, then what the file is called.
+      const found = modalityIn(r.name) ?? (ECHO_FINDINGS.test(r.name) ? 'Echocardiogram' : null) ?? modalityIn(r.source?.documentName ?? '');
+      return (found as ReportKind | null) ?? 'Imaging report';
     }
-    default: return null;
+    default:
+      return ECG_FINDINGS.test(r.name) || /\b(ecg|ekg|electrocardiogra\w*)\b/i.test(r.source?.documentName ?? '') ? 'ECG' : null;
   }
 }
 
+const GENERIC_IMAGING: ReportKind = 'Imaging report';
+const IMAGING_KINDS: ReportKind[] = ['Echocardiogram', 'ECG', 'Bone density scan', 'X-ray', 'MRI scan', 'CT scan', 'Ultrasound', 'Mammogram', 'Imaging report'];
+
 /** The kind of report, from the results read from it. Mixed lab results → "Lab report". */
-export function reportKind(results: Array<Pick<RecordedObservation, 'category' | 'name'>>): ReportKind | null {
-  const kinds = [...new Set(results.map(kindOfOne).filter((k): k is ReportKind => k !== null))];
+export function reportKind(results: Array<Pick<RecordedObservation, 'category' | 'name'> & { source?: { documentName?: string } }>): ReportKind | null {
+  const all = results.map(kindOfOne).filter((k): k is ReportKind => k !== null);
+  const kinds = [...new Set(all)];
   if (kinds.length === 0) return null;
   if (kinds.length === 1) return kinds[0];
-  return kinds.every((k) => k === 'Blood test' || k === 'Urine test' || k === 'Lab report') ? 'Lab report' : 'Health report';
+  const lab = (k: ReportKind) => k === 'Blood test' || k === 'Urine test' || k === 'Lab report';
+  if (kinds.every(lab)) return 'Lab report';
+  // A scan's own findings ("Impression") never outvote the scan's name: the most common specific imaging kind wins.
+  if (kinds.every((k) => IMAGING_KINDS.includes(k))) {
+    const specific = kinds.filter((k) => k !== GENERIC_IMAGING);
+    if (specific.length === 0) return GENERIC_IMAGING;
+    return specific.sort((x, y) => all.filter((k) => k === y).length - all.filter((k) => k === x).length)[0];
+  }
+  return 'Health report';
 }
 
 /** Newest dated result's date, as the report date (null if none was clear). */

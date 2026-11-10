@@ -26,4 +26,20 @@ describe('report names', () => {
   it('omits the date when none was clear', () => {
     expect(reportName([obs({ id: 'a', date: null })])).toBe('Blood test');
   });
+
+  it('names the scan, not just "Imaging report": echo from its findings, ultrasound/X-ray from the file name', () => {
+    const echo = ['Aortic Valve', 'Tricuspid Valve', 'Impression'].map((name, n) => obs({ id: `e${n}`, category: 'imaging', name, value: 'NORMAL' }));
+    expect(reportKind(echo)).toBe('Echocardiogram'); // a generic "Impression" does not turn it into a mixed report
+    expect(reportName(echo)).toBe('Echocardiogram · 15 Jan 2026');
+    const usg = ['Liver', 'Impression'].map((name, n) => obs({ id: `u${n}`, category: 'imaging', name, source: { documentId: 'd2', documentName: 'Abdominal Ultrasound.pdf', pageNumber: 1 } }));
+    expect(reportKind(usg)).toBe('Ultrasound');
+    const xr = [obs({ id: 'x', category: 'imaging', name: 'Lung Fields', source: { documentId: 'd3', documentName: 'Chest X-ray Report.pdf', pageNumber: 1 } })];
+    expect(reportKind(xr)).toBe('X-ray');
+    expect(reportKind([obs({ id: 'g', category: 'imaging', name: 'Impression' })])).toBe('Imaging report'); // nothing says which
+  });
+  it('names an ECG from its measurements, and a bone-density scan from its file name', () => {
+    expect(reportKind([obs({ id: 'q', category: 'other', name: 'QRS', value: '90', unit: 'ms' })])).toBe('ECG');
+    expect(reportKind([obs({ id: 'b', category: 'imaging', name: 'Hip T-score', source: { documentId: 'd4', documentName: 'Bone Density (DEXA) Report.pdf', pageNumber: 1 } })])).toBe('Bone density scan');
+    expect(reportKind([obs({ id: 'o', category: 'other', name: 'Something else' })])).toBeNull();
+  });
 });
