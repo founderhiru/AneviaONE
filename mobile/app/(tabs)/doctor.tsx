@@ -27,8 +27,8 @@ const where = (r: BriefResult) => {
 function useType() {
   const theme = useTheme();
   const big = React.useContext(BigContext);
-  const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary }, big ? { fontSize: 20, lineHeight: 28 } : null];
-  const small = [theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16, lineHeight: 22 } : null];
+  const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary, fontSize: big ? 17 : 13, lineHeight: big ? 24 : 18 }];
+  const small = [theme.typography.caption, { color: theme.colors.textTertiary, fontSize: big ? 14 : 11, lineHeight: big ? 19 : 15 }];
   return { theme, big, body, small };
 }
 
@@ -46,7 +46,7 @@ function ResultRow({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }
       accessibilityRole="button"
       accessibilityLabel={`${r.name}, ${r.value}${r.range ? `, report range ${r.range}` : ''}, ${r.reportTitle}`}
       testID={`doctor-${scope}-${r.id}`}
-      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.sm, paddingVertical: theme.spacing.xs }}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.sm, paddingVertical: 6 }}
     >
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[...body, { fontWeight: '600' }]}>{r.name}</Text>
@@ -54,10 +54,10 @@ function ResultRow({ r, scope }: { r: BriefResult; scope: 'outside' | 'report' }
         {r.previous ? <Text style={[...small, { color: theme.colors.textSecondary }]}>was {r.previous.value} in {briefDate(r.previous.date)}</Text> : null}
       </View>
       <View style={{ alignItems: 'flex-end', gap: 2, maxWidth: '45%' }}>
-        <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary,  }, big ? { fontSize: 24 } : null]} numberOfLines={2}>{r.value}</Text>
+        <Text style={{ color: theme.colors.textPrimary, fontSize: big ? 20 : 14, lineHeight: big ? 26 : 19, fontWeight: '700', fontVariant: ['tabular-nums'], textAlign: 'right' }} numberOfLines={2}>{r.value}</Text>
         {side ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: theme.colors.warningSubtle }}>
-            <Text style={[theme.typography.labelSmall, { color: theme.colors.warning }, big ? { fontSize: 14 } : null]}>{side === 'Above' ? '▲ Above range' : '▼ Below range'}</Text>
+          <View style={{ paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: theme.colors.warningSubtle }}>
+            <Text style={[theme.typography.labelSmall, { color: theme.colors.warning, fontSize: big ? 12 : 10, lineHeight: big ? 16 : 14 }]}>{side === 'Above' ? '▲ Above range' : '▼ Below range'}</Text>
           </View>
         ) : null}
       </View>
@@ -70,10 +70,10 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   return (
     <View style={{ gap: theme.spacing.xs }}>
       <View style={{ gap: 2 }}>
-        <Text style={[theme.typography.labelMedium, { color: theme.colors.accent, letterSpacing: 1.2 }, big ? { fontSize: 15 } : null]} accessibilityRole="header">{title.toUpperCase()}</Text>
+        <Text style={[theme.typography.labelMedium, { color: theme.colors.accent, letterSpacing: 1.6, fontSize: big ? 12 : 10, lineHeight: big ? 16 : 14 }]} accessibilityRole="header">{title.toUpperCase()}</Text>
         {hint ? <Text style={small}>{hint}</Text> : null}
       </View>
-      <View style={{ padding: theme.spacing.md, borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, gap: theme.spacing.xs }}>{children}</View>
+      <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: theme.radius.md, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }}>{children}</View>
     </View>
   );
 }
@@ -85,7 +85,7 @@ function Plain({ items }: { items: string[] }) {
       {items.map((i, n) => (
         <View key={i}>
           {n > 0 ? <Hairline /> : null}
-          <Text style={[...body, { paddingVertical: theme.spacing.xs }]}>{i}</Text>
+          <Text style={[...body, { paddingVertical: 6 }]}>{i}</Text>
         </View>
       ))}
     </View>
@@ -96,8 +96,8 @@ function Stat({ value, label }: { value: number; label: string }) {
   const { theme, big } = useType();
   return (
     <View style={{ flex: 1, gap: 2 }}>
-      <Text style={{ fontSize: big ? 34 : 28, color: FOREST.text }}>{value}</Text>
-      <Text style={[theme.typography.caption, { color: FOREST.textMuted }, big ? { fontSize: 15 } : null]}>{label}</Text>
+      <Text style={{ fontSize: big ? 28 : 22, lineHeight: big ? 32 : 26, color: FOREST.text, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{value}</Text>
+      <Text style={[theme.typography.caption, { color: FOREST.textMuted, fontSize: big ? 13 : 10, letterSpacing: 0.8, textTransform: 'uppercase' }]}>{label}</Text>
     </View>
   );
 }
@@ -156,15 +156,15 @@ export default function DoctorScreen() {
   }
 
   const big = handover;
-  const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary }] as const;
-  const bigBody = big ? { fontSize: 20, lineHeight: 28 } : null;
-  const small = [theme.typography.caption, { color: theme.colors.textTertiary }, big ? { fontSize: 16, lineHeight: 22 } : null];
+  const body = [theme.typography.bodyMedium, { color: theme.colors.textPrimary, fontSize: big ? 17 : 13, lineHeight: big ? 24 : 18 }] as const;
+  const bigBody = null;
+  const small = [theme.typography.caption, { color: theme.colors.textTertiary, fontSize: big ? 14 : 11, lineHeight: big ? 19 : 15 }];
 
   return (
     <BigContext.Provider value={big}>
     <ScreenContainer>
       <PersonBar />
-      <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">Summary for your Doctor</Text>
+      <Text style={[theme.typography.headingMedium, { color: theme.colors.textPrimary, fontSize: 18, lineHeight: 24 }]} accessibilityRole="header">Summary for your Doctor</Text>
 
       {error ? (
         <ErrorState description="We couldn’t prepare your summary. Please try again." onRetry={load} />
@@ -178,11 +178,11 @@ export default function DoctorScreen() {
           onActionPress={() => router.push('/add')}
         />
       ) : (
-        <View style={{ gap: theme.spacing.md }} testID="doctor-brief">
-          <View style={{ gap: theme.spacing.md, padding: theme.spacing.md, borderRadius: theme.radius.xl, backgroundColor: FOREST.field }}>
+        <View style={{ gap: theme.spacing.sm }} testID="doctor-brief">
+          <View style={{ gap: theme.spacing.md, padding: 14, borderRadius: theme.radius.lg, backgroundColor: FOREST.field }}>
             <View style={{ gap: 4 }}>
-              <Text style={[theme.typography.labelSmall, { color: FOREST.gold, letterSpacing: 1.4 }]}>HEALTH SUMMARY · PREPARED {briefDate(brief.preparedOn).toUpperCase()}</Text>
-              <Text style={{ fontSize: big ? 30 : 24, lineHeight: big ? 38 : 30, color: FOREST.text }} testID="doctor-person">
+              <Text style={[theme.typography.labelSmall, { color: FOREST.gold, letterSpacing: 1.6, fontSize: 10 }]}>HEALTH SUMMARY · PREPARED {briefDate(brief.preparedOn).toUpperCase()}</Text>
+              <Text style={{ fontSize: big ? 24 : 19, lineHeight: big ? 30 : 25, fontWeight: '600', color: FOREST.text }} testID="doctor-person">
                 {brief.person.name ?? 'Name not provided'}
               </Text>
             </View>
@@ -197,7 +197,7 @@ export default function DoctorScreen() {
           {brief.heldReports > 0 ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, padding: theme.spacing.sm, borderRadius: theme.radius.md, backgroundColor: theme.colors.warningSubtle }}>
               <Ionicons name="information-circle-outline" size={big ? 22 : 18} color={theme.colors.warning} />
-              <Text style={[theme.typography.bodySmall, { flex: 1, color: theme.colors.textSecondary }, big ? { fontSize: 16 } : null]} testID="doctor-held-note">
+              <Text style={[theme.typography.bodySmall, { flex: 1, color: theme.colors.textSecondary, fontSize: big ? 14 : 12 }]} testID="doctor-held-note">
                 {brief.heldReports} {brief.heldReports === 1 ? 'report has' : 'reports have'} results not yet checked — not included here.
               </Text>
               {!big ? (
@@ -239,7 +239,7 @@ export default function DoctorScreen() {
               {brief.questions.map((q, n) => (
                 <View key={q}>
                   {n > 0 ? <Hairline /> : null}
-                  <Text style={[...body, { paddingVertical: theme.spacing.xs }]} testID={`doctor-question-${n}`}>{n + 1}. {q}</Text>
+                  <Text style={[...body, { paddingVertical: 6 }]} testID={`doctor-question-${n}`}>{n + 1}. {q}</Text>
                 </View>
               ))}
             </Section>
@@ -303,7 +303,7 @@ export default function DoctorScreen() {
               {brief.reports.map((rep, n) => (
                 <View key={rep.documentId} style={{ gap: 2 }}>
                   {n > 0 ? <Hairline /> : null}
-                  <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, paddingTop: theme.spacing.xs }, big ? { fontSize: 22 } : null]}>{rep.title}</Text>
+                  <Text style={[...body, { fontWeight: '700', paddingTop: 6 }]}>{rep.title}</Text>
                   {rep.results.map((r) => <ResultRow key={r.id} r={r} scope="report" />)}
                 </View>
               ))}
