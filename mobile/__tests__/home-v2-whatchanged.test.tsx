@@ -17,6 +17,10 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import type { RecordedObservation, StoredDocument } from '../types';
 import { renderWithAuth } from './testUtils';
 
+const mockPeople: { people: unknown[]; active: unknown } = { people: [], active: null };
+jest.mock('../hooks/usePeople', () => ({ usePeople: () => ({ ...mockPeople, switchTo: mockSwitch, refresh: jest.fn() }) }));
+const mockSwitch = jest.fn();
+
 jest.mock('../services/supabaseClient', () => ({ getSupabaseClient: jest.fn(), isSupabaseConfigured: true }));
 jest.mock('../services/health/healthService', () => {
   const actual = jest.requireActual('../services/health/healthService');
@@ -158,5 +162,30 @@ describe('Home (new)', () => {
     expect(within(card).getByText('Lab 1')).toBeTruthy();
     expect(screen.queryByTestId('home-change-card')).toBeNull();
     expect(screen.queryByText('Latest results')).toBeNull(); // no long results list on Home; the Health tab has it
+  });
+
+  it('with nothing to chart, shows where single results sit against their printed range, and when they were done', async () => {
+    const singles = [
+      result('s1', 'LDL Cholesterol', '142', '2026-03-10', 'd1', { referenceRange: '0 - 100', referenceLow: 0, referenceHigh: 100 }),
+      result('s2', 'HDL Cholesterol', '50', '2026-03-10', 'd1', { referenceRange: '40 - 100', referenceLow: 40, referenceHigh: 100 }),
+    ];
+    await renderHome([doc('d1')], singles);
+    const card = await screen.findByTestId('home-key-numbers');
+    expect(within(card).getByTestId('key-number-s1')).toBeTruthy();
+    expect(within(card).getAllByText('Above printed range').length).toBe(1);
+    expect(within(card).getByText('Within printed range')).toBeTruthy();
+  });
+
+  it('shows the family at a glance, and tapping a person switches to their records', async () => {
+    mockPeople.active = { id: 'me', name: 'Asha', relationship: 'self', access: 'owner' };
+    mockPeople.people = [mockPeople.active, { id: 'dad', name: 'Ramesh Verma', relationship: 'father', access: 'owner' }];
+    await renderHome(docs, LDL);
+    const row = await screen.findByTestId('family-dad');
+    await waitFor(() => expect(within(row).getByText(/Latest report/)).toBeTruthy());
+    expect(screen.queryByTestId('family-me')).toBeNull(); // the person on screen is not repeated
+    fireEvent.press(row);
+    expect(mockSwitch).toHaveBeenCalledWith('dad');
+    mockPeople.people = [];
+    mockPeople.active = null;
   });
 });

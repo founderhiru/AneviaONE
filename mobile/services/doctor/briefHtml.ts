@@ -49,6 +49,7 @@ export function doctorBriefHtml(b: DoctorBrief): string {
     .map((t) => `<p class="t"><b>${esc(t.name)}</b><span class="s">${t.points.map((p) => `${esc(p.value)}${t.unit ? ' ' + esc(t.unit) : ''} (${esc(briefDate(p.date))})`).join(' &rarr; ')}</span></p>`)
     .join('');
 
+  const questions = b.questions.length ? `<ol class="q">${b.questions.map((q) => `<li>${esc(q)}</li>`).join('')}</ol>` : '';
   const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @page{margin:0}
@@ -65,7 +66,7 @@ td.v{font-weight:600;white-space:nowrap;text-align:right;padding-right:14px}td.m
 .rep{margin:0 0 10px;break-inside:avoid}.rt{font-weight:600;margin-bottom:2px}
 .hl{display:flex;justify-content:space-between;gap:12px;padding:2px 0;border-bottom:1px solid #eaf0e6}.hl b{font-weight:600;text-align:right}
 .t{margin:6px 0}.t b{display:block;font-weight:600}
-ul{margin:4px 0;padding-left:18px}li{margin:2px 0}
+ul,ol{margin:4px 0;padding-left:20px}li{margin:3px 0}
 .note{color:#6b7a70;font-size:10px;margin-top:22px;border-top:1px solid #d9e2d4;padding-top:8px}
 </style></head><body>
 <div class="band"><div class="k">Health summary &middot; Prepared ${esc(briefDate(b.preparedOn))}</div>
@@ -74,6 +75,7 @@ ul{margin:4px 0;padding-left:18px}li{margin:2px 0}
 <div class="page">
 ${b.heldReports ? `<p class="s">${plural(b.heldReports, 'report')} with results not yet checked (not included).</p>` : ''}
 ${section('Worth discussing: outside the range printed on the report', outside)}
+${section('Questions to ask', questions)}
 ${section('Latest reports', reports)}
 ${section('Changes over time', trends)}
 ${section('Medications listed on reports', list(b.medications))}${section('Conditions stated on reports', list(b.conditions))}${section('Allergies stated on reports', list(b.allergies))}

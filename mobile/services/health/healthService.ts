@@ -54,7 +54,7 @@ export interface HealthService {
   /** Test results behind a timeline event (trusted records only). */
   getEventObservations(event: HealthEvent): Promise<Observation[]>;
   /** Test results read from the person's own reports, newest first. */
-  getRecordedObservations(): Promise<RecordedObservation[]>;
+  getRecordedObservations(subjectId?: string | null): Promise<RecordedObservation[]>;
   /** Test results read from one stored document, in page order. */
   getDocumentObservations(documentId: string): Promise<RecordedObservation[]>;
 }
@@ -99,13 +99,13 @@ const LOAD_ERROR = { code: 'unknown' as const, userMessage: 'We couldn’t load 
  * Each row is joined to its stored document name and page number so every
  * value can be traced back to its source.
  */
-async function loadObservations(filter: { documentId?: string }): Promise<RecordedObservation[]> {
+async function loadObservations(filter: { documentId?: string; subjectId?: string | null }): Promise<RecordedObservation[]> {
   const client = getSupabaseClient();
   if (!client) throw new ServiceError('not_configured', 'Your Health Memory isn’t available right now.');
   let query = filter.documentId
     ? client.from('observations').select(OBSERVATION_COLUMNS).eq('document_id', filter.documentId).is('superseded_at', null).neq('review_status', 'rejected')
     : client.from('current_observations').select(OBSERVATION_COLUMNS);
-  const subjectId = getActiveSubjectId();
+  const subjectId = filter.subjectId ?? getActiveSubjectId();
   if (subjectId) query = query.eq('subject_id', subjectId);
   query = query.order('effective_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(500);
   const { data, error } = await query;
@@ -205,7 +205,7 @@ export const productionHealthService: HealthService = {
         referenceRange: r.referenceRange ?? undefined,
       }));
   },
-  getRecordedObservations: () => loadObservations({}),
+  getRecordedObservations: (subjectId) => loadObservations({ subjectId }),
   getDocumentObservations: (documentId) => loadObservations({ documentId }),
 };
 

@@ -234,6 +234,17 @@ export default function DoctorScreen() {
             )}
           </Section>
 
+          {brief.questions.length ? (
+            <Section title="Questions to ask" hint="From your own reports. Change or drop any you like.">
+              {brief.questions.map((q, n) => (
+                <View key={q}>
+                  {n > 0 ? <Hairline /> : null}
+                  <Text style={[...body, { paddingVertical: theme.spacing.xs }]} testID={`doctor-question-${n}`}>{n + 1}. {q}</Text>
+                </View>
+              ))}
+            </Section>
+          ) : null}
+
           {brief.trends.length ? (
             <Section title="Changes over time" hint="The same test on different dates, as printed.">
               {brief.trends.map((t, n) => {
