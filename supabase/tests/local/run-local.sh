@@ -42,7 +42,9 @@ echo "▸ Running family access test (invites, approval, revocation, granted rea
 echo "▸ Running family uploads test (a relative's reports: person, facts, original file, identity check)"
 PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/family_uploads_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
-
+echo "▸ Running obligations test (reminders: isolation, grants, extracted proposals, deletion)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/obligations_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 if $WITH_PROPOSED; then
   for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
     echo "▸ Applying PROPOSED $(basename "$migration")"
