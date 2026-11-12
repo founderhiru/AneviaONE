@@ -1,3 +1,4 @@
+import { getActiveSubjectId, isOtherDemoPerson } from '../people/activeSubject';
 /**
  * DEMO MODE ONLY. Loaded exclusively through services/demo/demoServices.ts,
  * so production builds never bundle the fictional sample dataset.
@@ -51,6 +52,7 @@ export const demoHealthService: HealthService = {
   getVaccinations: () => delay(mockVaccinations),
   getProcedures: () => delay(mockProcedures),
   getEventObservations: (event) => delay(getObservationsByIds(event.observationIds)),
-  getRecordedObservations: () => delay([...mockObservations].sort((a, b) => b.date.localeCompare(a.date)).map(toRecorded)),
+  // The sample health records belong to "Me"; the demo family (EXPO_PUBLIC_DEMO_FAMILY) has none yet.
+  getRecordedObservations: (subjectId) => delay(isOtherDemoPerson(subjectId ?? getActiveSubjectId()) ? [] : [...mockObservations].sort((a, b) => b.date.localeCompare(a.date)).map(toRecorded)),
   getDocumentObservations: (documentId) => delay(mockObservations.filter((o) => o.sourceDocumentId === documentId).map(toRecorded)),
 };

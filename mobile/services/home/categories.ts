@@ -14,17 +14,17 @@ export type HomeCategory = {
   title: string;
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
-  route: '/(tabs)/health' | '/family' | '/reminders' | '/vault?group=identity' | '/vault?group=documents' | '/vault?group=insurance';
+  route: '/(tabs)/health' | '/family' | '/reminders' | '/vault' | '/vault?category=identity' | '/vault?category=insurance';
   /** Needs the personal documents folder (build setting; see config/vaultFlag.ts). */
   vault?: boolean;
 };
 
 export const HOME_CATEGORIES: HomeCategory[] = [
   { key: 'health', title: 'Health', subtitle: 'Reports, results and your health history', icon: 'heart-outline', route: '/(tabs)/health' },
-  { key: 'identity', title: 'Identity', subtitle: 'Keep your ID files in one safe place', icon: 'id-card-outline', route: '/vault?group=identity', vault: true },
+  { key: 'identity', title: 'Identity', subtitle: 'Keep your ID files in one safe place', icon: 'id-card-outline', route: '/vault?category=identity', vault: true },
   { key: 'family', title: 'Family', subtitle: 'People, and who can see their records', icon: 'people-outline', route: '/family' },
-  { key: 'documents', title: 'Documents', subtitle: 'Education, property, legal and other files', icon: 'folder-open-outline', route: '/vault?group=documents', vault: true },
-  { key: 'insurance', title: 'Insurance', subtitle: 'Policies and certificates', icon: 'shield-checkmark-outline', route: '/vault?group=insurance', vault: true },
+  { key: 'documents', title: 'Documents', subtitle: 'Education, property, legal, photos and more', icon: 'folder-open-outline', route: '/vault', vault: true },
+  { key: 'insurance', title: 'Insurance', subtitle: 'Policies and certificates', icon: 'shield-checkmark-outline', route: '/vault?category=insurance', vault: true },
   { key: 'life', title: 'Life Management', subtitle: 'Reminders and important dates', icon: 'calendar-outline', route: '/reminders' },
 ];
 

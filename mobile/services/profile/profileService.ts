@@ -121,6 +121,12 @@ function accountDeleteError(http: { status: number; code: string | null } | null
   if (http?.code === 'reauthentication_required') {
     return new ServiceError('reauthentication_required', 'For your security, sign in again, then delete your account within 15 minutes. Nothing has been deleted.');
   }
+  if (http?.code === 'custody_unresolved') {
+    return new ServiceError('custody_unresolved', 'You still look after people whose records need a decision. Nothing has been deleted.');
+  }
+  if (http?.code === 'legal_hold') {
+    return new ServiceError('legal_hold', 'A record on your account is on hold and can’t be deleted right now. Nothing has been deleted.');
+  }
   if (http?.code === 'account_busy') {
     return new ServiceError('busy', 'A report is being read right now. Try again in a few minutes. Nothing has been deleted.', { retryable: true });
   }

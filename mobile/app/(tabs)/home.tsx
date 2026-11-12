@@ -2,7 +2,9 @@ import React from 'react';
 
 import { HomeCategories } from '../../components/home/HomeCategories';
 import { HomeClassic } from '../../components/home/HomeClassic';
+import { HomeNav } from '../../components/home/HomeNav';
 import { HomeV2 } from '../../components/home/HomeV2';
+import { NAV_V2 } from '../../config/navFlag';
 import { HOME_VARIANT } from '../../config/homeVariant';
 
 /**
@@ -11,6 +13,7 @@ import { HOME_VARIANT } from '../../config/homeVariant';
  * (a build setting; see config/homeVariant.ts) until the new one is proven.
  */
 export default function HomeScreen() {
+  if (NAV_V2) return <HomeNav />;
   if (HOME_VARIANT === 'classic') return <HomeClassic />;
   if (HOME_VARIANT === 'categories') return <HomeCategories />;
   return <HomeV2 />;

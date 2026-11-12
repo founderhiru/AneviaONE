@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, Share, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Button, Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, TextInput } from '../../components';
+import { Button, Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, SecondaryButton, TextInput } from '../../components';
 import { BRAND, PRODUCT_TERMS } from '../../config/brand';
 import { useTheme } from '../../design/theme';
 import { usePeople } from '../../hooks/usePeople';
+import { custodyService } from '../../services/custody/custodyService';
 import { toIsoDate } from '../../services/people/dates';
 import { peopleService, RELATIONSHIPS, type AccessEntry, type Person, type Relationship } from '../../services/people/peopleService';
 import { ServiceError } from '../../services/serviceError';
@@ -92,6 +93,9 @@ function PersonRow({ person, selected, onOpen, entries, reload }: { person: Pers
   const [err, setErr] = useState<string | null>(null);
   const self = person.relationship === 'self' && person.access === 'owner';
   const canInvite = person.access === 'owner';
+  const isRelative = person.access === 'owner' && person.relationship !== 'self';
+  const [removing, setRemoving] = useState(false);
+  const [typedName, setTypedName] = useState('');
   const active = entries.filter((e) => e.status === 'active');
 
   async function invite(role: 'viewer' | 'manager') {
@@ -99,6 +103,20 @@ function PersonRow({ person, selected, onOpen, entries, reload }: { person: Pers
     setErr(null);
     try {
       setCode(await peopleService.createInvite(person.id, role));
+    } catch (e) {
+      setErr(messageOf(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  /** Removing a person erases their records and files for good, so their name is typed first. */
+  async function removePerson() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await custodyService.confirmDeletion(person.id, typedName);
+      await custodyService.removePerson(person.id);
+      await reload();
     } catch (e) {
       setErr(messageOf(e));
     } finally {
@@ -150,6 +168,22 @@ function PersonRow({ person, selected, onOpen, entries, reload }: { person: Pers
             <View style={{ flex: 1 }}><Button label="Invite to view" variant="secondary" loading={busy} onPress={() => invite('viewer')} testID={`family-invite-view-${person.id}`} /></View>
             <View style={{ flex: 1 }}><Button label="Invite to help" variant="secondary" loading={busy} onPress={() => invite('manager')} testID={`family-invite-help-${person.id}`} /></View>
           </View>
+        )
+      ) : null}
+      {isRelative ? (
+        removing ? (
+          <View style={{ gap: theme.spacing.xs, marginTop: theme.spacing.sm }} testID={`family-remove-person-box-${person.id}`}>
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.textPrimary }]}>
+              This erases all of {person.name}&rsquo;s records and files. Anyone you shared them with loses access. It can&rsquo;t be recovered.
+            </Text>
+            <TextInput label={`Type ${person.name} to confirm`} value={typedName} onChangeText={setTypedName} autoCorrect={false} editable={!busy} testID={`family-remove-person-name-${person.id}`} />
+            <Button label={`Delete ${person.name}’s records`} variant="destructive" onPress={removePerson} disabled={typedName.trim().length === 0 || busy} loading={busy} testID={`family-remove-person-confirm-${person.id}`} />
+            <SecondaryButton label="Keep them" onPress={() => { setRemoving(false); setTypedName(''); }} testID={`family-remove-person-cancel-${person.id}`} />
+          </View>
+        ) : (
+          <Pressable onPress={() => setRemoving(true)} accessibilityRole="button" testID={`family-remove-person-${person.id}`} style={{ marginTop: theme.spacing.sm }}>
+            <Text style={[theme.typography.caption, { color: theme.colors.danger, fontWeight: '600' }]}>Remove {person.name} and their records</Text>
+          </Pressable>
         )
       ) : null}
       {err ? <Text style={[theme.typography.caption, { color: theme.colors.danger, marginTop: 4 }]}>{err}</Text> : null}

@@ -38,7 +38,7 @@ export type AccessEntry = {
   expiresAt: string | null;
 };
 
-type SubjectRow = { id: string; display_name: string; relationship: Person['relationship']; date_of_birth: string | null; linked_user_id: string | null; created_by: string };
+type SubjectRow = { id: string; display_name: string; relationship: Person['relationship']; date_of_birth: string | null; linked_user_id: string | null; custodian_user_id: string | null };
 type GrantRow = { subject_id: string; role: 'manager' | 'viewer'; status: string; expires_at: string | null };
 
 const LOAD_FAILED = 'We couldn’t load the people on your account. Please try again.';
@@ -71,6 +71,8 @@ export const getCachedPeople = (): Person[] => cached;
 export const getActivePerson = (): Person | null => cached.find((p) => p.id === getActiveSubjectId()) ?? null;
 /** Reports can be added to your own record and to relatives you manage; never to a record shared with you. */
 export const canAddReports = (p: Person | null): boolean => p === null || p.access === 'owner';
+/** Personal documents can be added to a record you control, or one you manage (the database enforces the same). */
+export const canAddVaultFiles = (p: Person | null): boolean => p === null || p.access === 'owner' || p.access === 'manager';
 /** The signed-in person's own record. */
 export const isOwnRecord = (p: Person | null): boolean => p === null || (p.relationship === 'self' && p.access === 'owner');
 
@@ -83,7 +85,7 @@ export const productionPeopleService: PeopleService = {
     if (!me) return [];
 
     const [subjects, grants] = await Promise.all([
-      client.from('subjects').select('id, display_name, relationship, date_of_birth, linked_user_id, created_by').order('created_at', { ascending: true }),
+      client.from('subjects').select('id, display_name, relationship, date_of_birth, linked_user_id, custodian_user_id').order('created_at', { ascending: true }),
       client.from('subject_access').select('subject_id, role, status, expires_at').eq('grantee_user_id', me).eq('status', 'active'),
     ]);
     // Before the family tables exist for this account there is nobody to switch between:
@@ -102,7 +104,7 @@ export const productionPeopleService: PeopleService = {
       name: s.display_name,
       relationship: s.relationship,
       dateOfBirth: s.date_of_birth,
-      access: s.linked_user_id === me || s.created_by === me ? 'owner' : (roleFor.get(s.id) ?? 'viewer'),
+      access: s.linked_user_id === me || s.custodian_user_id === me ? 'owner' : (roleFor.get(s.id) ?? 'viewer'),
     }));
     // Own record first, then relatives, then people who shared theirs.
     const rank = (p: Person) => (p.relationship === 'self' && p.access === 'owner' ? 0 : p.access === 'owner' ? 1 : 2);
@@ -180,10 +182,24 @@ export const productionPeopleService: PeopleService = {
   },
 };
 
-/** Demo mode has one person and no sharing. */
+/** Demo mode has one person and no sharing, unless EXPO_PUBLIC_DEMO_FAMILY=on adds a fictional Dad and Mum to try switching. */
+const DEMO_FAMILY = isDemoMode && process.env.EXPO_PUBLIC_DEMO_FAMILY === 'on';
+const DEMO_PEOPLE: Person[] = [
+  { id: 'demo-person', name: 'Demo User', relationship: 'self', dateOfBirth: null, access: 'owner' },
+  { id: 'demo-dad', name: 'Dad', relationship: 'father', dateOfBirth: null, access: 'owner' },
+  { id: 'demo-mum', name: 'Mum', relationship: 'mother', dateOfBirth: null, access: 'owner' },
+];
 const demoPeopleService: PeopleService = {
-  refresh: async () => [],
-  switchTo: () => undefined,
+  refresh: async () => {
+    if (!DEMO_FAMILY) return [];
+    cached = DEMO_PEOPLE;
+    if (!getActiveSubjectId()) setActiveSubjectId('demo-person');
+    emitPeopleChanged();
+    return cached;
+  },
+  switchTo: (id) => {
+    if (DEMO_FAMILY && cached.some((p) => p.id === id)) setActiveSubjectId(id);
+  },
   createRelative: async () => { throw new ServiceError('not_configured', 'Not available in the demo.'); },
   createInvite: async () => { throw new ServiceError('not_configured', 'Not available in the demo.'); },
   redeemInvite: async () => false,

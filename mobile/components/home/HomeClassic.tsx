@@ -38,6 +38,7 @@ import {
   type GroupFilter,
 } from '../../services/health/whatChanged';
 import type { RecordedObservation, StoredDocument } from '../../types';
+import { NoticesCard } from './NoticesCard';
 
 /** How many of the person's newest documents Home shows. */
 const RECENT_DOCUMENTS = 3;
@@ -230,6 +231,7 @@ export function HomeClassic() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      <NoticesCard />
       <PersonBar />
       {header}
 

@@ -5,40 +5,44 @@
  */
 import { sanitizeFilename } from '../documents/documentValidation';
 
-export type VaultCategory = 'identity' | 'insurance' | 'education' | 'property' | 'legal' | 'vehicle' | 'certificate' | 'other';
+export type VaultCategory = 'identity' | 'insurance' | 'education' | 'property_legal' | 'photos' | 'other';
 
-export const VAULT_CATEGORIES: { value: VaultCategory; label: string }[] = [
-  { value: 'identity', label: 'Identity' },
-  { value: 'insurance', label: 'Insurance' },
-  { value: 'education', label: 'Education' },
-  { value: 'property', label: 'Property' },
-  { value: 'legal', label: 'Legal' },
-  { value: 'vehicle', label: 'Vehicle' },
-  { value: 'certificate', label: 'Certificates' },
-  { value: 'other', label: 'Other' },
+export type VaultCategoryInfo = {
+  value: VaultCategory;
+  label: string;
+  hint: string;
+  icon: 'id-card-outline' | 'shield-checkmark-outline' | 'school-outline' | 'home-outline' | 'images-outline' | 'folder-open-outline';
+  /** Named slots inside the category; empty means one plain list. */
+  kinds: string[];
+};
+
+export const VAULT_CATEGORIES: VaultCategoryInfo[] = [
+  { value: 'identity', label: 'Identity Documents', hint: 'Aadhaar, PAN, Passport, Driving Licence', icon: 'id-card-outline', kinds: ['Aadhaar', 'PAN', 'Passport', 'Driving Licence'] },
+  { value: 'insurance', label: 'Insurance', hint: 'Health, Life, Vehicle', icon: 'shield-checkmark-outline', kinds: ['Health', 'Life', 'Vehicle'] },
+  { value: 'education', label: 'Education & Certificates', hint: 'Degrees, marksheets, certificates', icon: 'school-outline', kinds: [] },
+  { value: 'property_legal', label: 'Property & Legal', hint: 'Agreements, deeds, wills', icon: 'home-outline', kinds: [] },
+  { value: 'photos', label: 'Photos & Personal Files', hint: 'Photos and papers you want to keep', icon: 'images-outline', kinds: [] },
+  { value: 'other', label: 'Other Documents', hint: 'Anything else worth keeping', icon: 'folder-open-outline', kinds: [] },
 ];
 
 export const CATEGORY_LABEL: Record<VaultCategory, string> = Object.fromEntries(VAULT_CATEGORIES.map((c) => [c.value, c.label])) as Record<VaultCategory, string>;
 
-/** The three places on Home that open the folder. */
-export type VaultGroup = 'identity' | 'insurance' | 'documents';
+export const parseCategory = (value: unknown): VaultCategory | null =>
+  VAULT_CATEGORIES.some((c) => c.value === value) ? (value as VaultCategory) : null;
 
-export const GROUP_TITLE: Record<VaultGroup, string> = { identity: 'Identity', insurance: 'Insurance', documents: 'Documents' };
+export const categoryInfo = (value: VaultCategory): VaultCategoryInfo => VAULT_CATEGORIES.find((c) => c.value === value)!;
 
-const GROUP_CATEGORIES: Record<VaultGroup, VaultCategory[]> = {
-  identity: ['identity'],
-  insurance: ['insurance'],
-  documents: ['education', 'property', 'legal', 'vehicle', 'certificate', 'other'],
-};
-
-export const categoriesOf = (group: VaultGroup | null): VaultCategory[] => (group ? GROUP_CATEGORIES[group] : VAULT_CATEGORIES.map((c) => c.value));
-
-export const parseGroup = (value: unknown): VaultGroup | null => (value === 'identity' || value === 'insurance' || value === 'documents' ? value : null);
+/** A kind is only valid inside the category that names it. */
+export const validKind = (category: VaultCategory, kind: string | null | undefined): string | null =>
+  kind && categoryInfo(category).kinds.includes(kind) ? kind : null;
 
 export type VaultFile = {
   id: string;
   subjectId: string;
   category: VaultCategory;
+  kind: string | null;
+  /** Optional day (YYYY-MM-DD) the document runs out, e.g. a passport. */
+  expiresOn: string | null;
   title: string;
   originalFilename: string;
   mimeType: VaultMime;
@@ -46,7 +50,32 @@ export type VaultFile = {
   storagePath: string;
   uploadedAt: string | null;
   createdAt: string;
+  /** Who added it, from the viewer's side: never a name, never a user id. */
+  addedBy: AddedBy;
 };
+
+export type AddedBy = 'you' | 'family_member' | 'former_family_member';
+
+export const ADDED_BY_LABEL: Record<AddedBy, string> = {
+  you: 'Added by you',
+  family_member: 'Added by a family member',
+  former_family_member: 'Added by a previous family member',
+};
+
+/** uploaded_by is null once the uploader's account is gone; the file stays with the person. */
+export const addedByFor = (uploadedBy: string | null, me: string | null): AddedBy => (uploadedBy === null ? 'former_family_member' : uploadedBy === me ? 'you' : 'family_member');
+
+/** Delete: whoever controls the record, or the family member who added the file while they still manage it. */
+export const canDeleteVaultFile = (access: 'owner' | 'manager' | 'viewer' | null, file: Pick<VaultFile, 'addedBy'>): boolean =>
+  access === null || access === 'owner' || (access === 'manager' && file.addedBy === 'you');
+
+/** What the person's controller sees in "Recent activity": roles, never names. */
+export type VaultActivity = { id: string; action: 'added' | 'deleted'; title: string; actorRole: 'self' | 'custodian' | 'manager'; at: string };
+
+export function activityText(a: Pick<VaultActivity, 'action' | 'title' | 'actorRole'>): string {
+  const who = a.actorRole === 'manager' ? 'A family member' : 'You';
+  return `${who} ${a.action === 'added' ? 'added' : 'deleted'} ${a.title}`;
+}
 
 export const MAX_VAULT_BYTES = 20 * 1024 * 1024;
 export const VAULT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic'] as const;
@@ -90,4 +119,39 @@ export function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export const expectedVaultPath = (userId: string, fileId: string, mime: VaultMime): string => `${userId}/files/${fileId}/original.${EXTENSION_FOR[mime]}`;
+/** A file lives in its PERSON's folder, not the uploader's. */
+export const expectedVaultPath = (subjectId: string, fileId: string, mime: VaultMime): string => `${subjectId}/files/${fileId}/original.${EXTENSION_FOR[mime]}`;
+
+export type SlotStatus = 'not_added' | 'added' | 'expiring' | 'expired';
+export const EXPIRY_WARNING_DAYS = 90;
+
+const DAY_MS = 86_400_000;
+/** Whole days from today to a YYYY-MM-DD day (negative once it has passed). */
+export function daysToExpiry(expiresOn: string, today: Date): number {
+  const [y, m, d] = expiresOn.split('-').map(Number);
+  const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((Date.UTC(y, m - 1, d) - start) / DAY_MS);
+}
+
+/** Status of one slot (e.g. Passport) from the files in it. Only dates the person entered count. */
+export function slotStatus(files: Pick<VaultFile, 'expiresOn'>[], today: Date): SlotStatus {
+  if (files.length === 0) return 'not_added';
+  const days = files.filter((f) => f.expiresOn).map((f) => daysToExpiry(f.expiresOn as string, today));
+  if (days.length === 0) return 'added';
+  // A newer, valid copy beats an old expired one: judge by the latest expiry.
+  const latest = Math.max(...days);
+  if (latest < 0) return 'expired';
+  return latest <= EXPIRY_WARNING_DAYS ? 'expiring' : 'added';
+}
+
+export const STATUS_LABEL: Record<SlotStatus, string> = { not_added: 'Not added', added: 'Added', expiring: 'Expiring soon', expired: 'Expired' };
+
+/** A real calendar day typed as YYYY-MM-DD, or null. */
+export function parseExpiry(raw: string): string | null {
+  const t = raw.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
+  const [y, m, d] = t.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return y >= 1900 && y <= 2200 ? t : null;
+}

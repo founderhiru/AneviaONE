@@ -24,6 +24,16 @@ import_map = "./functions/deno.json"
 verify_jwt = true
 import_map = "./functions/deno.json"
 
+# A person's controller, or the family member who uploaded a document, deletes a vault file.
+[functions.delete-vault-file]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+# A person's custodian removes a relative they look after (their vault files first, then their records).
+[functions.remove-relative]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
 [functions.delete-account]
 verify_jwt = true
 import_map = "./functions/deno.json"

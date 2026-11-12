@@ -22,6 +22,9 @@ export type ServiceErrorCode =
   | 'reauthentication_required'
   | 'busy'
   | 'incomplete'
+  | 'custody_unresolved'
+  | 'legal_hold'
+  | 'has_health_reports'
   | 'unknown';
 
 export class ServiceError extends Error {

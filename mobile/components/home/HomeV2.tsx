@@ -41,6 +41,7 @@ import {
   needsReview,
 } from '../../services/health/whatChanged';
 import type { RecordedObservation, StoredDocument } from '../../types';
+import { NoticesCard } from './NoticesCard';
 
 const [wordLead, wordAccent] = wordmarkParts();
 
@@ -259,6 +260,7 @@ export function HomeV2() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      <NoticesCard />
       <PersonBar />
       {header}
 
