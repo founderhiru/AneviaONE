@@ -95,7 +95,7 @@ No feature is internally release-ready or production verified: no internal build
 | Ask My Health | Real: `ask-health` gives a safety screen, then retrieval as the caller (RLS), then an answer built from the records. AI only rewords it, only with consent, and each cited sentence is validated | Deno ask tests; local test (no-AI path) | Locally verified (no-AI path); AI path Implemented |
 | M3 Medication history | **List only.** Memory items show name, dose as written, first recorded and source. There is no start/stop, dose-change history or timeline | `medications-screen` (new) | Planned / incomplete |
 | M4 Doctor Brief | **Placeholder** screen ("isn't available yet"), unreachable from navigation | — | Planned / incomplete |
-| M5 Security and privacy hardening | RLS, private Storage, redacted logs, consent gating are in place. **Missing: account deletion and data export** (the Privacy screen now says so plainly) | SQL security suites | Planned / incomplete |
+| M5 Security and privacy hardening | RLS, private Storage, redacted logs, consent gating are in place. **Account deletion is built (not yet verified in production); data export is still missing** (the Privacy screen now says so plainly) | SQL security suites | Planned / incomplete |
 | M6 Multilingual | **Not started.** No i18n layer; all copy is English | — | Planned / incomplete |
 
 ### Phase 3 — Family Health

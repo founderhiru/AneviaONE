@@ -1,6 +1,6 @@
 # Family release: applying PRs #30, #31 and #32 to production
 
-**Status: rehearsed on a throwaway database with synthetic data. NOT applied to production.**
+**Status: rehearsed on a throwaway database with synthetic data. applied to production and verified on 11 November 2026 (verify script all true).**
 Rehearsal: `supabase/release/family/rehearse.sh` (precheck → fingerprint → apply → verify → fingerprint → rollback → fingerprint → apply again). Every row was identical before and after, and all checks passed.
 
 ## What is being applied

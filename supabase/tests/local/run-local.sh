@@ -21,11 +21,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-initdb -D "$WORK/data" --auth=trust --no-instructions >/dev/null
+initdb -D "$WORK/data" -U postgres --auth=trust --no-instructions >/dev/null
 pg_ctl -D "$WORK/data" -o "-p $PORT -k $WORK -c listen_addresses=''" -l "$WORK/pg.log" -w start >/dev/null
-createdb -h "$WORK" -p "$PORT" hi_test
+createdb -h "$WORK" -p "$PORT" -U postgres hi_test
 
-PSQL=(psql -h "$WORK" -p "$PORT" -d hi_test -v ON_ERROR_STOP=1 -q -X)
+PSQL=(psql -h "$WORK" -p "$PORT" -U postgres -d hi_test -v ON_ERROR_STOP=1 -q -X)
 
 echo "▸ Loading Supabase stand-in (auth, storage, API roles)"
 "${PSQL[@]}" -f "$HERE/supabase_stub.sql"
@@ -44,6 +44,9 @@ PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/fa
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 echo "▸ Running obligations test (reminders: isolation, grants, extracted proposals, deletion)"
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/obligations_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+echo "▸ Running vault files test (private personal documents: isolation, owner-only writes, storage, deletion)"
+PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/vault_files_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 if $WITH_PROPOSED; then
   for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
