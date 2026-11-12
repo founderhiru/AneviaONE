@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { lastSignInFromJwt, type AccountDeletionAuth, type AccountDeletionDb, type AccountDeletionStorage, type BeginResult } from './handler.ts';
 
 /** Every bucket that holds a person's files, all under `<user id>/`. */
-export const ACCOUNT_BUCKETS = ['medical-documents', 'document-derivatives'] as const;
+export const ACCOUNT_BUCKETS = ['medical-documents', 'document-derivatives', 'personal-vault'] as const;
 const PAGE = 100;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

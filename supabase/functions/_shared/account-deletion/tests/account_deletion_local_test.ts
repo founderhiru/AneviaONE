@@ -20,7 +20,7 @@ const IS_LOCAL = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(URL) && Bo
 const RUN = Math.random().toString(36).slice(2, 8);
 const PDF = new TextEncoder().encode('%PDF-1.4\n% synthetic, fictional test file\n%%EOF\n');
 
-const USER_TABLES = ['documents', 'document_status_history', 'extraction_runs', 'document_pages', 'fact_sources', 'consents', 'health_profiles',
+const USER_TABLES = ['vault_files', 'documents', 'document_status_history', 'extraction_runs', 'document_pages', 'fact_sources', 'consents', 'health_profiles',
   'observations', 'conditions', 'medications', 'procedures', 'allergies', 'encounters'];
 
 /** A user with a fresh email sign-in (so the token's amr is recent), as the app does it. */
@@ -50,6 +50,15 @@ async function storedReport(admin: SupabaseClient, user: string, name: string) {
   const der = await admin.storage.from('document-derivatives').upload(`${user}/documents/${doc.id}/pages/1.json`, '{"synthetic":true}', { contentType: 'application/json' });
   if (der.error) throw new Error(`derivative: ${der.error.message}`);
   await admin.from('documents').update({ status: 'uploaded', uploaded_at: new Date().toISOString() }).eq('id', doc.id);
+  // A file in the personal vault (its record cascades; the file is removed by the function).
+  const { data: self } = await admin.from('subjects').select('id').eq('linked_user_id', user).single();
+  const { data: vf, error: vfError } = await admin.from('vault_files')
+    .insert({ user_id: user, subject_id: self!.id, category: 'identity', title: 'Synthetic ID', original_filename: 'id.pdf', mime_type: 'application/pdf', file_size_bytes: PDF.length })
+    .select('id, storage_path').single();
+  if (vfError) throw new Error(`vault file: ${vfError.message}`);
+  const vup = await admin.storage.from('personal-vault').upload(vf.storage_path, PDF, { contentType: 'application/pdf' });
+  if (vup.error) throw new Error(`vault upload: ${vup.error.message}`);
+  await admin.from('vault_files').update({ status: 'stored' }).eq('id', vf.id);
   const call = async (fn: string, args: Record<string, unknown>) => {
     const { data, error } = await admin.rpc(fn, args);
     if (error) throw new Error(`${fn}: ${error.message}`);
@@ -79,7 +88,7 @@ async function rowsOf(admin: SupabaseClient, user: string) {
 
 async function objectsOf(admin: SupabaseClient, user: string) {
   const all: string[] = [];
-  for (const bucket of ['medical-documents', 'document-derivatives']) {
+  for (const bucket of ['medical-documents', 'document-derivatives', 'personal-vault']) {
     const walk = async (folder: string) => {
       const { data } = await admin.storage.from(bucket).list(folder, { limit: 100 });
       for (const e of data ?? []) e.id === null ? await walk(`${folder}/${e.name}`) : all.push(`${bucket}:${folder}/${e.name}`);

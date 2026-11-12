@@ -45,6 +45,9 @@ PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/fa
 echo "▸ Running obligations test (reminders: isolation, grants, extracted proposals, deletion)"
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/obligations_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+echo "▸ Running vault files test (private personal documents: isolation, owner-only writes, storage, deletion)"
+PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/vault_files_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 if $WITH_PROPOSED; then
   for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
     echo "▸ Applying PROPOSED $(basename "$migration")"
