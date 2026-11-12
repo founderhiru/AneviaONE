@@ -16,8 +16,10 @@ import {
   PersonBar,
 } from '../index';
 import { SummaryTiles } from './WhatChangedUI';
+import { ComingUp } from './ComingUp';
 import { CheckCard, ChangeSummaryCard, DoctorShortcut, FamilyStrip, HealthStoryCard, KeyMeasureTiles, KeyNumbersCard, type FamilyRow } from './HomeV2UI';
 import { BRAND, wordmarkParts } from '../../config/brand';
+import { isDemoMode } from '../../config/appMode';
 import { FOREST } from '../../design/brandSurface';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
@@ -249,6 +251,12 @@ export function HomeV2() {
     </View>
   );
 
+  // Reminders belong to the person on screen; viewers of a shared record can read but not change them.
+  const reminderSubject = active?.id ?? (isDemoMode ? 'demo-person' : null);
+  const reminderEdit = active ? active.access !== 'viewer' : isDemoMode;
+  const reminderFor = active && active.relationship !== 'self' ? active.name.split(' ')[0] : null;
+  const comingUp = <ComingUp subjectId={reminderSubject} canEdit={reminderEdit} forName={reminderFor} />;
+
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
       <PersonBar />
@@ -268,15 +276,20 @@ export function HomeV2() {
       {isLoading ? (
         <LoadingState label="Loading your Health Memory…" />
       ) : isEmpty ? (
-        <EmptyState
-          title="Your health story starts here."
-          description={`Add your first health report and ${BRAND.wordmark} will begin connecting the pieces over time.`}
-          actionLabel="Add health record"
-          onActionPress={() => router.push('/add')}
-        />
+        <>
+          <EmptyState
+            title="Your health story starts here."
+            description={`Add your first health report and ${BRAND.wordmark} will begin connecting the pieces over time.`}
+            actionLabel="Add health record"
+            onActionPress={() => router.push('/add')}
+          />
+          {comingUp}
+        </>
       ) : (
         <>
           <SummaryTiles counts={counts} onReports={() => router.push('/documents')} onResults={() => router.push('/(tabs)/health')} onVerify={openVerify} />
+
+          {comingUp}
 
           {comparisons.length > 0 ? (
             <ChangeSummaryCard comparisons={comparisons} onOpen={() => router.push('/changes')} />

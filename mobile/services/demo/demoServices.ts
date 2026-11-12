@@ -4,12 +4,16 @@ import type { AuthService } from '../auth/authTypes';
 import type { DocumentsService } from '../documents/documentsTypes';
 import type { sampleDocumentsService } from '../documents/sampleDocuments';
 import type { HealthService } from '../health/healthService';
+import type { ObligationsService } from '../obligations/obligationsService';
+import type { VaultService } from '../vault/vaultService';
 
 export type DemoServices = {
   auth: AuthService;
   documents: DocumentsService;
   health: HealthService;
   ai: AiService;
+  obligations: ObligationsService;
+  vault: VaultService;
   sampleDocuments: typeof sampleDocumentsService;
 };
 
@@ -31,6 +35,8 @@ export function loadDemoServices(): DemoServices {
       documents: require('../documents/demoDocumentsService').demoDocumentsService,
       health: require('../health/demoHealthService').demoHealthService,
       ai: require('../ai/demoAiService').demoAiService,
+      obligations: require('../obligations/demoObligationsService').demoObligationsService,
+      vault: require('../vault/demoVaultService').demoVaultService,
       sampleDocuments: require('../documents/sampleDocuments').sampleDocumentsService,
     };
   }
