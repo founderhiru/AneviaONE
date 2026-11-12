@@ -1,3 +1,4 @@
+import { getActiveSubjectId, isOtherDemoPerson } from '../people/activeSubject';
 import { mockChanges, mockDocuments } from '../../mock';
 import type { ProcessingSummary, StoredDocument } from '../../types';
 import { ServiceError } from '../serviceError';
@@ -39,6 +40,7 @@ function demoUuid(): string {
 
 export const demoDocumentsService: DocumentsService = {
   async listDocuments() {
+    if (isOtherDemoPerson(getActiveSubjectId())) return [];
     return [...documents.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 

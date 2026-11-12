@@ -6,24 +6,27 @@ import { loadDemoServices } from '../demo/demoServices';
 import { ServiceError, toServiceError } from '../serviceError';
 import { getSupabaseClient } from '../supabaseClient';
 import type { PickedFile } from '../../types';
-import { expectedVaultPath, validateVaultFile, type VaultCategory, type VaultFile, type VaultMime } from './vaultRules';
+import { addedByFor, expectedVaultPath, parseExpiry, validKind, validateVaultFile, type VaultActivity, type VaultCategory, type VaultFile, type VaultMime } from './vaultRules';
 
 /**
  * The personal documents folder. Files go to the private `personal-vault` bucket; the
- * database decides owner, path and state (see the `vault_files` migration). Nothing is
- * read, classified or sent to AI. Only the owner of a person's record can add or delete;
- * people with approved access can open.
+ * database decides uploader, role, path and state (see the `vault_files` migration). Nothing is
+ * read, classified or sent to AI. The controller of a person's record, or a family manager with
+ * write access, can add; the controller or the uploader can delete; anyone with access can open.
+ * A file belongs to the person, so it stays when the family member who added it leaves.
  *
  * Upload: reserve a row (database assigns owner and path) -> upload the file to exactly that
  * path -> confirm (the database checks the file really exists and records its size).
  */
 
-export type VaultUploadInput = { subjectId: string | null; category: VaultCategory; title: string; file: PickedFile };
+export type VaultUploadInput = { subjectId: string | null; category: VaultCategory; kind?: string | null; expiresOn?: string | null; title: string; file: PickedFile };
 export type VaultStage = 'checking' | 'uploading' | 'saving';
 
 export interface VaultService {
   list(subjectId: string | null): Promise<VaultFile[]>;
   upload(input: VaultUploadInput, onStage?: (stage: VaultStage) => void): Promise<VaultFile>;
+  /** Recent adds and deletes, for the person's controller (others get an empty list). */
+  listActivity(subjectId: string | null): Promise<VaultActivity[]>;
   /** A short-lived link to open the file. */
   openUrl(file: VaultFile): Promise<string>;
   remove(file: VaultFile): Promise<void>;
@@ -37,7 +40,10 @@ const LOAD_FAILED = 'We couldn’t load your files. Please try again.';
 type Row = {
   id: string;
   subject_id: string;
+  uploaded_by: string | null;
   category: VaultCategory;
+  kind: string | null;
+  expires_on: string | null;
   title: string;
   original_filename: string;
   mime_type: VaultMime;
@@ -46,12 +52,14 @@ type Row = {
   uploaded_at: string | null;
   created_at: string;
 };
-const COLUMNS = 'id, subject_id, category, title, original_filename, mime_type, file_size_bytes, storage_path, uploaded_at, created_at';
+const COLUMNS = 'id, subject_id, uploaded_by, category, kind, expires_on, title, original_filename, mime_type, file_size_bytes, storage_path, uploaded_at, created_at';
 
-const fromRow = (r: Row): VaultFile => ({
+const fromRow = (r: Row, me: string | null): VaultFile => ({
   id: r.id,
   subjectId: r.subject_id,
   category: r.category,
+  kind: r.kind,
+  expiresOn: r.expires_on,
   title: r.title,
   originalFilename: r.original_filename,
   mimeType: r.mime_type,
@@ -59,6 +67,7 @@ const fromRow = (r: Row): VaultFile => ({
   storagePath: r.storage_path,
   uploadedAt: r.uploaded_at,
   createdAt: r.created_at,
+  addedBy: addedByFor(r.uploaded_by, me),
 });
 
 function requireClient() {
@@ -74,20 +83,35 @@ async function requireUserId(client: NonNullable<ReturnType<typeof getSupabaseCl
   return id;
 }
 
-/** Best effort: remove a reservation whose upload never completed. */
-async function abandon(client: NonNullable<ReturnType<typeof getSupabaseClient>>, row: Pick<Row, 'id' | 'storage_path'>) {
-  await client.storage.from(VAULT_BUCKET).remove([row.storage_path]).catch(() => undefined);
-  await Promise.resolve(client.from('vault_files').delete().eq('id', row.id).eq('status', 'pending_upload')).catch(() => undefined);
+/** Best effort: drop a reservation whose upload never completed (the database refuses while a stored object exists). */
+async function abandon(client: NonNullable<ReturnType<typeof getSupabaseClient>>, row: Pick<Row, 'id'>) {
+  await Promise.resolve(client.rpc('vault_delete_file', { p_file: row.id })).catch(() => undefined);
 }
 
 export const productionVaultService: VaultService = {
   async list(subjectId) {
     if (!subjectId) return [];
     const client = requireClient();
-    await requireUserId(client);
+    const me = await requireUserId(client);
     const { data, error } = await client.from('vault_files').select(COLUMNS).eq('subject_id', subjectId).eq('status', 'stored').order('created_at', { ascending: false }).limit(500);
     if (error) throw toServiceError(error, { code: 'unknown', userMessage: LOAD_FAILED, retryable: true });
-    return (data as Row[]).map(fromRow);
+    return (data as Row[]).map((r) => fromRow(r, me));
+  },
+
+  async listActivity(subjectId) {
+    if (!subjectId) return [];
+    const client = requireClient();
+    await requireUserId(client);
+    const { data, error } = await client.from('subject_activity').select('id, action, entity_title, actor_role, at').eq('subject_id', subjectId).order('at', { ascending: false }).limit(20);
+    // Only a person's controller can read this; for everyone else it is simply empty.
+    if (error) return [];
+    return (data as { id: string; action: 'added' | 'deleted'; entity_title: string; actor_role: VaultActivity['actorRole']; at: string }[]).map((r) => ({
+      id: r.id,
+      action: r.action,
+      title: r.entity_title,
+      actorRole: r.actor_role,
+      at: r.at,
+    }));
   },
 
   async upload(input, onStage) {
@@ -105,15 +129,17 @@ export const productionVaultService: VaultService = {
     if (!size.ok) throw new ServiceError('invalid_file', size.message);
 
     const client = requireClient();
-    const userId = await requireUserId(client);
+    const me = await requireUserId(client);
 
     onStage?.('uploading');
     const { data: reserved, error: reserveError } = await client
       .from('vault_files')
       .insert({
-        // Your own record is filled in by the database; a relative you manage is named.
+        // Your own record is filled in by the database; anyone else's is named (relative, or a person who made you a manager).
         ...(input.subjectId && !isOwnRecordFor(input.subjectId) ? { subject_id: input.subjectId } : {}),
         category: input.category,
+        kind: validKind(input.category, input.kind),
+        expires_on: input.expiresOn ? parseExpiry(input.expiresOn) : null,
         title: input.title,
         original_filename: sanitizeFilename(input.file.name),
         mime_type: checked.mimeType,
@@ -125,7 +151,7 @@ export const productionVaultService: VaultService = {
       throw toServiceError(reserveError, { code: 'save_failed', userMessage: 'We couldn’t start the upload. Please try again.', retryable: true });
     }
     const row = reserved as Row;
-    if (row.storage_path !== expectedVaultPath(userId, row.id, checked.mimeType)) {
+    if (row.storage_path !== expectedVaultPath(row.subject_id, row.id, checked.mimeType)) {
       await abandon(client, row);
       throw new ServiceError('unknown', 'We couldn’t start the upload. Please try again.');
     }
@@ -140,7 +166,7 @@ export const productionVaultService: VaultService = {
     let lastError: unknown = null;
     for (let attempt = 0; attempt < CONFIRM_ATTEMPTS; attempt++) {
       const { data: confirmed, error } = await client.from('vault_files').update({ status: 'stored' }).eq('id', row.id).select(COLUMNS).single();
-      if (!error && confirmed) return fromRow(confirmed as Row);
+      if (!error && confirmed) return fromRow(confirmed as Row, me);
       lastError = error;
     }
     throw toServiceError(lastError, { code: 'save_failed', userMessage: 'Your file was uploaded but we couldn’t finish saving it. Please try again.', retryable: true });
@@ -157,12 +183,12 @@ export const productionVaultService: VaultService = {
   async remove(file) {
     const client = requireClient();
     await requireUserId(client);
-    // The file first, then its record. If the record cannot be removed the file is gone, and
-    // deleting again finishes the job; a record is never removed while its file is still there.
-    const removed = await client.storage.from(VAULT_BUCKET).remove([file.storagePath]);
-    if (removed.error) throw toServiceError(removed.error, { code: 'unknown', userMessage: 'We couldn’t delete this file. It hasn’t been removed — please try again.', retryable: true });
-    const { error } = await client.from('vault_files').delete().eq('id', file.id);
-    if (error) throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t finish deleting this file. Please try again.', retryable: true });
+    // One audited server path: it checks who may delete, removes the stored file, then the record.
+    // If the record step fails the file is already gone and deleting again finishes the job.
+    const { data, error } = await client.functions.invoke('delete-vault-file', { body: { file_id: file.id } });
+    if (error || (data as { status?: string } | null)?.status !== 'deleted') {
+      throw toServiceError(error, { code: 'unknown', userMessage: 'We couldn’t delete this file. Please try again.', retryable: true });
+    }
   },
 };
 

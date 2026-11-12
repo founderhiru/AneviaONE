@@ -11,6 +11,9 @@
  * import cycles.
  */
 
+/** Demo family members (EXPO_PUBLIC_DEMO_FAMILY): their sample records are not the demo account's own. */
+export const isOtherDemoPerson = (id: string | null): boolean => id === 'demo-dad' || id === 'demo-mum';
+
 let activeId: string | null = null;
 const listeners = new Set<() => void>();
 

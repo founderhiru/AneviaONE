@@ -34,9 +34,9 @@ const SHARED = '33333333-3333-4333-8333-333333333333';
 const OTHER_USER = '44444444-4444-4444-8444-444444444444';
 
 const subjectRows = [
-  { id: ME, display_name: 'Asha', relationship: 'self', date_of_birth: '1985-03-14', linked_user_id: TEST_USER_ID, created_by: TEST_USER_ID },
-  { id: DAD, display_name: 'Dad', relationship: 'father', date_of_birth: '1952-01-09', linked_user_id: null, created_by: TEST_USER_ID },
-  { id: SHARED, display_name: 'Meera', relationship: 'self', date_of_birth: null, linked_user_id: OTHER_USER, created_by: OTHER_USER },
+  { id: ME, display_name: 'Asha', relationship: 'self', date_of_birth: '1985-03-14', linked_user_id: TEST_USER_ID, custodian_user_id: null },
+  { id: DAD, display_name: 'Dad', relationship: 'father', date_of_birth: '1952-01-09', linked_user_id: null, custodian_user_id: TEST_USER_ID },
+  { id: SHARED, display_name: 'Meera', relationship: 'self', date_of_birth: null, linked_user_id: OTHER_USER, custodian_user_id: null },
 ];
 const grantRows = [{ subject_id: SHARED, role: 'viewer', status: 'active', expires_at: null }];
 

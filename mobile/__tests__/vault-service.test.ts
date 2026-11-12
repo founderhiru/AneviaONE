@@ -10,11 +10,11 @@ jest.mock('../services/supabaseClient', () => ({ getSupabaseClient: jest.fn(), i
 jest.mock('../services/documents/fileAccess', () => ({ readLocalFile: jest.fn(async () => new ArrayBuffer(2048)) }));
 jest.mock('../services/vault/ownership', () => ({ isOwnRecordFor: jest.fn(() => true) }));
 
-const ROW = { id: 'f1', subject_id: 's1', category: 'identity', title: 'Passport', original_filename: 'p.jpg', mime_type: 'image/jpeg', file_size_bytes: 2048, storage_path: 'me/files/f1/original.jpg', uploaded_at: '2026-11-11T00:00:00Z', created_at: '2026-11-11T00:00:00Z' };
+const ROW = { id: 'f1', subject_id: 's1', uploaded_by: 'me', category: 'identity', kind: 'Passport', title: 'Passport', original_filename: 'p.jpg', mime_type: 'image/jpeg', file_size_bytes: 2048, storage_path: 's1/files/f1/original.jpg', uploaded_at: '2026-11-11T00:00:00Z', created_at: '2026-11-11T00:00:00Z' };
 
 type Calls = { method: string; args: unknown[] }[];
 
-function fakeClient(opts: { result?: { data?: unknown; error?: unknown }; upload?: { error: unknown } | null; remove?: { error: unknown }; signed?: { data?: unknown; error?: unknown } } = {}) {
+function fakeClient(opts: { invoke?: { data?: unknown; error?: unknown }; result?: { data?: unknown; error?: unknown }; upload?: { error: unknown } | null; remove?: { error: unknown }; signed?: { data?: unknown; error?: unknown } } = {}) {
   const calls: Calls = [];
   const result = opts.result ?? { data: ROW };
   const chain: Record<string, unknown> = {};
@@ -27,6 +27,16 @@ function fakeClient(opts: { result?: { data?: unknown; error?: unknown }; upload
   chain.single = async () => result;
   chain.then = (resolve: (v: unknown) => unknown) => resolve(result);
   const client = {
+    rpc: async (fn: string, args: unknown) => {
+      calls.push({ method: 'rpc', args: [fn, args] });
+      return { data: null, error: null };
+    },
+    functions: {
+      invoke: async (...a: unknown[]) => {
+        calls.push({ method: 'invoke', args: a });
+        return opts.invoke ?? { data: { status: 'deleted' }, error: null };
+      },
+    },
     auth: { getSession: async () => ({ data: { session: { user: { id: 'me' } } } }) },
     from: (t: string) => {
       calls.push({ method: 'from', args: [t] });
@@ -64,10 +74,16 @@ describe('productionVaultService', () => {
     const list = await productionVaultService.list('s1');
     expect(of(calls, 'from')).toEqual([['vault_files']]);
     expect(of(calls, 'eq')).toEqual([['subject_id', 's1'], ['status', 'stored']]);
-    expect(list[0]).toMatchObject({ id: 'f1', title: 'Passport', category: 'identity', storagePath: 'me/files/f1/original.jpg' });
+    expect(list[0]).toMatchObject({ id: 'f1', title: 'Passport', category: 'identity', kind: 'Passport', storagePath: 's1/files/f1/original.jpg', addedBy: 'you' });
     const none = fakeClient();
     expect(await productionVaultService.list(null)).toEqual([]);
     expect(none).toHaveLength(0);
+  });
+
+  it('labels who added a file from the viewer\'s side, never by name', async () => {
+    fakeClient({ result: { data: [{ ...ROW, id: 'a', uploaded_by: 'someone-else' }, { ...ROW, id: 'b', uploaded_by: null }, ROW] } });
+    const list = await productionVaultService.list('s1');
+    expect(list.map((f) => f.addedBy)).toEqual(['family_member', 'former_family_member', 'you']);
   });
 
   it('uploads in order: reserve, store at the assigned path, confirm', async () => {
@@ -77,7 +93,7 @@ describe('productionVaultService', () => {
     const order = calls.map((c) => c.method).filter((m) => ['insert', 'upload', 'update'].includes(m));
     expect(order).toEqual(['insert', 'upload', 'update']);
     expect(of(calls, 'bucket')[0]).toEqual([VAULT_BUCKET]);
-    expect(of(calls, 'upload')[0][0]).toBe('me/files/f1/original.jpg');
+    expect(of(calls, 'upload')[0][0]).toBe('s1/files/f1/original.jpg');
     expect(of(calls, 'update')[0]).toEqual([{ status: 'stored' }]);
   });
 
@@ -91,8 +107,10 @@ describe('productionVaultService', () => {
     const calls = fakeClient({ upload: { error: { message: 'secret backend detail' } } });
     await expect(productionVaultService.upload(input)).rejects.toMatchObject({ code: 'upload_failed' });
     await expect(productionVaultService.upload(input)).rejects.not.toThrow(/secret backend detail/);
-    expect(of(calls, 'remove').length).toBeGreaterThan(0);
-    expect(of(calls, 'delete').length).toBeGreaterThan(0);
+    // the app can no longer delete storage objects or rows itself: the reservation is dropped through the database function
+    expect(of(calls, 'rpc').some((a) => a[0] === 'vault_delete_file')).toBe(true);
+    expect(of(calls, 'delete')).toHaveLength(0);
+    expect(of(calls, 'remove')).toHaveLength(0);
   });
 
   it('rejects a path the server did not assign to this person', async () => {
@@ -103,18 +121,30 @@ describe('productionVaultService', () => {
 
   it('opens through a short-lived link', async () => {
     const calls = fakeClient();
-    expect(await productionVaultService.openUrl({ id: 'f1', storagePath: 'me/files/f1/original.jpg' } as never)).toBe('https://signed.example/x');
-    expect(of(calls, 'sign')[0]).toEqual(['me/files/f1/original.jpg', 60]);
+    expect(await productionVaultService.openUrl({ id: 'f1', storagePath: 's1/files/f1/original.jpg' } as never)).toBe('https://signed.example/x');
+    expect(of(calls, 'sign')[0]).toEqual(['s1/files/f1/original.jpg', 60]);
   });
 
-  it('deletes the file before its record, and keeps the record if the file could not be removed', async () => {
+  it('deletes through the server function only, never by touching storage or the table itself', async () => {
     const calls = fakeClient();
-    await productionVaultService.remove({ id: 'f1', storagePath: 'me/files/f1/original.jpg' } as never);
-    const order = calls.map((c) => c.method).filter((m) => m === 'remove' || m === 'delete');
-    expect(order).toEqual(['remove', 'delete']);
+    await productionVaultService.remove({ id: 'f1', storagePath: 's1/files/f1/original.jpg' } as never);
+    expect(of(calls, 'invoke')).toEqual([['delete-vault-file', { body: { file_id: 'f1' } }]]);
+    expect(of(calls, 'remove')).toHaveLength(0);
+    expect(of(calls, 'delete')).toHaveLength(0);
+  });
 
-    const failing = fakeClient({ remove: { error: { message: 'boom' } } });
-    await expect(productionVaultService.remove({ id: 'f1', storagePath: 'x' } as never)).rejects.toMatchObject({ userMessage: expect.stringContaining('hasn’t been removed') });
-    expect(of(failing, 'delete')).toHaveLength(0);
+  it('shows a safe message and does not claim success when the server could not delete', async () => {
+    fakeClient({ invoke: { data: null, error: { message: 'secret backend detail' } } });
+    await expect(productionVaultService.remove({ id: 'f1', storagePath: 'x' } as never)).rejects.toMatchObject({ userMessage: expect.stringContaining('couldn’t delete') });
+    fakeClient({ invoke: { data: { status: 'something_else' }, error: null } });
+    await expect(productionVaultService.remove({ id: 'f1', storagePath: 'x' } as never)).rejects.toBeTruthy();
+  });
+
+  it('reads the activity log for a person; an error means an empty list, never a failure', async () => {
+    fakeClient({ result: { data: [{ id: 'x', action: 'added', entity_title: 'Passport', actor_role: 'manager', at: '2026-11-11T00:00:00Z' }] } });
+    expect(await productionVaultService.listActivity('s1')).toEqual([{ id: 'x', action: 'added', title: 'Passport', actorRole: 'manager', at: '2026-11-11T00:00:00Z' }]);
+    fakeClient({ result: { error: { message: 'denied' } } });
+    expect(await productionVaultService.listActivity('s1')).toEqual([]);
+    expect(await productionVaultService.listActivity(null)).toEqual([]);
   });
 });

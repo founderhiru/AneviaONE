@@ -18,6 +18,7 @@ import { documentsService } from '../../services/documents/documentsService';
 import { VAULT_ENABLED } from '../../config/vaultFlag';
 import { familyBadge, visibleCategories, lifeBadgeFor, type HomeCategory, type TileBadge } from '../../services/home/categories';
 import type { StoredDocument } from '../../types';
+import { NoticesCard } from './NoticesCard';
 
 const [wordLead, wordAccent] = wordmarkParts();
 const RECENT = 3;
@@ -111,6 +112,7 @@ export function HomeCategories() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={handleRefresh}>
+      <NoticesCard />
       <PersonBar />
       {header}
 

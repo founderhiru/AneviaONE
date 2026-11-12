@@ -10,6 +10,7 @@
 const ALLOWED_KEYS = new Set([
   'event',
   'document_id',
+  'file_id',
   'run_id',
   'status',
   'failure_kind',

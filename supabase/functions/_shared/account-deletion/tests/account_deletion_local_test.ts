@@ -20,7 +20,7 @@ const IS_LOCAL = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(URL) && Bo
 const RUN = Math.random().toString(36).slice(2, 8);
 const PDF = new TextEncoder().encode('%PDF-1.4\n% synthetic, fictional test file\n%%EOF\n');
 
-const USER_TABLES = ['vault_files', 'documents', 'document_status_history', 'extraction_runs', 'document_pages', 'fact_sources', 'consents', 'health_profiles',
+const USER_TABLES = ['documents', 'document_status_history', 'extraction_runs', 'document_pages', 'fact_sources', 'consents', 'health_profiles',
   'observations', 'conditions', 'medications', 'procedures', 'allergies', 'encounters'];
 
 /** A user with a fresh email sign-in (so the token's amr is recent), as the app does it. */
@@ -53,7 +53,7 @@ async function storedReport(admin: SupabaseClient, user: string, name: string) {
   // A file in the personal vault (its record cascades; the file is removed by the function).
   const { data: self } = await admin.from('subjects').select('id').eq('linked_user_id', user).single();
   const { data: vf, error: vfError } = await admin.from('vault_files')
-    .insert({ user_id: user, subject_id: self!.id, category: 'identity', title: 'Synthetic ID', original_filename: 'id.pdf', mime_type: 'application/pdf', file_size_bytes: PDF.length })
+    .insert({ uploaded_by: user, subject_id: self!.id, category: 'identity', title: 'Synthetic ID', original_filename: 'id.pdf', mime_type: 'application/pdf', file_size_bytes: PDF.length })
     .select('id, storage_path').single();
   if (vfError) throw new Error(`vault file: ${vfError.message}`);
   const vup = await admin.storage.from('personal-vault').upload(vf.storage_path, PDF, { contentType: 'application/pdf' });
@@ -81,12 +81,15 @@ async function rowsOf(admin: SupabaseClient, user: string) {
     if (error) throw new Error(`${t}: ${error.message}`);
     counts[t] = count ?? 0;
   }
+  // Vault files belong to the PERSON (keyed by subject), so count them by the person's own record.
+  const { data: self } = await admin.from('subjects').select('id').eq('linked_user_id', user).maybeSingle();
+  counts.vault_files = self ? ((await admin.from('vault_files').select('*', { count: 'exact', head: true }).eq('subject_id', self.id)).count ?? 0) : 0;
   const { count } = await admin.from('profiles').select('*', { count: 'exact', head: true }).eq('id', user);
   counts.profiles = count ?? 0;
   return counts;
 }
 
-async function objectsOf(admin: SupabaseClient, user: string) {
+async function objectsOf(admin: SupabaseClient, user: string, selfSubject: string | null = null) {
   const all: string[] = [];
   for (const bucket of ['medical-documents', 'document-derivatives', 'personal-vault']) {
     const walk = async (folder: string) => {
@@ -94,6 +97,8 @@ async function objectsOf(admin: SupabaseClient, user: string) {
       for (const e of data ?? []) e.id === null ? await walk(`${folder}/${e.name}`) : all.push(`${bucket}:${folder}/${e.name}`);
     };
     await walk(user);
+    // The vault is keyed by person, not by account: the person's own folder too.
+    if (bucket === 'personal-vault' && selfSubject) await walk(selfSubject);
   }
   return all.sort();
 }
@@ -116,6 +121,8 @@ Deno.test({
     const b = await signedIn(admin, 'b');
     let bRowsBefore: Record<string, number> = {};
     let bObjectsBefore: string[] = [];
+    let selfA = '';
+    let selfB = '';
     try {
     for (const who of [a, b]) {
       const { error } = await who.client.from('consents').insert([
@@ -127,15 +134,19 @@ Deno.test({
     await storedReport(admin, a.id, 'E2E a-1.pdf');
     await storedReport(admin, a.id, 'E2E a-2.pdf');
     await storedReport(admin, b.id, 'E2E b-1.pdf');
+    // The vault is keyed by person: remember each one's own-record id before the accounts go.
+    const selfOf = async (u: string) => (await admin.from('subjects').select('id').eq('linked_user_id', u).single()).data!.id as string;
+    selfA = await selfOf(a.id);
+    selfB = await selfOf(b.id);
     bRowsBefore = await rowsOf(admin, b.id);
-    bObjectsBefore = await objectsOf(admin, b.id);
+    bObjectsBefore = await objectsOf(admin, b.id, selfB);
 
       await t.step('setup: both people have reports, results, consents and files', async () => {
         const ra = await rowsOf(admin, a.id);
         assertEquals(ra.documents, 2);
         assert(ra.observations >= 1 && ra.consents === 2 && ra.profiles === 1);
-        assertEquals((await objectsOf(admin, a.id)).length, 4); // 2 originals + 2 derivatives
-        assertEquals(bObjectsBefore.length, 2);
+        assertEquals((await objectsOf(admin, a.id, selfA)).length, 6); // 2 originals + 2 derivatives + 2 vault files
+        assertEquals(bObjectsBefore.length, 3); // 1 original + 1 derivative + 1 vault file
       });
 
       await t.step('without the confirmation phrase: refused, nothing changes', async () => {
@@ -162,12 +173,12 @@ Deno.test({
       });
 
       await t.step('every file of A is gone, in both buckets (no orphans)', async () => {
-        assertEquals(await objectsOf(admin, a.id), []);
+        assertEquals(await objectsOf(admin, a.id, selfA), []);
       });
 
       await t.step('B is completely unaffected: same rows, same files', async () => {
         assertEquals(await rowsOf(admin, b.id), bRowsBefore);
-        assertEquals(await objectsOf(admin, b.id), bObjectsBefore);
+        assertEquals(await objectsOf(admin, b.id, selfB), bObjectsBefore);
         const { data } = await b.client.from('current_observations').select('id');
         assertEquals(data?.length, 1);
       });
@@ -179,8 +190,8 @@ Deno.test({
       });
     } finally {
       // Clean up both synthetic users and any file they still have.
-      for (const who of [a, b]) {
-        for (const o of await objectsOf(admin, who.id)) {
+      for (const [who, selfSubject] of [[a, selfA || null], [b, selfB || null]] as const) {
+        for (const o of await objectsOf(admin, who.id, selfSubject)) {
           const [bucket, path] = o.split(':');
           await admin.storage.from(bucket).remove([path]);
         }

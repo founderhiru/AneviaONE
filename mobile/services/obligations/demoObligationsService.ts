@@ -12,9 +12,9 @@ const nextId = () => `demo-obligation-${(counter += 1)}`;
 
 function seed(): Obligation[] {
   const today = new Date();
-  const make = (kind: Obligation['kind'], title: string, days: number): Obligation => ({
+  const make = (kind: Obligation['kind'], title: string, days: number, subjectId = DEMO_SUBJECT): Obligation => ({
     id: nextId(),
-    subjectId: DEMO_SUBJECT,
+    subjectId,
     kind,
     title,
     dueOn: addDays(today, days),
@@ -28,13 +28,16 @@ function seed(): Obligation[] {
     make('refill', 'Blood pressure medicine refill', 4),
     make('renewal', 'Renew family health insurance', 12),
     make('followup', 'Follow-up visit with Doctor', 26),
+    make('refill', 'Dad: blood pressure refill', 3, 'demo-dad'),
+    make('renewal', 'Dad: renew passport', 38, 'demo-dad'),
+    make('followup', 'Mum: eye check-up', 9, 'demo-mum'),
   ];
 }
 
 let items: Obligation[] = seed();
 
 export const demoObligationsService: ObligationsService = {
-  list: async () => items.filter((o) => o.state === 'open'),
+  list: async (subjectId) => items.filter((o) => o.state === 'open' && (!subjectId || o.subjectId === subjectId)),
   add: async (input: NewObligation) => {
     const created: Obligation = {
       id: nextId(),
