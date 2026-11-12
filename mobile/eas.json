@@ -23,7 +23,9 @@
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_APP_MODE": "production"
+        "EXPO_PUBLIC_APP_MODE": "production",
+        "EXPO_PUBLIC_VAULT_FILES": "on",
+        "EXPO_PUBLIC_NAV_V2": "on"
       }
     }
   },
