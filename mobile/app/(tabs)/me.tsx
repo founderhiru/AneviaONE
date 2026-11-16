@@ -7,6 +7,7 @@ import { Avatar, Card, LoadingState, PersonBar, ScreenContainer } from '../../co
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { usePeople } from '../../hooks/usePeople';
 import { PRODUCT_TERMS } from '../../config/brand';
+import { CONNECTED_HEALTH_ENABLED } from '../../config/connectedFlag';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { healthService } from '../../services/health/healthService';
@@ -156,6 +157,8 @@ export default function MeScreen() {
       <RowList
         rows={[
           { label: 'My documents', onPress: () => router.push('/documents') },
+          // Front-end page: records are live, every other source is marked Coming soon. Off unless a build asks.
+          ...(CONNECTED_HEALTH_ENABLED ? [{ label: 'Connected Health', onPress: () => router.push('/connected'), testID: 'me-connected' }] : []),
           // Only once this account has the family tables (nobody to manage before that).
           ...(people.length > 0 ? [{ label: 'Family', detail: people.length > 1 ? `${people.length} people` : undefined, onPress: () => router.push('/family'), testID: 'me-family' }] : []),
         ]}

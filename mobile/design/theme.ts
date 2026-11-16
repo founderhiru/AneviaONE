@@ -1,6 +1,7 @@
 import { useColorScheme } from 'react-native';
 
-import { darkColors, lightColors, type ColorTokens } from './colors';
+import { VISUAL_V2_ENABLED } from '../config/visualFlag';
+import { darkColors, greenLightColors, lightColors, type ColorTokens } from './colors';
 import { radius, type RadiusTokens } from './radius';
 import { shadows, type ShadowTokens } from './shadows';
 import { spacing, minTouchTarget, type SpacingTokens } from './spacing';
@@ -20,7 +21,7 @@ export function getTheme(scheme: string | null | undefined): Theme {
   const resolved = scheme === 'dark' ? 'dark' : 'light';
   return {
     scheme: resolved,
-    colors: resolved === 'dark' ? darkColors : lightColors,
+    colors: resolved === 'dark' ? darkColors : VISUAL_V2_ENABLED ? greenLightColors : lightColors,
     spacing,
     radius,
     shadows,

@@ -113,6 +113,35 @@ export const lightColors: ColorTokens = {
   skeleton: palette.cream200,
 };
 
+/**
+ * Visual direction V2 (light): a clean near-white canvas with deep green as the anchor.
+ * Used only when the build sets EXPO_PUBLIC_VISUAL_V2=on. Text pairs keep at least 4.5:1.
+ */
+export const greenLightColors: ColorTokens = {
+  ...lightColors,
+  background: '#F6F8F7',
+  surface: palette.white,
+  surfaceAlt: '#EEF3F0',
+  border: '#E1E8E4',
+  borderStrong: '#C5D1CB',
+
+  brandPrimary: '#0F6B4F',
+  brandPrimaryPressed: '#0B5740',
+  brandSecondary: '#2C8266',
+  accent: '#0F6B4F',
+  accentSubtle: '#DDF1E8',
+
+  success: '#0F6B4F',
+  successSubtle: '#DDF1E8',
+  info: '#2C6FA8',
+  infoSubtle: '#E3EEF8',
+  trendDown: '#0F6B4F',
+
+  focusRing: '#2C8266',
+  overlay: 'rgba(12, 40, 31, 0.45)',
+  skeleton: '#E7EDEA',
+};
+
 export const darkColors: ColorTokens = {
   background: palette.navy900,
   surface: palette.navy800,

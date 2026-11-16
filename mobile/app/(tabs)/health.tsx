@@ -3,7 +3,9 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Card, ErrorState, LoadingState, ScreenContainer, SectionHeader, StatusBadge, TrendCard, PersonBar } from '../../components';
+import { BiomarkerRow } from '../../components/BiomarkerRow';
 import { PRODUCT_TERMS } from '../../config/brand';
+import { VISUAL_V2_ENABLED } from '../../config/visualFlag';
 import { useTheme } from '../../design/theme';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { healthService } from '../../services/health/healthService';
@@ -89,13 +91,23 @@ export default function HealthScreen() {
       </Text>
 
       <View style={{ gap: theme.spacing.sm }} testID="test-results">
-        <SectionHeader title="Test results" />
+        <SectionHeader title={VISUAL_V2_ENABLED ? 'Biomarkers' : 'Test results'} />
         {data.results.length === 0 ? (
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
             Results read from your reports appear here, each with the report and page it came from.
           </Text>
         ) : (
-          data.results.slice(0, 20).map((r) => <TestResultCard key={r.id} result={r} />)
+          data.results.slice(0, 20).map((r) => {
+            if (!VISUAL_V2_ENABLED) return <TestResultCard key={r.id} result={r} />;
+            // History for the same test in the same unit, when there is any.
+            const trend = data.trends.find((t) => t.metricName.toLowerCase() === r.name.toLowerCase() && (t.unit ?? null) === (r.unit ?? null));
+            const open = trend
+              ? () => router.push(`/trends/${encodeURIComponent(trend.metricName)}`)
+              : r.source.documentId
+                ? () => router.push(`/documents/${r.source.documentId}`)
+                : undefined;
+            return <BiomarkerRow key={r.id} result={r} trend={trend} onPress={open} />;
+          })
         )}
       </View>
 

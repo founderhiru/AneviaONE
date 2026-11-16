@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { VISUAL_V2_ENABLED } from '../config/visualFlag';
 import { useTheme } from '../design/theme';
 import { presentDocumentStatus, formatFileSize } from '../services/documents/documentsService';
 import type { StoredDocument } from '../types';
@@ -30,11 +31,19 @@ export function StoredDocumentCard({ document, onPress }: { document: StoredDocu
   return (
     <Card onPress={onPress} accessibilityLabel={`${document.originalFilename}, ${when}, ${presentation.label}`}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }} testID={`stored-document-${document.id}`}>
-        <Ionicons
-          name={document.source === 'camera' ? 'camera-outline' : 'document-text-outline'}
-          size={24}
-          color={theme.colors.brandPrimary}
-        />
+        <View
+          style={
+            VISUAL_V2_ENABLED
+              ? { width: 44, height: 44, borderRadius: theme.radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.accentSubtle }
+              : undefined
+          }
+        >
+          <Ionicons
+            name={document.source === 'camera' ? 'camera-outline' : 'document-text-outline'}
+            size={24}
+            color={theme.colors.brandPrimary}
+          />
+        </View>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]} numberOfLines={1}>
             {document.originalFilename}
