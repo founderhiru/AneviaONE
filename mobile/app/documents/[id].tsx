@@ -8,7 +8,9 @@ import { Card, ErrorState, LoadingState, ReadReportPanel, ScreenContainer, Scree
 import { isDemoMode } from '../../config/appMode';
 import { useTheme } from '../../design/theme';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
+import { usePeople } from '../../hooks/usePeople';
 import { useReadReport } from '../../hooks/useReadReport';
+import { canAddReports } from '../../services/people/peopleService';
 import { loadDemoServices } from '../../services/demo/demoServices';
 import {
   IDENTITY_UNCONFIRMED_PRESENTATION,
@@ -47,6 +49,7 @@ function StoredDocumentView({ id }: { id: string }) {
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [results, setResults] = useState<RecordedObservation[]>([]);
+  const { active: activePerson } = usePeople();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   // Uploaded PDFs and camera scans are both read on the server — straight
@@ -216,6 +219,18 @@ function StoredDocumentView({ id }: { id: string }) {
         </View>
       ) : null}
 
+      {/* Read (or tried), and nothing came of it: often a handwritten prescription. Offer typing the medicines in. */}
+      {results.length === 0 && (document.status === 'completed' || document.status === 'failed') && canAddReports(activePerson) ? (
+        <Card testID="document-add-medicines">
+          <View style={{ gap: theme.spacing.xs }}>
+            <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>Is this a prescription?</Text>
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+              Handwritten prescriptions often can&rsquo;t be read. You can add the medicines yourself, with the original open beside you.
+            </Text>
+            <SecondaryButton label="Add the medicines" onPress={() => router.push({ pathname: '/medications/form', params: { fromDocument: document.id } })} testID="document-add-medicines-button" />
+          </View>
+        </Card>
+      ) : null}
 
       {hasStoredOriginal(document.status) ? (
         <Card onPress={opening ? undefined : () => openOriginal(document)} accessibilityLabel="View original document">

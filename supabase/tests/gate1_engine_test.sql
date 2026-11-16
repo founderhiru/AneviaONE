@@ -236,7 +236,21 @@ begin
   select * into claimed from public.engine_claim_document(doc, a, true);
   perform pg_temp.expect_true('explicit reprocess claims the completed document', claimed.id = doc);
   run2 := public.engine_start_run(doc, a, 'g1.0', 'anthropic', 'claude-opus-5-5', 'p1', v);
-  result := public.engine_complete_document(run2, a, pg_temp.payload(0.95));
+  -- The reprocessed read also carries a prescription line (details as written).
+  result := public.engine_complete_document(run2, a, pg_temp.payload(0.95) || jsonb_build_object('medications', jsonb_build_array(
+    jsonb_build_object('page_number', 2, 'source_text', 'Tab. Metformin 500 mg 1-0-1 x 30 days after food', 'confidence', 0.95,
+      'confidence_gate', 'passed', 'fact_fingerprint', repeat('5', 64), 'name_as_written', 'Metformin',
+      'dose_as_written', '500 mg', 'frequency_as_written', '1-0-1', 'route_as_written', 'Tab.',
+      'duration_as_written', 'x 30 days', 'instructions_as_written', 'after food', 'prescriber_name', 'Dr. Meera Nair'),
+    jsonb_build_object('page_number', 2, 'source_text', 'Aspirin 75 mg', 'confidence', 0.95,
+      'confidence_gate', 'passed', 'fact_fingerprint', repeat('6', 64), 'name_as_written', 'Aspirin', 'dose_as_written', '75 mg'))));
+  perform pg_temp.expect_count('a prescription line is stored with its route, duration, instructions and prescriber, as written', format(
+    $q$select 1 from public.current_medications where document_id = %L and name_as_written = 'Metformin'
+         and frequency_as_written = '1-0-1' and route_as_written = 'Tab.' and duration_as_written = 'x 30 days'
+         and instructions_as_written = 'after food' and prescriber_name = 'Dr. Meera Nair'$q$, doc), 1);
+  perform pg_temp.expect_count('a medicine without prescription details stores none', format(
+    $q$select 1 from public.current_medications where document_id = %L and name_as_written = 'Aspirin'
+         and route_as_written is null and duration_as_written is null and instructions_as_written is null and prescriber_name is null$q$, doc), 1);
   perform pg_temp.expect_count('reprocessing does not duplicate current observations',
     format('select 1 from public.current_observations where document_id = %L', doc), 2);
   perform pg_temp.expect_true('the person''s confirmed HbA1c survives reprocessing (not replaced by the new run)',

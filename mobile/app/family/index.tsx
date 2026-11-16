@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, Share, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { Button, Card, ErrorState, LoadingState, ScreenContainer, ScreenHeader, SecondaryButton, TextInput } from '../../components';
 import { BRAND, PRODUCT_TERMS } from '../../config/brand';
+import { VISUAL_V2_ENABLED } from '../../config/visualFlag';
+import { initialsFor } from '../../components/Avatar';
+import { documentsService } from '../../services/documents/documentsService';
 import { useTheme } from '../../design/theme';
 import { usePeople } from '../../hooks/usePeople';
 import { custodyService } from '../../services/custody/custodyService';
@@ -26,6 +30,7 @@ export default function FamilyScreen() {
   const [access, setAccess] = useState<Record<string, AccessEntry[]>>({});
 
   const owned = people.filter((p) => p.access === 'owner');
+  const [addSignal, setAddSignal] = useState(0);
 
   const load = useCallback(async () => {
     setError(null);
@@ -56,14 +61,15 @@ export default function FamilyScreen() {
         <ErrorState description={error} onRetry={load} />
       ) : (
         <View style={{ gap: theme.spacing.lg }}>
-          <Section title="People">
+          {VISUAL_V2_ENABLED ? <FamilyOverview people={people} active={active} onPick={switchTo} onAdd={() => setAddSignal((n) => n + 1)} /> : null}
+          <Section title={VISUAL_V2_ENABLED ? 'Access and sharing' : 'People'}>
             {people.map((p) => (
               <PersonRow key={p.id} person={p} selected={p.id === active?.id} onOpen={() => { switchTo(p.id); router.back(); }} entries={access[p.id] ?? []} reload={load} />
             ))}
           </Section>
 
           <RequestsToApprove owned={owned} access={access} reload={load} />
-          <AddRelative onDone={load} />
+          <AddRelative onDone={load} openSignal={addSignal} />
           <EnterCode onDone={load} />
           <Text style={[...small]}>
             {BRAND.productName} never shares someone’s records without their approval. You can remove anyone’s access at any time.
@@ -71,6 +77,82 @@ export default function FamilyScreen() {
         </View>
       )}
     </ScreenContainer>
+  );
+}
+
+const personLabel = (p: Person) => (p.relationship === 'self' && p.access === 'owner' ? 'You' : p.name.trim().split(/\s+/)[0] || 'Relative');
+
+/**
+ * Visual V2: a strip of people (initials, never photos) and what is on file for the one being
+ * shown. Choosing a person here switches whose records the whole app shows. No scores or advice.
+ */
+function FamilyOverview({ people, active, onPick, onAdd }: { people: Person[]; active: Person | null; onPick: (id: string) => void; onAdd: () => void }) {
+  const theme = useTheme();
+  const [docCount, setDocCount] = useState<number | null>(null);
+  const activeId = active?.id ?? null;
+
+  useEffect(() => {
+    let live = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDocCount(null);
+    documentsService
+      .listDocuments()
+      .then((docs) => live && setDocCount(docs.length))
+      .catch(() => live && setDocCount(null));
+    return () => {
+      live = false;
+    };
+  }, [activeId]);
+
+  const isSelf = !!active && active.relationship === 'self' && active.access === 'owner';
+  const rows: { key: string; icon: keyof typeof Ionicons.glyphMap; title: string; detail: string; go: () => void }[] = [
+    { key: 'documents', icon: 'document-text-outline', title: 'Documents and reports', detail: docCount === null ? 'Open the list' : `${docCount} ${docCount === 1 ? 'document' : 'documents'}`, go: () => router.push('/documents') },
+    { key: 'health', icon: 'stats-chart-outline', title: 'Health', detail: 'Results, trends and medications', go: () => router.push('/(tabs)/health') },
+    { key: 'timeline', icon: 'time-outline', title: 'Timeline', detail: 'What was added, and when', go: () => router.push('/(tabs)/timeline') },
+  ];
+
+  return (
+    <View style={{ gap: theme.spacing.md }} testID="family-overview">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md }}>
+        {people.map((p) => {
+          const selected = p.id === activeId;
+          return (
+            <Pressable key={p.id} onPress={() => onPick(p.id)} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={`Show ${personLabel(p)}`} testID={`family-pick-${p.id}`} style={{ alignItems: 'center', gap: 4, width: 60 }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: selected ? theme.colors.brandPrimary : theme.colors.surfaceAlt, borderWidth: 2, borderColor: selected ? theme.colors.brandPrimary : theme.colors.border }}>
+                <Text style={[theme.typography.labelLarge, { color: selected ? theme.colors.textOnDark : theme.colors.textPrimary }]}>{initialsFor(p.name) ?? '·'}</Text>
+              </View>
+              <Text style={[theme.typography.caption, { color: selected ? theme.colors.brandPrimary : theme.colors.textSecondary, fontWeight: selected ? '600' : '400' }]} numberOfLines={1}>{personLabel(p)}</Text>
+            </Pressable>
+          );
+        })}
+        <Pressable onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add a relative" testID="family-pick-add" style={{ alignItems: 'center', gap: 4, width: 60 }}>
+          <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.borderStrong, backgroundColor: theme.colors.surface }}>
+            <Ionicons name="add" size={24} color={theme.colors.textPrimary} />
+          </View>
+          <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>Add</Text>
+        </Pressable>
+      </View>
+
+      {active ? (
+        <Card padded={false}>
+          <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary, padding: theme.spacing.md, paddingBottom: theme.spacing.xs }]} testID="family-overview-title">
+            {isSelf ? 'Your records' : `${active.name}’s records`}
+          </Text>
+          {rows.map((r) => (
+            <Pressable key={r.key} onPress={r.go} accessibilityRole="button" testID={`family-overview-${r.key}`} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, padding: theme.spacing.md, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+              <View style={{ width: 40, height: 40, borderRadius: theme.radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.accentSubtle }}>
+                <Ionicons name={r.icon} size={20} color={theme.colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{r.title}</Text>
+                <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>{r.detail}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textTertiary} />
+            </Pressable>
+          ))}
+        </Card>
+      ) : null}
+    </View>
   );
 }
 
@@ -228,9 +310,14 @@ function RequestsToApprove({ owned, access, reload }: { owned: Person[]; access:
   );
 }
 
-function AddRelative({ onDone }: { onDone: () => void }) {
+function AddRelative({ onDone, openSignal = 0 }: { onDone: () => void; openSignal?: number }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+  // The "Add" circle in the people strip opens this form.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (openSignal > 0) setOpen(true);
+  }, [openSignal]);
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState<Relationship | null>(null);
   const [day, setDay] = useState('');

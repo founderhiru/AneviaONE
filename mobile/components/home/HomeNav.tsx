@@ -7,6 +7,9 @@ import { AiConsentCard, Avatar, Card, LoadingState, ProcessingState, READING_COP
 import { ChangeSummaryCard, CheckCard } from './HomeV2UI';
 import { SummaryTiles } from './WhatChangedUI';
 import { isDemoMode } from '../../config/appMode';
+import { wordmarkParts } from '../../config/brand';
+import { CONNECTED_HEALTH_ENABLED } from '../../config/connectedFlag';
+import { VISUAL_V2_ENABLED } from '../../config/visualFlag';
 import { VAULT_ENABLED } from '../../config/vaultFlag';
 import { useTheme } from '../../design/theme';
 import { useAuth } from '../../hooks/useAuth';
@@ -137,12 +140,38 @@ export function HomeNav() {
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={refresh}>
       <NoticesCard />
-      <View testID="home-nav">
-        <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>{firstName ? `Hello, ${firstName}` : 'Hello'}</Text>
-        <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
-          Your life. Your intelligence.
-        </Text>
-      </View>
+      {VISUAL_V2_ENABLED ? (
+        <View style={{ gap: theme.spacing.md }} testID="home-nav">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }} testID="home-brand-row">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.accentSubtle }}>
+                <Ionicons name="leaf" size={18} color={theme.colors.brandPrimary} />
+              </View>
+              <Text style={[theme.typography.headingSmall, { color: theme.colors.textPrimary }]} accessibilityLabel={WORDMARK.join('')}>
+                {WORDMARK[0]}
+                <Text style={{ color: theme.colors.brandPrimary }}>{WORDMARK[1]}</Text>
+              </Text>
+            </View>
+            <Pressable onPress={() => go('/(tabs)/me')} accessibilityRole="button" accessibilityLabel="Your account" testID="home-open-me" hitSlop={6}>
+              <Avatar name={user?.fullName ?? undefined} size={36} />
+            </Pressable>
+          </View>
+          <View>
+            <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header" testID="home-greeting">
+              {greetingFor(new Date())}
+              {firstName ? `, ${firstName}` : ''}
+            </Text>
+            <Text style={[theme.typography.bodyMedium, { color: theme.colors.textSecondary }]}>Your health, records and insights in one place.</Text>
+          </View>
+        </View>
+      ) : (
+        <View testID="home-nav">
+          <Text style={[theme.typography.bodyMedium, { color: theme.colors.textTertiary }]}>{firstName ? `Hello, ${firstName}` : 'Hello'}</Text>
+          <Text style={[theme.typography.headingLarge, { color: theme.colors.textPrimary }]} accessibilityRole="header">
+            Your life. Your intelligence.
+          </Text>
+        </View>
+      )}
 
       {people.length > 1 && active ? (
         <View style={{ gap: theme.spacing.xs }} testID="home-person-switcher">
@@ -202,12 +231,21 @@ export function HomeNav() {
         </View>
       ) : null}
 
-      <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-        <BigTile icon="heart-outline" title="Health" subtitle="Reports, results and Doctor Brief" badge={documents ? plural(documents.length, 'report', 'reports') : undefined} onPress={() => go('/(tabs)/hub')} testID="home-tile-health" />
-        {VAULT_ENABLED ? (
-          <BigTile icon="folder-open-outline" title="Personal Documents" subtitle="Identity, insurance and more" badge={plural(files.length, 'file', 'files')} onPress={() => go('/(tabs)/documents')} testID="home-tile-documents" />
-        ) : null}
-      </View>
+      {VISUAL_V2_ENABLED ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: theme.spacing.sm }} testID="home-tiles">
+          <SmallTile icon="stats-chart-outline" title="My Health" detail={documents ? plural(documents.length, 'report', 'reports') : 'Results and trends'} onPress={() => go('/(tabs)/hub')} testID="home-tile-health" />
+          <SmallTile icon="document-text-outline" title="Documents and Records" detail={VAULT_ENABLED ? plural(files.length, 'file', 'files') : 'Your reports'} onPress={() => go(VAULT_ENABLED ? '/(tabs)/documents' : '/documents')} testID="home-tile-documents" />
+          {CONNECTED_HEALTH_ENABLED ? <SmallTile icon="watch-outline" title="Connected Health" detail="Your health sources" onPress={() => go('/connected')} testID="home-tile-connected" /> : null}
+          <SmallTile icon="people-outline" title="Family Health" detail={people.length > 1 ? plural(people.length, 'person', 'people') : 'Add a relative'} onPress={() => go('/family')} testID="home-tile-family" />
+        </View>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <BigTile icon="heart-outline" title="Health" subtitle="Reports, results and Doctor Brief" badge={documents ? plural(documents.length, 'report', 'reports') : undefined} onPress={() => go('/(tabs)/hub')} testID="home-tile-health" />
+          {VAULT_ENABLED ? (
+            <BigTile icon="folder-open-outline" title="Personal Documents" subtitle="Identity, insurance and more" badge={plural(files.length, 'file', 'files')} onPress={() => go('/(tabs)/documents')} testID="home-tile-documents" />
+          ) : null}
+        </View>
+      )}
 
       <Pressable
         onPress={() => go('/reminders')}
@@ -245,6 +283,34 @@ export function HomeNav() {
         </View>
       ) : null}
     </ScreenContainer>
+  );
+}
+
+const WORDMARK = wordmarkParts();
+
+/** A plain greeting for the time of day on the phone. */
+export function greetingFor(now: Date): string {
+  const h = now.getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+/** Visual V2: a compact door to one area, two to a row. */
+function SmallTile({ icon, title, detail, onPress, testID }: { icon: IconName; title: string; detail: string; onPress: () => void; testID: string }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${detail}`}
+      testID={testID}
+      style={{ width: '48.5%', minHeight: 124, padding: theme.spacing.md, gap: 6, backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: theme.radius.lg }}
+    >
+      <View style={{ width: 40, height: 40, borderRadius: theme.radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.accentSubtle }}>
+        <Ionicons name={icon} size={22} color={theme.colors.brandPrimary} />
+      </View>
+      <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]} numberOfLines={2}>{title}</Text>
+      <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]} numberOfLines={1}>{detail}</Text>
+    </Pressable>
   );
 }
 

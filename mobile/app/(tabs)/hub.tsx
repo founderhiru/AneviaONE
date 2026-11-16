@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmbeddedScreenContext } from '../../components/ScreenContainer';
 import { useTheme } from '../../design/theme';
 import DoctorScreen from './doctor';
 import HealthScreen from './health';
@@ -59,9 +60,11 @@ export default function HealthHub() {
         </View>
       </SafeAreaView>
       <View style={{ flex: 1 }} testID={`hub-${section}`}>
-        {section === 'overview' && <HealthScreen />}
-        {section === 'timeline' && <TimelineScreen />}
-        {section === 'doctor' && <DoctorScreen />}
+        <EmbeddedScreenContext.Provider value={true}>
+          {section === 'overview' && <HealthScreen />}
+          {section === 'timeline' && <TimelineScreen />}
+          {section === 'doctor' && <DoctorScreen />}
+        </EmbeddedScreenContext.Provider>
       </View>
     </View>
   );

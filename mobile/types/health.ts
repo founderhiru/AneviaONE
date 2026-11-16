@@ -26,6 +26,14 @@ export type Medication = {
   startDate?: string;
   endDate?: string;
   prescribedBy?: string;
+  /** Instructions exactly as written on the prescription (e.g. "after food"). */
+  instructions?: string;
+  /** How long it is prescribed for, as written (e.g. "x 30 days"). */
+  duration?: string;
+  /** The stored record behind this entry; present when it can be changed from the app. */
+  recordId?: string;
+  /** extracted = read from a report; user_entered = typed in; user_corrected = changed by the person. */
+  origin?: 'extracted' | 'user_entered' | 'user_corrected';
   sourceDocumentId?: string;
 };
 

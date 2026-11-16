@@ -16,8 +16,23 @@ import {
 import { getObservationsByIds, mockObservations } from '../../mock/observations';
 import { getDocumentById } from '../../mock/documents';
 import type { Observation, RecordedObservation } from '../../types';
+import { demoMedicationStore } from './demoMedicationStore';
 import { mockAllergies, mockConditions, mockMedications, mockProcedures, mockVaccinations } from '../../mock/medications';
 import type { HealthService } from './healthService';
+
+/** DEMO ONLY: the real backend parses a report's printed range into bounds; the sample data
+ * has only the printed text, so read the two simple shapes it uses ("4.0 - 5.6 %", "< 100 mg/dL"). */
+function demoBounds(value: string, range?: string | null): Pick<RecordedObservation, 'valueNumeric' | 'referenceLow' | 'referenceHigh'> {
+  const n = Number(value);
+  const valueNumeric = value.trim() !== '' && Number.isFinite(n) ? n : null;
+  const between = range?.match(/^\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)/);
+  if (between) return { valueNumeric, referenceLow: Number(between[1]), referenceHigh: Number(between[2]) };
+  const under = range?.match(/^\s*<\s*(\d+(?:\.\d+)?)/);
+  if (under) return { valueNumeric, referenceLow: null, referenceHigh: Number(under[1]) };
+  const over = range?.match(/^\s*>\s*(\d+(?:\.\d+)?)/);
+  if (over) return { valueNumeric, referenceLow: Number(over[1]), referenceHigh: null };
+  return { valueNumeric, referenceLow: null, referenceHigh: null };
+}
 
 function toRecorded(o: Observation): RecordedObservation {
   return {
@@ -28,6 +43,7 @@ function toRecorded(o: Observation): RecordedObservation {
     referenceRange: o.referenceRange ?? null,
     date: o.date,
     needsReview: false,
+    ...demoBounds(o.value, o.referenceRange),
     category: o.category,
     source: { documentId: o.sourceDocumentId ?? '', documentName: getDocumentById(o.sourceDocumentId ?? '')?.title ?? 'Sample report', pageNumber: null },
   };
@@ -46,7 +62,8 @@ export const demoHealthService: HealthService = {
   getTrends: () => delay(mockTrends),
   getTrendById: (id) => delay(mockGetTrendById(id)),
   getTrendByMetricName: (metricName) => delay(mockGetTrendByMetricName(metricName)),
-  getMedications: () => delay(mockMedications),
+  // The sample list, plus any medicine typed in during this session.
+  getMedications: () => delay([...mockMedications, ...demoMedicationStore.list()]),
   getConditions: () => delay(mockConditions),
   getAllergies: () => delay(mockAllergies),
   getVaccinations: () => delay(mockVaccinations),

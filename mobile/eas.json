@@ -25,7 +25,17 @@
       "env": {
         "EXPO_PUBLIC_APP_MODE": "production",
         "EXPO_PUBLIC_VAULT_FILES": "on",
-        "EXPO_PUBLIC_NAV_V2": "on"
+        "EXPO_PUBLIC_NAV_V2": "on",
+        "EXPO_PUBLIC_VISUAL_V2": "on",
+        "EXPO_PUBLIC_CONNECTED_HEALTH": "on",
+        "EXPO_PUBLIC_APPLE_HEALTH": "on"
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
       }
     }
   },

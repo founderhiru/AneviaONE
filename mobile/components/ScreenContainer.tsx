@@ -4,6 +4,13 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useTheme } from '../design/theme';
 
+/**
+ * True when a screen is shown inside another screen that already keeps clear of the status bar
+ * (the Health hub's sections). The inner screen then skips its own top inset, so the space is
+ * not added twice.
+ */
+export const EmbeddedScreenContext = React.createContext(false);
+
 export type ScreenContainerProps = {
   children: React.ReactNode;
   scroll?: boolean;
@@ -19,12 +26,14 @@ export type ScreenContainerProps = {
 export function ScreenContainer({
   children,
   scroll = true,
-  edges = ['top', 'left', 'right'],
+  edges: requestedEdges = ['top', 'left', 'right'],
   contentStyle,
   refreshing,
   onRefresh,
 }: ScreenContainerProps) {
   const theme = useTheme();
+  const embedded = React.useContext(EmbeddedScreenContext);
+  const edges = embedded ? requestedEdges.filter((e) => e !== 'top') : requestedEdges;
 
   if (!scroll) {
     return (

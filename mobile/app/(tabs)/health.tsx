@@ -3,7 +3,9 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Card, ErrorState, LoadingState, ScreenContainer, SectionHeader, StatusBadge, TrendCard, PersonBar } from '../../components';
+import { BiomarkerRow } from '../../components/BiomarkerRow';
 import { PRODUCT_TERMS } from '../../config/brand';
+import { VISUAL_V2_ENABLED } from '../../config/visualFlag';
 import { useTheme } from '../../design/theme';
 import { useHealthMemoryUpdates } from '../../hooks/useHealthMemoryUpdates';
 import { healthService } from '../../services/health/healthService';
@@ -89,13 +91,23 @@ export default function HealthScreen() {
       </Text>
 
       <View style={{ gap: theme.spacing.sm }} testID="test-results">
-        <SectionHeader title="Test results" />
+        <SectionHeader title={VISUAL_V2_ENABLED ? 'Biomarkers' : 'Test results'} />
         {data.results.length === 0 ? (
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
             Results read from your reports appear here, each with the report and page it came from.
           </Text>
         ) : (
-          data.results.slice(0, 20).map((r) => <TestResultCard key={r.id} result={r} />)
+          data.results.slice(0, 20).map((r) => {
+            if (!VISUAL_V2_ENABLED) return <TestResultCard key={r.id} result={r} />;
+            // History for the same test in the same unit, when there is any.
+            const trend = data.trends.find((t) => t.metricName.toLowerCase() === r.name.toLowerCase() && (t.unit ?? null) === (r.unit ?? null));
+            const open = trend
+              ? () => router.push(`/trends/${encodeURIComponent(trend.metricName)}`)
+              : r.source.documentId
+                ? () => router.push(`/documents/${r.source.documentId}`)
+                : undefined;
+            return <BiomarkerRow key={r.id} result={r} trend={trend} onPress={open} />;
+          })
         )}
       </View>
 
@@ -133,16 +145,20 @@ export default function HealthScreen() {
           onActionPress={data.medications.length ? () => router.push('/medications') : undefined}
         />
         {data.medications.length === 0 ? (
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None on file.</Text>
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]} onPress={() => router.push('/medications')} testID="health-medications-empty">
+            None on file. If a prescription can&rsquo;t be read, you can add medicines yourself.
+          </Text>
         ) : (
           data.medications.slice(0, 3).map((med) => (
             <Card key={med.id}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{med.name}</Text>
                   <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-                    {[med.dosage, med.frequency].filter(Boolean).join(' · ') || 'As written on your report'}
+                    {[med.dosage, med.frequency, med.duration].filter(Boolean).join(' · ') || (med.origin && med.origin !== 'extracted' ? 'Added by you' : 'As written on your report')}
                   </Text>
+                  {med.instructions ? <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{med.instructions}</Text> : null}
+                  {med.prescribedBy ? <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>Prescribed by {med.prescribedBy}</Text> : null}
                 </View>
                 <StatusBadge label={med.status === 'active' ? 'Active' : med.status === 'past' ? 'Past' : med.status === 'as_needed' ? 'As needed' : 'Recorded'} tone={med.status === 'active' ? 'success' : 'neutral'} />
               </View>

@@ -16,7 +16,7 @@ import { AnthropicJsonProvider, type AnthropicProviderOptions, type JsonModelPro
 import { EXTRACTION_JSON_SCHEMA } from './extraction-schema.ts';
 import type { Page } from './validate.ts';
 
-export const PROMPT_VERSION = 'g1-extract-4';
+export const PROMPT_VERSION = 'g1-extract-5';
 
 export interface StructuredExtractor {
   readonly provider: string;
@@ -39,6 +39,16 @@ Rules:
 - Conditions: "diagnosed" only when a clinician states the diagnosis for this patient; "reported" when the patient reports it; otherwise "mentioned". A family history (a relative's condition) is always "mentioned". Do not list conditions that are explicitly denied or ruled out.
 - Allergies: only allergies the report states the patient has. "No known allergies" is not an allergy.
 - Medications: status only if the report states it (for example "stopped" or "as needed").
+- Prescriptions (a Doctor's list of medicines to take): record each medicine line as one medication.
+  - name is the medicine name as written, without the form prefix ("Tab.", "Cap.", "Syp.", "Inj.") and without the strength.
+  - dose is the strength or amount as written (for example "500 mg", "5 ml").
+  - frequency is the schedule exactly as written, including shorthand such as "1-0-1", "OD", "BD", "TDS", "SOS" or "HS". Never expand, translate or interpret shorthand.
+  - route, duration and instructions: exactly as written, only when printed for that medicine; otherwise empty strings.
+  - prescriber: the prescribing Doctor's name exactly as printed on the same page (letterhead or signature block); otherwise an empty string.
+  - source_text is the medicine's own line and must contain the name and, when given, the dose and frequency.
+  - Also record the visit as one encounter with encounter_type "consultation" when the prescription carries a date.
+  - Record only medicines that are clearly written. If a name is handwritten or hard to read, give a low confidence or leave it out. Never guess a medicine name from a partial word, and never correct a spelling.
+  - Advice, diet notes, tests ordered and follow-up dates are not medications.
 - patient_name / patient_date_of_birth: only if the report explicitly prints them, quoted exactly; otherwise an empty value.
 - report_date: the report's own date (collection/report date) as written, if shown.
 - Written imaging reports (X-ray, ultrasound, CT, MRI and similar): you are reading the radiologist's WRITTEN report, never the image itself. Record:
