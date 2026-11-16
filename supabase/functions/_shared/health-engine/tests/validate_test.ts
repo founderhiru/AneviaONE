@@ -221,3 +221,67 @@ Deno.test('medication status: stated values kept, unknown values rejected', () =
   assertEquals(r.facts.map((f) => f.row.status), ['active']);
   assertEquals(r.rejected.map((x) => x.reason), ['invalid_enum']);
 });
+
+// ----------------------------------------------------------- prescriptions ---
+
+const RX_PAGE: Page[] = [
+  {
+    page_number: 1,
+    text: 'Dr. Meera Nair, MD\nCity Clinic\nDate: 12/03/2026\nRx\nTab. Metformin 500 mg 1-0-1 x 30 days after food\nCap. Omeprazole 20 mg OD before breakfast\nSyp. Cough-Eze 5 ml SOS',
+  },
+];
+const rx = (over: Record<string, unknown>) =>
+  ({ name: 'Metformin', dose: '500 mg', frequency: '1-0-1', status: 'not_stated', start_date: '', end_date: '', route: 'Tab.', duration: 'x 30 days', instructions: 'after food', prescriber: 'Dr. Meera Nair', page: 1, source_text: 'Tab. Metformin 500 mg 1-0-1 x 30 days after food', confidence: 0.95, ...over }) as never;
+
+Deno.test('prescription: each medicine keeps its details exactly as written, shorthand untouched', () => {
+  const r = validateExtraction({ ...empty(), medications: [rx({})] }, RX_PAGE, { today: TODAY });
+  assertEquals(r.rejected, []);
+  const row = r.facts[0].row;
+  assertEquals(row.name_as_written, 'Metformin');
+  assertEquals(row.dose_as_written, '500 mg');
+  assertEquals(row.frequency_as_written, '1-0-1');
+  assertEquals(row.route_as_written, 'Tab.');
+  assertEquals(row.duration_as_written, 'x 30 days');
+  assertEquals(row.instructions_as_written, 'after food');
+  assertEquals(row.prescriber_name, 'Dr. Meera Nair');
+});
+
+Deno.test('prescription: a detail that is not on the page is dropped, the medicine is kept', () => {
+  const r = validateExtraction(
+    { ...empty(), medications: [rx({ duration: 'for 90 days', instructions: 'take twice a day with meals', prescriber: 'Dr. Someone Else' })] },
+    RX_PAGE,
+    { today: TODAY },
+  );
+  assertEquals(r.facts.length, 1);
+  const row = r.facts[0].row;
+  assertEquals(row.duration_as_written, null);
+  assertEquals(row.instructions_as_written, null);
+  assertEquals(row.prescriber_name, null);
+  assertEquals(row.frequency_as_written, '1-0-1');
+});
+
+Deno.test('prescription: an expanded or invented schedule is rejected; a medicine not written is rejected', () => {
+  const r = validateExtraction(
+    {
+      ...empty(),
+      medications: [
+        rx({ frequency: 'twice daily' }),
+        rx({ name: 'Atorvastatin', dose: '10 mg', frequency: 'OD', source_text: 'Tab. Atorvastatin 10 mg OD' }),
+      ],
+    },
+    RX_PAGE,
+    { today: TODAY },
+  );
+  assertEquals(r.facts.length, 0);
+  assertEquals(r.rejected.map((x) => x.reason).sort(), ['quote_not_on_page', 'value_not_in_quote']);
+});
+
+Deno.test('medications from older extractions (no prescription fields) still validate', () => {
+  const r = validateExtraction(
+    { ...empty(), medications: [{ name: 'Omeprazole', dose: '20 mg', frequency: 'OD', status: null, start_date: null, end_date: null, page: 1, source_text: 'Cap. Omeprazole 20 mg OD', confidence: 0.9 }] },
+    RX_PAGE,
+    { today: TODAY },
+  );
+  assertEquals(r.facts.length, 1);
+  assertEquals(r.facts[0].row.route_as_written, null);
+});

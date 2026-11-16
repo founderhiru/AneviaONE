@@ -11,7 +11,7 @@ import { getSupabaseClient } from '../supabaseClient';
  */
 
 type ServerEvidence = { documentId: string | null; documentName: string | null; reportDate: string | null; pageNumber: number | null };
-type ServerMemoryItem = { key: string; name: string; detail: string | null; firstRecorded: string | null; lastRecorded: string | null; recordIds: string[]; sources: ServerEvidence[] };
+type ServerMemoryItem = { key: string; name: string; detail: string | null; firstRecorded: string | null; lastRecorded: string | null; recordIds: string[]; sources: ServerEvidence[]; instructions?: string | null; prescriber?: string | null; medication?: { recordId: string; origin: string | null; dose: string | null; frequency: string | null; duration: string | null; status: string } };
 type ServerTrend = {
   id: string;
   name: string;
@@ -161,14 +161,29 @@ export function toEvent(e: ServerEvent): HealthEvent {
   };
 }
 
-export const toMedication = (m: ServerMemoryItem): Medication => ({
-  id: m.key,
-  name: m.name,
-  dosage: orUndefined(m.detail),
-  status: 'recorded',
-  startDate: orUndefined(m.firstRecorded),
-  sourceDocumentId: lastSource(m),
-});
+const MEDICATION_STATUS: Record<string, Medication['status']> = { active: 'active', stopped: 'past', as_needed: 'as_needed' };
+const ORIGINS = ['extracted', 'user_entered', 'user_corrected'] as const;
+
+export const toMedication = (m: ServerMemoryItem): Medication => {
+  const rec = m.medication;
+  const origin = ORIGINS.find((o) => o === rec?.origin);
+  return {
+    id: m.key,
+    name: m.name,
+    // Newer servers send the fields one by one; older ones only the joined detail line.
+    dosage: rec ? orUndefined(rec.dose) : orUndefined(m.detail),
+    frequency: rec ? orUndefined(rec.frequency) : undefined,
+    duration: rec ? orUndefined(rec.duration) : undefined,
+    status: rec ? (MEDICATION_STATUS[rec.status] ?? 'recorded') : 'recorded',
+    startDate: orUndefined(m.firstRecorded),
+    // From a prescription or typed in, as written; absent for medicines only mentioned in a report.
+    instructions: orUndefined(m.instructions ?? null),
+    prescribedBy: orUndefined(m.prescriber ?? null),
+    recordId: rec?.recordId,
+    origin,
+    sourceDocumentId: lastSource(m),
+  };
+};
 
 export const toCondition = (c: ServerMemoryItem): Condition => {
   const assertion = /Recorded as (mentioned|reported|diagnosed)/.exec(c.detail ?? '')?.[1] as Condition['assertion'];

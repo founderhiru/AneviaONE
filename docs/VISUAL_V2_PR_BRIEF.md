@@ -25,3 +25,8 @@ tsc clean, eslint clean on touched files, jest 71 suites / 807 tests pass, iOS b
 
 ## Decision for review
 The range label is new behaviour. It only restates the lab's own range, but please confirm the wording with whoever reviews clinical boundaries.
+
+## Added after first Simulator review
+- **Home (new navigation):** brand row with an account avatar, a time-of-day greeting, and compact two-to-a-row tiles: My Health, Documents and Records, Connected Health (only when its flag is on), Family Health. The What changed card, checks, Life Management and Recently added are unchanged. No score.
+- **Health hub:** removed the doubled space under the Overview / Timeline / Doctor Brief tabs (applies with the flag on or off).
+- **Demo data:** sample results now carry numeric range bounds so range labels show in demo mode.

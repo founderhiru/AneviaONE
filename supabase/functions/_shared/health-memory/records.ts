@@ -59,6 +59,13 @@ export type MedicationRecord = Base & {
   status: string;
   startDate: string | null;
   endDate: string | null;
+  /** Prescription details as written, when the report gave them. */
+  route?: string | null;
+  duration?: string | null;
+  instructions?: string | null;
+  prescriber?: string | null;
+  /** How it got here: read from a report, typed in by the person, or changed by them. */
+  origin?: string | null;
 };
 export type AllergyRecord = Base & { kind: 'allergy'; reaction: string | null; assertion: 'mentioned' | 'reported' | 'diagnosed' };
 export type ProcedureRecord = Base & { kind: 'procedure' | 'immunization' };
@@ -94,7 +101,7 @@ const VIEWS: Record<RecordKind, { view: string; nameColumn: string; columns: str
   medication: {
     view: 'current_medications',
     nameColumn: 'name_as_written',
-    columns: 'name_as_written, dose_as_written, frequency_as_written, status, start_date, end_date, prescribed_date',
+    columns: 'origin, name_as_written, dose_as_written, frequency_as_written, route_as_written, duration_as_written, instructions_as_written, prescriber_name, status, start_date, end_date, prescribed_date',
   },
   allergy: { view: 'current_allergies', nameColumn: 'substance_as_written', columns: 'substance_as_written, reaction_as_written, assertion, recorded_date' },
   procedure: { view: 'current_procedures', nameColumn: 'name_as_written', columns: 'name_as_written, performed_date, procedure_kind', procedureKind: 'procedure' },
@@ -197,6 +204,11 @@ function toRecord(
         status: str(row.status) ?? 'unknown',
         startDate: str(row.start_date),
         endDate: str(row.end_date),
+        route: str(row.route_as_written),
+        duration: str(row.duration_as_written),
+        instructions: str(row.instructions_as_written),
+        prescriber: str(row.prescriber_name),
+        origin: str(row.origin),
       };
     case 'allergy':
       return {

@@ -39,6 +39,11 @@ export type ExtractedMedication = Evidence & {
   status: (typeof MEDICATION_STATUSES)[number] | 'not_stated' | null;
   start_date: string | null;
   end_date: string | null;
+  /** Prescription details, each as written; absent on older extractions. */
+  route?: string | null;
+  duration?: string | null;
+  instructions?: string | null;
+  prescriber?: string | null;
 };
 
 export type ExtractedCondition = Evidence & { name: string; assertion: (typeof ASSERTIONS)[number] };
@@ -139,9 +144,13 @@ export const EXTRACTION_JSON_SCHEMA = object(
           status: { type: 'string', enum: [...MEDICATION_STATUSES, STATUS_NOT_STATED], description: `Only if explicitly stated; otherwise "${STATUS_NOT_STATED}".` },
           start_date: notStated,
           end_date: notStated,
+          route: { ...notStated, description: 'How it is taken, exactly as written (for example "oral", "Tab.", "Inj."), or an empty string.' },
+          duration: { ...notStated, description: 'How long it is prescribed for, exactly as written (for example "x 30 days", "for 5 days"), or an empty string.' },
+          instructions: { ...notStated, description: 'Instructions for this medicine exactly as written (for example "after food"), or an empty string.' },
+          prescriber: { ...notStated, description: 'Name of the Doctor who prescribed it, exactly as printed on the same page, or an empty string.' },
           ...evidence,
         },
-        ['name', 'dose', 'frequency', 'status', 'start_date', 'end_date', ...evidenceKeys],
+        ['name', 'dose', 'frequency', 'status', 'start_date', 'end_date', 'route', 'duration', 'instructions', 'prescriber', ...evidenceKeys],
       ),
     },
     conditions: {

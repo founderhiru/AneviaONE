@@ -51,6 +51,9 @@ PGOPTIONS="-c hi_test.storage_writes=on" "${PSQL[@]}" -f "$SUPABASE_DIR/tests/va
 echo "▸ Running custody test (custodian, restrict, deletion plan, typed-name decision, person removal, notices, grant expiry)"
 "${PSQL[@]}" -f "$SUPABASE_DIR/tests/custody_test.sql" 2>&1 \
   | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
+echo "▸ Running manual medications test (who may add, edit / stop / remove, independence from reports, removing a relative)"
+"${PSQL[@]}" -f "$SUPABASE_DIR/tests/manual_medications_test.sql" 2>&1 \
+  | sed -e 's/^psql:[^ ]* NOTICE:  /  /' -e 's/^NOTICE:  /  /'
 if $WITH_PROPOSED; then
   for migration in "$SUPABASE_DIR"/migrations_proposed/*.sql; do
     echo "▸ Applying PROPOSED $(basename "$migration")"

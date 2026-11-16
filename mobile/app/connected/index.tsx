@@ -4,8 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
 import { BottomSheet, Card, ScreenContainer, ScreenHeader, StatusBadge } from '../../components';
+import { AppleHealthCard } from '../../components/connected/AppleHealthCard';
 import { ActionButton, IconTile, Segments, SourceCard, SourceStatusBadge, WearableTile } from '../../components/connected/ConnectedParts';
 import { useTheme } from '../../design/theme';
+import { useAppleHealth } from '../../hooks/useAppleHealth';
+import { useAuth } from '../../hooks/useAuth';
+import { usePeople } from '../../hooks/usePeople';
+import { isOwnRecord } from '../../services/people/peopleService';
 import { formatAdded, getRecordsSummary, type RecordsSummary } from '../../services/connected/connectedService';
 import { byGroup, STATUS_LABEL, type Integration, type SourceGroup } from '../../services/connected/integrations';
 
@@ -38,6 +43,11 @@ export default function ConnectedHealthScreen() {
   const [sheet, setSheet] = useState(false);
   const [records, setRecords] = useState<RecordsSummary | null>(null);
   const [recordsError, setRecordsError] = useState(false);
+  // Apple Health is the signed-in person's own data on this iPhone; never a family member's.
+  const { user } = useAuth();
+  const { active } = usePeople();
+  const ownRecord = isOwnRecord(active);
+  const apple = useAppleHealth(user?.id);
 
   // Refreshed when the screen is shown (e.g. back from adding a report).
   useFocusEffect(
@@ -99,7 +109,7 @@ export default function ConnectedHealthScreen() {
                       ? `${count} ${count === 1 ? 'document' : 'documents'}${last ? ` · last added ${last}` : ''}`
                       : 'Nothing added yet.'}
               </Text>
-              <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>Shares: test results, prescriptions, scans</Text>
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>Includes: test results, prescriptions, scans</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', gap: theme.spacing.xs, marginTop: theme.spacing.sm }}>
@@ -112,7 +122,11 @@ export default function ConnectedHealthScreen() {
           </View>
         </Card>
         <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]} testID="devices-empty">
-          No health platforms or devices are connected yet. Apple Health and Health Connect are coming soon.
+          {apple.offered
+            ? apple.connected && ownRecord
+              ? 'Apple Health is connected on this iPhone. Health Connect and wearables are coming soon.'
+              : 'Apple Health can be connected below. Health Connect and wearables are coming soon.'
+            : 'No health platforms or devices are connected yet. Apple Health and Health Connect are coming soon.'}
         </Text>
         <ActionButton label="Connect a source" onPress={() => setSheet(true)} primary icon="add" testID="connect-source" />
       </View>
@@ -133,7 +147,13 @@ export default function ConnectedHealthScreen() {
             </View>
           </>
         ) : (
-          items.map((i) => <SourceCard key={i.id} item={i} onOpen={open} />)
+          items.map((i) =>
+            i.id === 'apple_health' && apple.offered ? (
+              <AppleHealthCard key={i.id} state={apple} ownRecord={ownRecord} personName={active?.name} />
+            ) : (
+              <SourceCard key={i.id} item={i} onOpen={open} />
+            ),
+          )
         )}
       </View>
 
@@ -211,7 +231,7 @@ export default function ConnectedHealthScreen() {
               </Pressable>
             ))}
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary, marginTop: theme.spacing.xs }]} testID="sheet-coming">
-            Apple Health, Health Connect, wearables and lab partners are coming soon.
+            {apple.offered ? 'Apple Health is under Platforms on this page. Health Connect, wearables and lab partners are coming soon.' : 'Apple Health, Health Connect, wearables and lab partners are coming soon.'}
           </Text>
         </View>
       </BottomSheet>

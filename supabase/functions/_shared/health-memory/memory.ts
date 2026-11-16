@@ -17,6 +17,11 @@ export type MemoryItem = {
   lastRecorded: string | null;
   recordIds: string[];
   sources: Evidence[];
+  /** Medications only: instructions and prescriber from the most recent record, as written. */
+  instructions?: string | null;
+  prescriber?: string | null;
+  /** Medications only: the most recent record's own fields, so the app can label and change it. */
+  medication?: { recordId: string; origin: string | null; dose: string | null; frequency: string | null; duration: string | null; status: string };
 };
 
 export type HealthMemory = {
@@ -37,7 +42,7 @@ function detailOf(r: TrustedRecord): string | null {
       return `Recorded as ${(r as ConditionRecord).assertion}`;
     case 'medication': {
       const m = r as MedicationRecord;
-      return [m.dose, m.frequency, m.status !== 'unknown' ? m.status.replace('_', ' ') : null].filter(Boolean).join(' · ') || null;
+      return [m.dose, m.frequency, m.duration, m.status !== 'unknown' ? m.status.replace('_', ' ') : null].filter(Boolean).join(' · ') || null;
     }
     case 'allergy':
       return (r as AllergyRecord).reaction;
@@ -62,6 +67,20 @@ function group(records: TrustedRecord[]): MemoryItem[] {
       lastRecorded: dated[dated.length - 1] ?? null,
       recordIds: recs.map((r) => r.id).sort(),
       sources: recs.map((r) => r.evidence),
+      ...(latest.kind === 'medication'
+        ? {
+            instructions: (latest as MedicationRecord).instructions ?? null,
+            prescriber: (latest as MedicationRecord).prescriber ?? null,
+            medication: {
+              recordId: latest.id,
+              origin: (latest as MedicationRecord).origin ?? null,
+              dose: (latest as MedicationRecord).dose,
+              frequency: (latest as MedicationRecord).frequency,
+              duration: (latest as MedicationRecord).duration ?? null,
+              status: (latest as MedicationRecord).status,
+            },
+          }
+        : {}),
     };
   });
   return items.sort((a, b) => (b.lastRecorded ?? '').localeCompare(a.lastRecorded ?? '') || a.name.localeCompare(b.name));

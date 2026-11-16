@@ -145,16 +145,20 @@ export default function HealthScreen() {
           onActionPress={data.medications.length ? () => router.push('/medications') : undefined}
         />
         {data.medications.length === 0 ? (
-          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>None on file.</Text>
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]} onPress={() => router.push('/medications')} testID="health-medications-empty">
+            None on file. If a prescription can&rsquo;t be read, you can add medicines yourself.
+          </Text>
         ) : (
           data.medications.slice(0, 3).map((med) => (
             <Card key={med.id}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={[theme.typography.labelLarge, { color: theme.colors.textPrimary }]}>{med.name}</Text>
                   <Text style={[theme.typography.bodySmall, { color: theme.colors.textTertiary }]}>
-                    {[med.dosage, med.frequency].filter(Boolean).join(' · ') || 'As written on your report'}
+                    {[med.dosage, med.frequency, med.duration].filter(Boolean).join(' · ') || (med.origin && med.origin !== 'extracted' ? 'Added by you' : 'As written on your report')}
                   </Text>
+                  {med.instructions ? <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>{med.instructions}</Text> : null}
+                  {med.prescribedBy ? <Text style={[theme.typography.caption, { color: theme.colors.textTertiary }]}>Prescribed by {med.prescribedBy}</Text> : null}
                 </View>
                 <StatusBadge label={med.status === 'active' ? 'Active' : med.status === 'past' ? 'Past' : med.status === 'as_needed' ? 'As needed' : 'Recorded'} tone={med.status === 'active' ? 'success' : 'neutral'} />
               </View>

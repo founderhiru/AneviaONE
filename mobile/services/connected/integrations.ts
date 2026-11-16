@@ -16,7 +16,7 @@ export type SourceStatus = 'coming_soon' | 'available' | 'connected';
  * upload = the person adds files themselves. */
 export type SourcePath = 'direct' | 'via_platform' | 'upload';
 export type HealthPlatformId = 'apple_health' | 'health_connect';
-export type IconName = 'logo-apple' | 'fitness-outline' | 'watch-outline' | 'pulse-outline' | 'moon-outline' | 'barbell-outline' | 'flask-outline' | 'document-text-outline' | 'medkit-outline' | 'folder-open-outline' | 'business-outline' | 'git-network-outline' | 'heart-circle-outline' | 'phone-portrait-outline';
+export type IconName = 'heart-outline' | 'fitness-outline' | 'watch-outline' | 'pulse-outline' | 'moon-outline' | 'barbell-outline' | 'flask-outline' | 'document-text-outline' | 'medkit-outline' | 'folder-open-outline' | 'business-outline' | 'git-network-outline' | 'heart-circle-outline' | 'phone-portrait-outline';
 
 export type Integration = {
   id: string;
@@ -48,7 +48,7 @@ export const INTEGRATIONS: Integration[] = [
     id: 'apple_health',
     name: 'Apple Health',
     group: 'platform',
-    icon: 'logo-apple',
+    icon: 'heart-outline',
     status: 'coming_soon',
     path: 'direct',
     summary: 'Bring in the activity, sleep and vitals your iPhone already collects.',
@@ -74,7 +74,7 @@ export const INTEGRATIONS: Integration[] = [
   { id: 'whoop', name: 'WHOOP', group: 'wearable', icon: 'heart-circle-outline', status: 'coming_soon', path: 'via_platform', via: ['apple_health', 'health_connect'], summary: 'May share through Apple Health or Health Connect, depending on the WHOOP app.', dataTypes: ['Recovery', 'Sleep', 'Strain'] },
   // — Medical records: live through the existing upload —
   { id: 'lab_reports', name: 'Blood tests and lab reports', group: 'records', icon: 'flask-outline', status: 'available', path: 'upload', summary: 'Upload a PDF, photo or scan. AneviaONE reads the results into your Health Memory.', dataTypes: ['Test results', 'Dates', 'Reference ranges'], route: '/add' },
-  { id: 'prescriptions', name: 'Prescriptions and other documents', group: 'records', icon: 'medkit-outline', status: 'available', path: 'upload', summary: 'Add them as a PDF or photo. They are stored privately with your records.', dataTypes: ['Prescriptions', 'Scans'], route: '/add', note: 'AneviaONE reads lab reports today; other documents are stored, not read.' },
+  { id: 'prescriptions', name: 'Prescriptions', group: 'records', icon: 'medkit-outline', status: 'available', path: 'upload', summary: 'Upload a PDF or photo. AneviaONE reads each medicine, dose and schedule exactly as written.', dataTypes: ['Medicines', 'Dose and schedule', 'Prescribing Doctor'], route: '/add', note: 'Printed prescriptions read best. Handwritten ones are often held for you to check.' },
   { id: 'consultations', name: 'Doctor consultation records', group: 'records', icon: 'document-text-outline', status: 'coming_soon', path: 'upload', summary: 'Structured reading of consultation notes is not available yet.', dataTypes: ['Visit notes', 'Diagnoses', 'Advice'] },
   // — Future —
   { id: 'lab_partners', name: 'Laboratory partners', group: 'future', icon: 'business-outline', status: 'coming_soon', path: 'direct', summary: 'Receive your reports directly from partner labs, with your permission.', dataTypes: ['Lab results'] },
@@ -83,9 +83,11 @@ export const INTEGRATIONS: Integration[] = [
 ];
 
 /**
- * Adapters that connect a source to AneviaONE. None exist yet, which is why nothing in the
- * `platform` or `wearable` groups can be anything but `coming_soon`. When one is built (and its
- * data path is verified), register it here and flip that source's status in the same change.
+ * Adapters that connect a source to AneviaONE. This static list stays empty: an adapter is only
+ * real on a device that can run it. The first one, Apple Health (services/connected/appleHealth.ts),
+ * is offered at run time only when the build asks for it (EXPO_PUBLIC_APPLE_HEALTH=on) and the
+ * iPhone supports it; otherwise Apple Health stays `coming_soon` as listed above. Everything
+ * else in the `platform` and `wearable` groups has no adapter and can only be `coming_soon`.
  */
 export interface SourceAdapter {
   id: string;

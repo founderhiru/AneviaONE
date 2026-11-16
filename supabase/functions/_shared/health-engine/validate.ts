@@ -287,6 +287,13 @@ export function validateExtraction(
     const end = dateOrFlag(str(m.end_date, 60) as string | null, flags, today, pages.get(ev.page)!, dateOrder);
     if (start.invalid || end.invalid) return 'invalid_date';
     if (start.iso && end.iso && end.iso < start.iso) return 'invalid_date';
+    // Prescription details are kept only when they are written on the cited page, within the
+    // stored length. One that is not is dropped on its own: the medicine itself stays.
+    const pageText = pages.get(ev.page)!;
+    const onPage = (v: unknown, max: number): string | null => {
+      const t = str(v, max);
+      return t && t !== 'too_long' && containsCI(pageText, t) ? t : null;
+    };
     accept(
       'medications',
       ev,
@@ -294,6 +301,10 @@ export function validateExtraction(
         name_as_written: name,
         dose_as_written: dose,
         frequency_as_written: frequency,
+        route_as_written: onPage(m.route, 50),
+        duration_as_written: onPage(m.duration, 100),
+        instructions_as_written: onPage(m.instructions, 1000),
+        prescriber_name: onPage(m.prescriber, 200),
         start_date: start.iso,
         end_date: end.iso,
         status,

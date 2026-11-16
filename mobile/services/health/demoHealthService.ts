@@ -16,6 +16,7 @@ import {
 import { getObservationsByIds, mockObservations } from '../../mock/observations';
 import { getDocumentById } from '../../mock/documents';
 import type { Observation, RecordedObservation } from '../../types';
+import { demoMedicationStore } from './demoMedicationStore';
 import { mockAllergies, mockConditions, mockMedications, mockProcedures, mockVaccinations } from '../../mock/medications';
 import type { HealthService } from './healthService';
 
@@ -61,7 +62,8 @@ export const demoHealthService: HealthService = {
   getTrends: () => delay(mockTrends),
   getTrendById: (id) => delay(mockGetTrendById(id)),
   getTrendByMetricName: (metricName) => delay(mockGetTrendByMetricName(metricName)),
-  getMedications: () => delay(mockMedications),
+  // The sample list, plus any medicine typed in during this session.
+  getMedications: () => delay([...mockMedications, ...demoMedicationStore.list()]),
   getConditions: () => delay(mockConditions),
   getAllergies: () => delay(mockAllergies),
   getVaccinations: () => delay(mockVaccinations),

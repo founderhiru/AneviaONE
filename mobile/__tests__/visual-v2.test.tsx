@@ -10,6 +10,8 @@ import { greenLightColors, lightColors } from '../design/colors';
 import { getTheme } from '../design/theme';
 import { rangeStatusFor } from '../services/health/rangeStatus';
 import { BiomarkerRow } from '../components/BiomarkerRow';
+import { HomeNav, greetingFor } from '../components/home/HomeNav';
+import { healthService } from '../services/health/healthService';
 import MyDocumentsScreen from '../app/documents/index';
 import FamilyScreen from '../app/family';
 import { documentsService } from '../services/documents/documentsService';
@@ -144,5 +146,42 @@ describe('Family overview (V2)', () => {
     await renderWithAuth(<FamilyScreen />);
     await waitFor(() => expect(screen.getByText('People')).toBeTruthy());
     expect(screen.queryByTestId('family-overview')).toBeNull();
+  });
+});
+
+describe('Home (V2)', () => {
+
+  beforeEach(() => {
+    (usePeople as jest.Mock).mockReturnValue({ people: [], active: null, switchTo: jest.fn(), refresh: jest.fn() });
+    (useFocusEffect as jest.Mock).mockImplementation(() => undefined);
+    jest.spyOn(documentsService, 'listDocuments').mockResolvedValue([doc('a', 'a.pdf')]);
+    jest.spyOn(healthService, 'getRecordedObservations').mockResolvedValue([]);
+  });
+
+  it('greets by time of day', () => {
+    expect(greetingFor(new Date(2026, 0, 1, 9))).toBe('Good morning');
+    expect(greetingFor(new Date(2026, 0, 1, 14))).toBe('Good afternoon');
+    expect(greetingFor(new Date(2026, 0, 1, 20))).toBe('Good evening');
+  });
+
+  it('shows the brand row, greeting and compact tiles that open real screens — and no score', async () => {
+    await renderWithAuth(<HomeNav />);
+    expect(screen.getByTestId('home-brand-row')).toBeTruthy();
+    expect(screen.getByText('Your health, records and insights in one place.')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('1 report')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('home-tile-family'));
+    expect(router.push).toHaveBeenCalledWith('/family');
+    await fireEvent.press(screen.getByTestId('home-tile-health'));
+    expect(router.push).toHaveBeenCalledWith('/(tabs)/hub');
+    await fireEvent.press(screen.getByTestId('home-open-me'));
+    expect(router.push).toHaveBeenCalledWith('/(tabs)/me');
+    expect(screen.queryByText(/score/i)).toBeNull();
+  });
+
+  it('with the flag off Home keeps its current header and tiles', async () => {
+    mockV2 = false;
+    await renderWithAuth(<HomeNav />);
+    expect(screen.getByText('Your life. Your intelligence.')).toBeTruthy();
+    expect(screen.queryByTestId('home-tiles')).toBeNull();
   });
 });
